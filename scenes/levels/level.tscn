@@ -1,0 +1,23 @@
+[gd_scene load_steps=7 format=3 uid="uid://is7vjtxo3drv"]
+
+[ext_resource type="Script" path="res://scenes/scripts/level.gd" id="1_hgata"]
+[ext_resource type="Texture2D" uid="uid://cwth3ikns67q8" path="res://icon.svg" id="1_ikucx"]
+[ext_resource type="Script" path="res://scenes/scripts/logo.gd" id="2_cbayv"]
+[ext_resource type="PackedScene" uid="uid://b5o3tgfdgtldw" path="res://scenes/player.tscn" id="2_el2g4"]
+[ext_resource type="PackedScene" uid="uid://dphqnxcitwuq3" path="res://scenes/levels/fps_layer.tscn" id="5_70lhp"]
+[ext_resource type="Script" path="res://scenes/scripts/sophie.gd" id="6_hwhkf"]
+
+[node name="Level" type="Node2D"]
+script = ExtResource("1_hgata")
+
+[node name="logo" type="Sprite2D" parent="."]
+texture = ExtResource("1_ikucx")
+script = ExtResource("2_cbayv")
+
+[node name="player_scn" parent="." instance=ExtResource("2_el2g4")]
+position = Vector2(348, 322)
+
+[node name="sophie" type="Node2D" parent="."]
+script = ExtResource("6_hwhkf")
+
+[node name="fps_layer" parent="." instance=ExtResource("5_70lhp")]

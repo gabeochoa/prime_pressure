@@ -1,0 +1,19 @@
+[gd_scene load_steps=2 format=3 uid="uid://dphqnxcitwuq3"]
+
+[ext_resource type="Script" path="res://scenes/scripts/fps_value.gd" id="1_ca77s"]
+
+[node name="fps_layer" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="fps_value" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_right = 117.0
+offset_bottom = 48.0
+text = "FPS: 000
+"
+script = ExtResource("1_ca77s")
