@@ -1,6 +1,6 @@
 extends Node2D
 
-class ScreenListener:
+class ActionListener:
 	
 	var data: ActionData
 
@@ -55,7 +55,7 @@ class ScreenListener:
 '''
 
 class Screen: 
-	class CompleteAction extends ScreenListener:
+	class CompleteAction extends ActionListener:
 		func _init():
 			super(
 				ActionData.new()
@@ -70,10 +70,10 @@ class Screen:
 	
 	var complete: bool
 	var name: String
-	var config : Array[ScreenListener]
+	var config : Array[ActionListener]
 	var is_dirty: bool = true
 	
-	func _init(n: String, c: Array[ScreenListener]):
+	func _init(n: String, c: Array[ActionListener]):
 		name = n
 		config = c
 
@@ -86,7 +86,7 @@ class Screen:
 
 	
 class BoxScreen extends Screen: 
-	class BoxUnfold extends ScreenListener:
+	class BoxUnfold extends ActionListener:
 		func _init():
 			super(
 				ActionData.new()
@@ -98,7 +98,7 @@ class BoxScreen extends Screen:
 			print(data.name)
 			screen.next()
 
-	class BoxBottom extends ScreenListener:
+	class BoxBottom extends ActionListener:
 		func _init():
 			super(
 				ActionData.new()
@@ -110,7 +110,7 @@ class BoxScreen extends Screen:
 			print(data.name)
 			screen.next()
 
-	class BoxTape extends ScreenListener:
+	class BoxTape extends ActionListener:
 		func _init():
 			super(
 				ActionData.new()
@@ -143,7 +143,7 @@ class BoxScreen extends Screen:
 	func is_active() -> bool: 
 		return !is_complete()
 		
-	func is_active_action(action: ScreenListener) -> bool: 
+	func is_active_action(action: ActionListener) -> bool: 
 		for i in range(0, config.size()): 
 			if enabled != i: 
 				continue
@@ -157,7 +157,7 @@ class BoxScreen extends Screen:
 				
 
 class OrderScreen extends Screen: 
-	class OrderLetter extends ScreenListener:
+	class OrderLetter extends ActionListener:
 		func _init(key: Key):
 			super(
 				ActionData.new()
@@ -171,7 +171,7 @@ class OrderScreen extends Screen:
 			screen.next()
 	
 	func create_order_letter(item: String):
-		var list: Array[ScreenListener]
+		var list: Array[ActionListener]
 		for character in item: 
 			var char: int = character.to_ascii_buffer()[0] - "A".to_ascii_buffer()[0]
 			var key: Key = char + KEY_A
@@ -197,7 +197,7 @@ class OrderScreen extends Screen:
 	func is_active() -> bool: 
 		return !is_complete()
 		
-	func is_active_action(action: ScreenListener) -> bool: 
+	func is_active_action(action: ActionListener) -> bool: 
 		for i in range(0, config.size()): 
 			if enabled != i: 
 				continue
@@ -232,7 +232,7 @@ var using_controller: bool = true
 func _ready():
 	pass # Replace with function body.
 
-func assign_inputs_for_action(screen:Screen, action:ScreenListener):
+func assign_inputs_for_action(screen:Screen, action:ActionListener):
 	if action.data.gamepad.length() != 0:
 		return
 		
@@ -243,7 +243,7 @@ func assign_inputs_for_action(screen:Screen, action:ScreenListener):
 	action.data.gamepad = actions[action_index]
 	action_index += 1
 
-func handle_input_for_action(screen:Screen, action: ScreenListener):
+func handle_input_for_action(screen:Screen, action: ActionListener):
 	if !screen.is_active_action(action):
 		return
 		
@@ -281,7 +281,7 @@ func _unhandled_input(event):
 	#if event.pressed and event.keycode == KEY_W:
 	#get_viewport().set_input_as_handled()
 
-func create_action_button(screen: Screen, action: ScreenListener) -> Control :
+func create_action_button(screen: Screen, action: ActionListener) -> Control :
 	var label = action_label_scene.instantiate().with_data(
 		action.data
 		.set_is_controller(using_controller)
