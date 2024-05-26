@@ -16,8 +16,7 @@ class ScreenListener:
 		key = k
 			
 	func is_active() -> bool: 
-		assert(false, "class " + name + " needs to implement is_active()")
-		return false
+		return true
 		
 	func action(screen: Screen): 
 		assert(false, "class " + name + " needs to implement action()")
@@ -60,9 +59,17 @@ class ScreenListener:
 '''
 
 class Screen: 
+	class CompleteAction extends ScreenListener:
+		func _init():
+			super("Finish", KEY_ENTER)
+		func action(screen:Screen): 
+			print("screen " + screen.name + " complete")
+			screen.complete = true;
+	
+	var complete: bool
 	var name: String
 	var config : Array[ScreenListener]
-
+	
 	func _init(n: String, c: Array[ScreenListener]):
 		name = n
 		config = c
@@ -73,50 +80,64 @@ class Screen:
 
 	func is_not_active() -> bool:
 		return !is_active()
-
-
-class BoxScreen extends Screen: 
-	var enabled: Dictionary
 	
+class BoxScreen extends Screen: 
 	class BoxUnfold extends ScreenListener:
 		func _init():
 			super("unfold", KEY_U)
 			
-		func is_active() -> bool: 
-			return true
-			
 		func action(screen:Screen): 
-			print("unfold")
+			print(name)
+			screen.next()
 
 	class BoxBottom extends ScreenListener:
 		func _init():
 			super("bottom", KEY_B)
 			
-		func is_active() -> bool: 
-			return true
-			
 		func action(screen:Screen): 
-			print("bottom")
+			print(name)
+			screen.next()
 
 	class BoxTape extends ScreenListener:
 		func _init():
 			super("tape", KEY_T)
 			
-		func is_active() -> bool: 
-			return true
-			
 		func action(screen:Screen): 
-			print("tape")
+			print(name)
+			screen.next()
+			
+	var enabled: int
+	
+	func next():
+		enabled += 1
 
 	func _init():
 		super("box", [
 			BoxUnfold.new(),
 			BoxBottom.new(),
 			BoxTape.new(),
+			CompleteAction.new()
 		])
+		enabled = 0;
+		
+	func is_complete() -> bool: 
+		return complete
 
 	func is_active() -> bool: 
-		return true
+		return !is_complete()
+		
+	func is_active_action(action: ScreenListener) -> bool: 
+		for i in range(0, config.size()): 
+			if enabled != i: 
+				continue
+			var act = config[i]
+			if action.name != act.name:
+				#print("action names didnt match %s and %s" % [action.name, act.name])
+				continue
+			return act.is_active();
+		return false
+			
+				
 
 var action_index = 0;
 var actions: Array[String] = [
@@ -149,12 +170,12 @@ func handle_input_for_action(screen:Screen, action: ScreenListener):
 func _unhandled_input(event):
 	action_index = 0
 	
-	for screen in screens:
-		if screen.is_not_active():
-			continue
-			
+	var active_screens = screens.filter(func(screen): return screen.is_active())
+	
+	for screen in active_screens:
 		for action in screen.config:
-			handle_input_for_action(screen, action)
+			if screen.is_active_action(action):
+				handle_input_for_action(screen, action)
 	
 	if event is InputEventKey:
 		if event.pressed and event.keycode == KEY_W:
