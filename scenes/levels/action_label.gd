@@ -7,7 +7,7 @@ func get_image_for_key(key: Key)-> Texture2D:
 	match key:
 		var letter when key >= KEY_A and key <= KEY_Z:
 			var pos :int = key - KEY_A
-			var character: int= 65 + pos
+			var character: int = 65 + pos
 			var keyfile = make_keyboard.call(String.chr(character))
 			print(keyfile)
 			return load(keyfile)
@@ -40,6 +40,7 @@ var key: Key
 var gamepad: String
 var is_active: bool
 var use_controller: bool
+var hide_label: bool
 
 func _init(n: String, k: Key, g: String, is_controller: bool, active: bool):
 	name = n
@@ -47,6 +48,7 @@ func _init(n: String, k: Key, g: String, is_controller: bool, active: bool):
 	gamepad = g
 	use_controller = is_controller
 	is_active = active
+	print("action label _init ", g)
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -56,12 +58,17 @@ func _ready():
 
 func update_ui():
 	set_custom_minimum_size(Vector2(200, 100))
-	var image = get_image_for_gamepad(gamepad) if use_controller else get_image_for_key(key)
+	var image
 	if is_active:
+		if use_controller:
+			image = get_image_for_gamepad(gamepad) 
+		else:
+			image = get_image_for_key(key)
 		add_image(image, 100, 100)
 	else:
 		add_image(load("res://graphics/face.png"), 100, 100)
-	add_text(name)
+	if !hide_label:
+		add_text(name)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
