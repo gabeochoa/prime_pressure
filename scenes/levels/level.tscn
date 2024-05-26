@@ -2,18 +2,39 @@
 
 [ext_resource type="Script" path="res://scenes/scripts/level.gd" id="1_hgata"]
 [ext_resource type="Texture2D" uid="uid://cwth3ikns67q8" path="res://icon.svg" id="1_ikucx"]
-[ext_resource type="Script" path="res://scenes/scripts/logo.gd" id="2_cbayv"]
 [ext_resource type="PackedScene" uid="uid://b5o3tgfdgtldw" path="res://scenes/player.tscn" id="2_el2g4"]
 [ext_resource type="PackedScene" uid="uid://dphqnxcitwuq3" path="res://scenes/levels/fps_layer.tscn" id="5_70lhp"]
 [ext_resource type="Script" path="res://scenes/scripts/sophie.gd" id="6_hwhkf"]
 [ext_resource type="PackedScene" uid="uid://2ewk74lau0jq" path="res://scenes/action_label.tscn" id="7_0c7d6"]
+
+[sub_resource type="GDScript" id="GDScript_3kxpc"]
+script/source = "extends Sprite2D
+
+var pos: Vector2 = Vector2.ZERO
+const speed: int = 10
+
+func _unhandled_input(event):
+	if event is InputEventKey:
+		if event.pressed and event.keycode == KEY_W:
+			pos.y += 10
+
+
+# Called when the node enters the scene tree for the first time.
+func _ready():
+	pos = Vector2(100, 200);
+
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(_delta):
+	position = pos
+"
 
 [node name="Level" type="Node2D"]
 script = ExtResource("1_hgata")
 
 [node name="logo" type="Sprite2D" parent="."]
 texture = ExtResource("1_ikucx")
-script = ExtResource("2_cbayv")
+script = SubResource("GDScript_3kxpc")
 
 [node name="player_scn" parent="." instance=ExtResource("2_el2g4")]
 position = Vector2(348, 322)

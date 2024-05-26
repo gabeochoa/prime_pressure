@@ -1,27 +1,5 @@
 extends Node2D
 
-class ActionListener:
-	
-	var data: ActionData
-
-	func _init(action_data: ActionData):
-		data = action_data
-		
-	func from_raw(name: String, key: Key):
-		data.name = name
-		data.key = key
-		return self
-		
-	func is_active() -> bool: 
-		return true
-		
-	func action(screen: Screen): 
-		assert(false, "class " + data.name + " needs to implement action()")
-		return false
-
-	func is_not_active() -> bool:
-		return !is_active()
-
 
 '''
 	open the order
@@ -54,35 +32,6 @@ class ActionListener:
 		t
 '''
 
-class Screen: 
-	class CompleteAction extends ActionListener:
-		func _init():
-			super(
-				ActionData.new()
-				.set_name("Finish")
-				.set_key(KEY_ENTER)
-				.set_gamepad("action_finish")
-			)
-			
-		func action(screen:Screen): 
-			print("screen " + screen.name + " complete")
-			screen.complete = true;
-	
-	var complete: bool
-	var name: String
-	var config : Array[ActionListener]
-	var is_dirty: bool = true
-	
-	func _init(n: String, c: Array[ActionListener]):
-		name = n
-		config = c
-
-	func is_active() -> bool: 
-		assert(false, "class " + name + " needs to implement is_active()")
-		return false
-
-	func is_not_active() -> bool:
-		return !is_active()
 
 	
 class BoxScreen extends Screen: 
@@ -95,7 +44,7 @@ class BoxScreen extends Screen:
 			)
 			
 		func action(screen:Screen): 
-			print(data.name)
+			print("on action triggered: ", data.name)
 			screen.next()
 
 	class BoxBottom extends ActionListener:
@@ -107,7 +56,7 @@ class BoxScreen extends Screen:
 			)
 			
 		func action(screen:Screen): 
-			print(data.name)
+			print("on action triggered: ", data.name)
 			screen.next()
 
 	class BoxTape extends ActionListener:
@@ -119,23 +68,29 @@ class BoxScreen extends Screen:
 			)
 			
 		func action(screen:Screen): 
-			print(data.name)
+			print("on action triggered: ", data.name)
 			screen.next()
 			
-	var enabled: int
-	
-	func next():
+	func next(first_run: bool = false):
 		is_dirty = true
-		enabled += 1
+		
+		if !first_run:
+			active_action.data.set_active(false)
+			config.increment_action_index()
+			
+		active_action = config.get_current_action()
+		active_action.data.set_active(true)
+		
+		print("next_iter, current action is ", active_action.data.name)
 
 	func _init():
-		super("box", [
+		super("box", ActionGroup.new().add_actions([
 			BoxUnfold.new(),
 			BoxBottom.new(),
 			BoxTape.new(),
 			CompleteAction.new()
-		])
-		enabled = 0;
+		]))
+		next(true)
 		
 	func is_complete() -> bool: 
 		return complete
@@ -144,17 +99,7 @@ class BoxScreen extends Screen:
 		return !is_complete()
 		
 	func is_active_action(action: ActionListener) -> bool: 
-		for i in range(0, config.size()): 
-			if enabled != i: 
-				continue
-			var act = config[i]
-			if action.data.name != act.data.name:
-				#print("action names didnt match %s and %s" % [action.name, act.name])
-				continue
-			return act.is_active();
-		return false
-			
-				
+		return action.data.name == active_action.data.name 
 
 class OrderScreen extends Screen: 
 	class OrderLetter extends ActionListener:
@@ -171,25 +116,31 @@ class OrderScreen extends Screen:
 			screen.next()
 	
 	func create_order_letter(item: String):
-		var list: Array[ActionListener]
+		var list: Array[ActionListener] = []
 		for character in item: 
-			var char: int = character.to_ascii_buffer()[0] - "A".to_ascii_buffer()[0]
-			var key: Key = char + KEY_A
+			var char_as_int: int = character.to_ascii_buffer()[0] - "A".to_ascii_buffer()[0]
+			var key: Key = (char_as_int as Key) + KEY_A
 			#print(" idk char %s %s %s key %s" % [character, character.to_ascii_buffer()[0], char, key])
 			list.append(OrderLetter.new(key))
 		return list
 	
-	var enabled: int
-	
 	func next():
 		is_dirty = true
-		enabled += 1
+		active_action = config.get_current_action()
 
 	func _init():
-		var actions = create_order_letter("SHAM")
-		actions.append_array( [ CompleteAction.new() ] )
-		super("order", actions)
-		enabled = 0;
+		var group = (
+			ActionGroup.new()
+			.add_child(
+				ActionGroup.new().add_actions(
+						create_order_letter("SHAM")
+					)
+			)
+			.add_actions(
+				[CompleteAction.new()]
+			))
+		super("order", group)
+		next()
 		
 	func is_complete() -> bool: 
 		return complete
@@ -198,18 +149,8 @@ class OrderScreen extends Screen:
 		return !is_complete()
 		
 	func is_active_action(action: ActionListener) -> bool: 
-		for i in range(0, config.size()): 
-			if enabled != i: 
-				continue
-			var act = config[i]
-			if action.data.name != act.data.name:
-				#print("action names didnt match %s and %s" % [action.name, act.name])
-				continue
-			return act.is_active();
-		return false
+		return action.data.name == active_action.data.name and action.is_active()
 			
-				
-
 
 var action_index = 0;
 var actions: Array[String] = [
@@ -220,17 +161,13 @@ var actions: Array[String] = [
 ]
 
 var screens: Array = [
+	BoxScreen.new(),
 	OrderScreen.new(),
-	BoxScreen.new()
 ]
 
 var using_controller: bool = true
 @export var action_label_scene: PackedScene
 @onready var screen_container: GridContainer =  %GridContainer
-
-# Called when the node enters the scene tree for the first time.
-func _ready():
-	pass # Replace with function body.
 
 func assign_inputs_for_action(screen:Screen, action:ActionListener):
 	if action.data.gamepad.length() != 0:
@@ -243,22 +180,9 @@ func assign_inputs_for_action(screen:Screen, action:ActionListener):
 	action.data.gamepad = actions[action_index]
 	action_index += 1
 
-func handle_input_for_action(screen:Screen, action: ActionListener):
-	if !screen.is_active_action(action):
-		return
-		
-	assign_inputs_for_action(screen,action)
-		
-	if Input.is_key_pressed(action.data.key) or Input.is_action_just_pressed(action.data.gamepad):
-		action.action(screen)
-		get_viewport().set_input_as_handled()
-		return
-
-
 # this cant be Array[Screen] because godot deletes the inner type idk
 func get_active_screens() -> Array:
 	return screens.filter(func(screen): return screen.is_active())
-
 
 func _unhandled_input(event):
 	action_index = 0
@@ -273,15 +197,25 @@ func _unhandled_input(event):
 		print("using keyboard")
 	
 	for screen in get_active_screens():
-		for action in screen.config:
+		var action = screen.active_action
+		if action.is_active():
 			if old_controller != using_controller:
 				screen.is_dirty = true
-			handle_input_for_action(screen, action)
+			if !screen.is_active_action(action):
+				continue
+				
+			if Input.is_key_pressed(action.data.key) or Input.is_action_just_pressed(action.data.gamepad):
+				print("action ", action.data.name, action.data.gamepad)
+				action.action(screen)
+				get_viewport().set_input_as_handled()
+				return
 	
 	#if event.pressed and event.keycode == KEY_W:
 	#get_viewport().set_input_as_handled()
 
 func create_action_button(screen: Screen, action: ActionListener) -> Control :
+	assign_inputs_for_action(screen, action)
+
 	var label = action_label_scene.instantiate().with_data(
 		action.data
 		.set_is_controller(using_controller)
@@ -290,6 +224,7 @@ func create_action_button(screen: Screen, action: ActionListener) -> Control :
 	
 	if action.data.hide_label:
 		label.data.hide_label = true
+		
 	var wrapper = MarginContainer.new()
 	wrapper.add_child(label)
 	wrapper.add_theme_constant_override("theme_override_constants/margin_left", 100)
@@ -312,12 +247,14 @@ func render_actions():
 	
 	for child in children:
 		child.queue_free()
-	for action in active_screen.config:
-		assign_inputs_for_action(active_screen,action)
-		var action_ui = create_action_button(active_screen, action)
-		screen_container.add_child(action_ui)
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+	active_screen.config.for_each_active(
+		func (action): 
+			screen_container.add_child(
+				create_action_button(active_screen, action)
+			)
+	)
+
+func _process(_delta):
 	render_actions()
 	pass

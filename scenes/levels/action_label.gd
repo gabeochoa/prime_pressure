@@ -2,7 +2,6 @@ class_name ActionLabel extends Control
 
 @onready var richLabel: RichTextLabel = %RichTextLabel
 
-	
 var data: ActionData
 
 func with_data(action_data: ActionData) -> ActionLabel :
@@ -11,17 +10,17 @@ func with_data(action_data: ActionData) -> ActionLabel :
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	print("create action label")
 	update_ui()
-	pass # Replace with function body.
 
 func update_ui():
+	print("update action label ui ", data.name)
 	set_custom_minimum_size(Vector2(200, 100))
 	var image = data.get_image()
 	richLabel.add_image(image, 100, 100)
-	if !data.hide_label:
-		richLabel.add_text(name)
+	richLabel.add_text(data.name)
+	#if !data.hide_label:
+		#richLabel.add_text(data.name)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	pass

@@ -56,14 +56,14 @@ func get_image() -> Texture2D:
 
 func get_image_for_key()-> Texture2D:
 	const prefix = "res://graphics/controls/keyboard_default/"
-	var make_keyboard = func(name): return prefix +  "keyboard_%s.png"%name
+	var make_keyboard = func(key_name): return prefix +  "keyboard_%s.png"%key_name
 	
 	match key:
 		var letter when key >= KEY_A and key <= KEY_Z:
-			var pos :int = key - KEY_A
+			var pos :int = letter - KEY_A
 			var character: int = 65 + pos
 			var keyfile = make_keyboard.call(String.chr(character))
-			print(keyfile)
+			#print(keyfile)
 			return load(keyfile)
 		KEY_ENTER:
 			return load(make_keyboard.call("enter"))
@@ -73,8 +73,8 @@ func get_image_for_key()-> Texture2D:
 	
 func get_image_for_gamepad()-> Texture2D:
 	const prefix = "res://graphics/controls/xbox_default/"
-	var make_button= func(name): return prefix +  "xbox_button_%s.png"%name
-	var make_= func(name): return prefix +  "xbox_%s.png"%name
+	var make_button= func(button_name): return prefix +  "xbox_button_%s.png"%button_name
+	var make_= func(button_name): return prefix +  "xbox_%s.png"%button_name
 	match gamepad:
 		"action_one":
 			return load(make_button.call("a"))
