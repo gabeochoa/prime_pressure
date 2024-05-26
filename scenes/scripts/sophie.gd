@@ -1,6 +1,5 @@
 extends Node2D
 
-
 enum WindowType {
 	Order,
 	Box,
@@ -154,6 +153,8 @@ var screens: Array = [
 	BoxScreen.new()
 ]
 
+var using_controller: bool = false
+
 @onready var screen_container: GridContainer = $"../CanvasLayer/VBoxContainer/PanelContainer/MarginContainer/GridContainer"
 
 # Called when the node enters the scene tree for the first time.
@@ -165,6 +166,9 @@ func handle_input_for_action(screen:Screen, action: ScreenListener):
 	
 	action.gamepad = actions[action_index]
 	action_index += 1
+	
+	if !screen.is_active_action(action):
+		return
 		
 	if Input.is_key_pressed(action.key) or Input.is_action_just_pressed(action.gamepad):
 		action.action(screen)
@@ -179,11 +183,22 @@ func get_active_screens() -> Array:
 
 func _unhandled_input(event):
 	action_index = 0
+	var old_controller = using_controller
+	
+	if event is InputEventJoypadButton:
+		using_controller = true
+		print("using controller")
+		
+	if event is InputEventKey:
+		using_controller = false
+		print("using keyboard")
 	
 	for screen in get_active_screens():
 		for action in screen.config:
-			if screen.is_active_action(action):
+			if old_controller != using_controller:
+				screen.is_dirty = true
 				handle_input_for_action(screen, action)
+	
 	
 	if event is InputEventKey:
 		if event.pressed and event.keycode == KEY_W:
@@ -193,9 +208,9 @@ func create_action_button(action: ScreenListener) -> Control :
 	var label = ActionLabel.new(
 		action.name,
 		action.key,
-		action.gamepad
+		action.gamepad,
+		using_controller
 	)
-	
 	var wrapper = MarginContainer.new()
 	wrapper.add_child(label)
 	wrapper.add_theme_constant_override("theme_override_constants/margin_left", 100)
