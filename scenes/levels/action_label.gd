@@ -1,4 +1,6 @@
-class_name ActionLabel extends RichTextLabel
+class_name ActionLabel extends Control
+
+@onready var richLabel: RichTextLabel = %RichTextLabel
 
 func get_image_for_key(key: Key)-> Texture2D:
 	const prefix = "res://graphics/controls/keyboard_default/"
@@ -42,13 +44,14 @@ var is_active: bool
 var use_controller: bool
 var hide_label: bool
 
-func _init(n: String, k: Key, g: String, is_controller: bool, active: bool):
+func with_data(n: String, k: Key, g: String, is_controller: bool, active: bool) -> ActionLabel :
 	name = n
 	key = k
 	gamepad = g
 	use_controller = is_controller
 	is_active = active
 	print("action label _init ", g)
+	return self
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -64,11 +67,11 @@ func update_ui():
 			image = get_image_for_gamepad(gamepad) 
 		else:
 			image = get_image_for_key(key)
-		add_image(image, 100, 100)
+		richLabel.add_image(image, 100, 100)
 	else:
-		add_image(load("res://graphics/face.png"), 100, 100)
+		richLabel.add_image(load("res://graphics/face.png"), 100, 100)
 	if !hide_label:
-		add_text(name)
+		richLabel.add_text(name)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):

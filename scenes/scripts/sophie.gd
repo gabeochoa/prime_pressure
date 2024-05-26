@@ -203,8 +203,8 @@ var screens: Array = [
 ]
 
 var using_controller: bool = true
-
-@onready var screen_container: GridContainer = $"../CanvasLayer/VBoxContainer/PanelContainer/MarginContainer/GridContainer"
+@export var action_label_scene: PackedScene
+@onready var screen_container: GridContainer =  %GridContainer
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -260,13 +260,14 @@ func _unhandled_input(event):
 	#get_viewport().set_input_as_handled()
 
 func create_action_button(screen: Screen, action: ScreenListener) -> Control :
-	var label = ActionLabel.new(
+	var label = action_label_scene.instantiate().with_data(
 		action.name,
 		action.key,
 		action.gamepad,
 		using_controller,
 		screen.is_active_action(action)
 	)
+	
 	if action.hide_label:
 		label.hide_label = true
 	var wrapper = MarginContainer.new()
