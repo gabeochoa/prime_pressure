@@ -162,7 +162,7 @@ var actions: Array[String] = [
 
 var screens: Array = [
 	BoxScreen.new(),
-	OrderScreen.new(),
+	#OrderScreen.new(),
 ]
 
 var using_controller: bool = true
@@ -171,9 +171,6 @@ var using_controller: bool = true
 
 func assign_inputs_for_action(screen:Screen, action:ActionListener):
 	if action.data.gamepad.length() != 0:
-		return
-		
-	if !screen.is_active_action(action):
 		return
 		
 	assert(action_index < actions.size(), "Showing more actions on screen than we have actions for")
@@ -190,11 +187,11 @@ func _unhandled_input(event):
 	
 	if event is InputEventJoypadButton:
 		using_controller = true
-		print("using controller")
+		#print("using controller")
 		
 	if event is InputEventKey:
 		using_controller = false
-		print("using keyboard")
+		#print("using keyboard")
 	
 	for screen in get_active_screens():
 		var action = screen.active_action
