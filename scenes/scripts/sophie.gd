@@ -1,5 +1,6 @@
 extends Node2D
 
+
 enum WindowType {
 	Order,
 	Box,
@@ -106,9 +107,11 @@ class BoxScreen extends Screen:
 			print(name)
 			screen.next()
 			
+	var is_dirty: bool = true
 	var enabled: int
 	
 	func next():
+		is_dirty = true
 		enabled += 1
 
 	func _init():
@@ -151,6 +154,8 @@ var screens: Array = [
 	BoxScreen.new()
 ]
 
+@onready var screen_container: GridContainer = $"../CanvasLayer/VBoxContainer/PanelContainer/MarginContainer/GridContainer"
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	pass # Replace with function body.
@@ -167,12 +172,15 @@ func handle_input_for_action(screen:Screen, action: ScreenListener):
 		return
 
 
+# this cant be Array[Screen] because godot deletes the inner type idk
+func get_active_screens() -> Array:
+	return screens.filter(func(screen): return screen.is_active())
+
+
 func _unhandled_input(event):
 	action_index = 0
 	
-	var active_screens = screens.filter(func(screen): return screen.is_active())
-	
-	for screen in active_screens:
+	for screen in get_active_screens():
 		for action in screen.config:
 			if screen.is_active_action(action):
 				handle_input_for_action(screen, action)
@@ -181,6 +189,39 @@ func _unhandled_input(event):
 		if event.pressed and event.keycode == KEY_W:
 			get_viewport().set_input_as_handled()
 
+func create_action_button(action: ScreenListener) -> Control :
+	var label = ActionLabel.new(
+		action.name,
+		action.key,
+		action.gamepad
+	)
+	
+	var wrapper = MarginContainer.new()
+	wrapper.add_child(label)
+	wrapper.add_theme_constant_override("theme_override_constants/margin_left", 100)
+	return wrapper
+		
+func render_actions():
+	var actives = get_active_screens()
+	if actives.size() == 0:
+		print("no active screens")
+		return
+		
+	var active_screen = actives[0]
+	
+	if !active_screen.is_dirty:
+		return
+	active_screen.is_dirty = false
+	
+	var children = screen_container.get_children();
+	
+	for child in children:
+		child.queue_free()
+	for action in active_screen.config:
+		var action_ui = create_action_button(action)
+		screen_container.add_child(action_ui)
+
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
+	render_actions()
 	pass
