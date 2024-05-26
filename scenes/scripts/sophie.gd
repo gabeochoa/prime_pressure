@@ -1,20 +1,22 @@
 extends Node2D
 
 class ScreenListener:
-	var hide_label: bool
-	var name: String
-	var key: Key
-	var gamepad: String
+	
+	var data: ActionData
 
-	func _init(n: String, k:Key):
-		name = n
-		key = k
+	func _init(action_data: ActionData):
+		data = action_data
+		
+	func from_raw(name: String, key: Key):
+		data.name = name
+		data.key = key
+		return self
 		
 	func is_active() -> bool: 
 		return true
 		
 	func action(screen: Screen): 
-		assert(false, "class " + name + " needs to implement action()")
+		assert(false, "class " + data.name + " needs to implement action()")
 		return false
 
 	func is_not_active() -> bool:
@@ -55,8 +57,12 @@ class ScreenListener:
 class Screen: 
 	class CompleteAction extends ScreenListener:
 		func _init():
-			super("Finish", KEY_ENTER)
-			gamepad = "action_finish"
+			super(
+				ActionData.new()
+				.set_name("Finish")
+				.set_key(KEY_ENTER)
+				.set_gamepad("action_finish")
+			)
 			
 		func action(screen:Screen): 
 			print("screen " + screen.name + " complete")
@@ -82,26 +88,38 @@ class Screen:
 class BoxScreen extends Screen: 
 	class BoxUnfold extends ScreenListener:
 		func _init():
-			super("unfold", KEY_U)
+			super(
+				ActionData.new()
+				.set_name("unfold")
+				.set_key(KEY_U)
+			)
 			
 		func action(screen:Screen): 
-			print(name)
+			print(data.name)
 			screen.next()
 
 	class BoxBottom extends ScreenListener:
 		func _init():
-			super("bottom", KEY_B)
+			super(
+				ActionData.new()
+				.set_name("bottom")
+				.set_key(KEY_B)
+			)
 			
 		func action(screen:Screen): 
-			print(name)
+			print(data.name)
 			screen.next()
 
 	class BoxTape extends ScreenListener:
 		func _init():
-			super("tape", KEY_T)
+			super(
+				ActionData.new()
+				.set_name("tape")
+				.set_key(KEY_T)
+			)
 			
 		func action(screen:Screen): 
-			print(name)
+			print(data.name)
 			screen.next()
 			
 	var enabled: int
@@ -130,7 +148,7 @@ class BoxScreen extends Screen:
 			if enabled != i: 
 				continue
 			var act = config[i]
-			if action.name != act.name:
+			if action.data.name != act.data.name:
 				#print("action names didnt match %s and %s" % [action.name, act.name])
 				continue
 			return act.is_active();
@@ -141,11 +159,15 @@ class BoxScreen extends Screen:
 class OrderScreen extends Screen: 
 	class OrderLetter extends ScreenListener:
 		func _init(key: Key):
-			super("order_letter_%s" % key, key)
-			hide_label = true
+			super(
+				ActionData.new()
+				.set_name("order_letter_%s" % key)
+				.set_key(key)
+				.set_hide_label(true)
+			)
 			
 		func action(screen:Screen): 
-			print(name)
+			print(data.name)
 			screen.next()
 	
 	func create_order_letter(item: String):
@@ -180,7 +202,7 @@ class OrderScreen extends Screen:
 			if enabled != i: 
 				continue
 			var act = config[i]
-			if action.name != act.name:
+			if action.data.name != act.data.name:
 				#print("action names didnt match %s and %s" % [action.name, act.name])
 				continue
 			return act.is_active();
@@ -211,14 +233,14 @@ func _ready():
 	pass # Replace with function body.
 
 func assign_inputs_for_action(screen:Screen, action:ScreenListener):
-	if action.gamepad.length() != 0:
+	if action.data.gamepad.length() != 0:
 		return
 		
 	if !screen.is_active_action(action):
 		return
 		
 	assert(action_index < actions.size(), "Showing more actions on screen than we have actions for")
-	action.gamepad = actions[action_index]
+	action.data.gamepad = actions[action_index]
 	action_index += 1
 
 func handle_input_for_action(screen:Screen, action: ScreenListener):
@@ -227,7 +249,7 @@ func handle_input_for_action(screen:Screen, action: ScreenListener):
 		
 	assign_inputs_for_action(screen,action)
 		
-	if Input.is_key_pressed(action.key) or Input.is_action_just_pressed(action.gamepad):
+	if Input.is_key_pressed(action.data.key) or Input.is_action_just_pressed(action.data.gamepad):
 		action.action(screen)
 		get_viewport().set_input_as_handled()
 		return
@@ -261,15 +283,13 @@ func _unhandled_input(event):
 
 func create_action_button(screen: Screen, action: ScreenListener) -> Control :
 	var label = action_label_scene.instantiate().with_data(
-		action.name,
-		action.key,
-		action.gamepad,
-		using_controller,
-		screen.is_active_action(action)
+		action.data
+		.set_is_controller(using_controller)
+		.set_active(screen.is_active_action(action))
 	)
 	
-	if action.hide_label:
-		label.hide_label = true
+	if action.data.hide_label:
+		label.data.hide_label = true
 	var wrapper = MarginContainer.new()
 	wrapper.add_child(label)
 	wrapper.add_theme_constant_override("theme_override_constants/margin_left", 100)
