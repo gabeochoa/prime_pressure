@@ -16,13 +16,11 @@ class Shop2 extends Shop:
 		
 class Shop3 extends Shop:
 	func action(): 
-		print("three action")
+		print("two action")
 	
 		
 var config: Array[ScreenListener]= [
 	Shop.new(),
-	Shop2.new(),
-	Shop3.new(),
 ]
 
 var action_index = 0;
