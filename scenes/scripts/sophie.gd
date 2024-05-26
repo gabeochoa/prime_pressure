@@ -11,7 +11,7 @@ class ScreenListener:
 	var key: Key
 	var gamepad: String
 
-	func _init(n: String, k:Key ):
+	func _init(n: String, k:Key):
 		name = n
 		key = k
 			
@@ -62,6 +62,8 @@ class Screen:
 	class CompleteAction extends ScreenListener:
 		func _init():
 			super("Finish", KEY_ENTER)
+			gamepad = "action_finish"
+			
 		func action(screen:Screen): 
 			print("screen " + screen.name + " complete")
 			screen.complete = true;
@@ -153,7 +155,7 @@ var screens: Array = [
 	BoxScreen.new()
 ]
 
-var using_controller: bool = false
+var using_controller: bool = true
 
 @onready var screen_container: GridContainer = $"../CanvasLayer/VBoxContainer/PanelContainer/MarginContainer/GridContainer"
 
@@ -161,12 +163,15 @@ var using_controller: bool = false
 func _ready():
 	pass # Replace with function body.
 
-func handle_input_for_action(screen:Screen, action: ScreenListener):
+func assign_inputs_for_action(screen:Screen, action:ScreenListener):
 	assert(action_index < actions.size(), "Showing more actions on screen than we have actions for")
 	
-	action.gamepad = actions[action_index]
-	action_index += 1
-	
+	if action.gamepad.length() == 0:
+		action.gamepad = actions[action_index]
+		action_index += 1
+
+func handle_input_for_action(screen:Screen, action: ScreenListener):
+	assign_inputs_for_action(screen,action)
 	if !screen.is_active_action(action):
 		return
 		
@@ -197,19 +202,18 @@ func _unhandled_input(event):
 		for action in screen.config:
 			if old_controller != using_controller:
 				screen.is_dirty = true
-				handle_input_for_action(screen, action)
+			handle_input_for_action(screen, action)
 	
-	
-	if event is InputEventKey:
-		if event.pressed and event.keycode == KEY_W:
-			get_viewport().set_input_as_handled()
+	#if event.pressed and event.keycode == KEY_W:
+	#get_viewport().set_input_as_handled()
 
-func create_action_button(action: ScreenListener) -> Control :
+func create_action_button(screen: Screen, action: ScreenListener) -> Control :
 	var label = ActionLabel.new(
 		action.name,
 		action.key,
 		action.gamepad,
-		using_controller
+		using_controller,
+		screen.is_active_action(action)
 	)
 	var wrapper = MarginContainer.new()
 	wrapper.add_child(label)
@@ -217,23 +221,25 @@ func create_action_button(action: ScreenListener) -> Control :
 	return wrapper
 		
 func render_actions():
+	var children = screen_container.get_children();
+	
 	var actives = get_active_screens()
 	if actives.size() == 0:
 		print("no active screens")
+		for child in children:
+			child.queue_free()
 		return
 		
 	var active_screen = actives[0]
-	
 	if !active_screen.is_dirty:
 		return
 	active_screen.is_dirty = false
 	
-	var children = screen_container.get_children();
-	
 	for child in children:
 		child.queue_free()
 	for action in active_screen.config:
-		var action_ui = create_action_button(action)
+		assign_inputs_for_action(active_screen,action)
+		var action_ui = create_action_button(active_screen, action)
 		screen_container.add_child(action_ui)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
