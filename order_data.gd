@@ -56,4 +56,5 @@ static func make_example_order() -> OrderData:
 		Item.new().set_type(ItemType.Chips).set_amount(2),
 		Item.new().set_type(ItemType.ToiletPaper).set_amount(10)
 	]
+	example_order.shuffle()
 	return OrderData.new().set_items(example_order)
