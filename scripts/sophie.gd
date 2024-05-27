@@ -15,15 +15,17 @@ var screens: Array[Screen] = []
 # this cant be Array[Screen] because godot deletes the inner type idk
 func get_active_screens() -> Array:
 	return screens.filter(func(screen): return screen.is_active())
+	
 
-func _unhandled_input(event):
+func process_screen_inputs(event):
 	ActionManager.instance().reset_count()
 	
 	InputSwitchHandler.instance().update_if_switched_input_type(event)
 	
-	if !screens.size(): return 
+	var active_screens = get_active_screens()
+	if active_screens.size() == 0: return 
 	
-	var screen = get_active_screens()[0]
+	var screen = active_screens[0]
 	if screen == null: return 
 	
 	var action = screen.active_action
@@ -39,6 +41,42 @@ func _unhandled_input(event):
 			action.is_complete = true #TODO should this live somewhere else? 
 			get_viewport().set_input_as_handled()
 			return
+	
+func process_queue_input(event):
+	var index_triggered = -1
+	
+	for key in range(KEY_1, KEY_9):
+		var index = key - KEY_1
+		if Input.is_key_pressed(key):
+			index_triggered = index
+			break
+	
+	if index_triggered == -1: return
+	if queue_slots[index_triggered] == null: return
+	
+	var order = queue_slots[index_triggered]
+	if order.ran_state: return
+	
+	match order.state:
+		OrderData.State.New:
+			order.state = OrderData.State.Procure
+			screens.append(
+				ProcureScreen.new(order)
+			)
+			order.ran_state = true
+			queue_dirty = true
+			pass
+		OrderData.State.Procure:
+			pass
+		OrderData.State.Pack:
+			pass
+		OrderData.State.Ship:
+			pass
+	
+
+func _unhandled_input(event):
+	process_queue_input(event)
+	process_screen_inputs(event)
 	
 func create_action_button(screen: Screen, action: ActionListener) -> Control :
 	ActionManager.instance().assign_input_if_missing(action)

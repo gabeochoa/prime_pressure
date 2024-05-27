@@ -42,6 +42,7 @@ class Item:
 	
 var queue_position: int = -1
 var state: State = State.New
+var ran_state: bool = false
 var order_items: Array[Item]
 
 func update_state(new_state: State):
