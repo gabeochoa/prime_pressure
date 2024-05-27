@@ -23,7 +23,7 @@ func has_next() -> bool:
 	if action_index < actions.size(): return true
 	return children_index < children.size() and children[children_index].has_next()
 	
-func for_each_active(cb: Callable) -> void: 
+func for_each(cb: Callable, active_only: bool = false) -> void: 
 	var _old_action_index = action_index
 	var _old_children_index = children_index
 	
@@ -40,10 +40,9 @@ func for_each_active(cb: Callable) -> void:
 	while(true):
 		var action = get_current_action()
 		increment_action_index()
-		
 		if action == null or action.is_empty:
 			break
-		if action.is_not_active(): 
+		if active_only and action.is_not_active(): 
 			continue
 		cb.call(action)
 	
@@ -55,6 +54,10 @@ func for_each_active(cb: Callable) -> void:
 		child.action_index = children_indexes[i][0]
 		child.children_index= children_indexes[i][1]
 		i+=1
+	
+	
+func for_each_active(cb: Callable) -> void: 
+	for_each(cb, true)
 
 func get_current_child_action() -> ActionListener: 
 	if !children.size(): return ActionListener.get_empty()

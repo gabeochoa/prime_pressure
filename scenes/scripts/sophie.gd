@@ -83,7 +83,7 @@ func render_actions():
 	
 	screen_container.columns = active_screen.num_items_per_row
 
-	active_screen.config.for_each_active(
+	active_screen.config.for_each(
 		func (action): 
 			screen_container.add_child(
 				create_action_button(active_screen, action)
