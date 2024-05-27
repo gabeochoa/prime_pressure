@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://dphqnxcitwuq3"]
 
-[ext_resource type="Script" path="res://scenes/scripts/fps_value.gd" id="1_ca77s"]
+[ext_resource type="Script" path="res://scripts/fps_value.gd" id="1_g6svv"]
 
 [node name="fps_layer" type="Control"]
 layout_mode = 3
@@ -17,4 +17,4 @@ offset_bottom = 764.0
 theme_override_font_sizes/normal_font_size = 25
 text = "FPS: 000
 "
-script = ExtResource("1_ca77s")
+script = ExtResource("1_g6svv")
