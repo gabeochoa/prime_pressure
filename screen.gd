@@ -13,6 +13,7 @@ class CompleteAction extends ActionListener:
 		print("screen " + screen.name + " complete")
 		screen.complete = true;
 
+var num_items_per_row: int = 1
 var complete: bool
 var name: String
 var config : ActionGroup
@@ -32,4 +33,3 @@ func is_not_active() -> bool:
 
 func is_complete() -> bool: 
 	return complete
-

@@ -1,40 +1,13 @@
-[gd_scene load_steps=8 format=3 uid="uid://is7vjtxo3drv"]
+[gd_scene load_steps=6 format=3 uid="uid://is7vjtxo3drv"]
 
 [ext_resource type="Script" path="res://scenes/scripts/level.gd" id="1_hgata"]
-[ext_resource type="Texture2D" uid="uid://cwth3ikns67q8" path="res://icon.svg" id="1_ikucx"]
 [ext_resource type="PackedScene" uid="uid://b5o3tgfdgtldw" path="res://scenes/player.tscn" id="2_el2g4"]
 [ext_resource type="PackedScene" uid="uid://dphqnxcitwuq3" path="res://scenes/levels/fps_layer.tscn" id="5_70lhp"]
 [ext_resource type="Script" path="res://scenes/scripts/sophie.gd" id="6_hwhkf"]
 [ext_resource type="PackedScene" uid="uid://2ewk74lau0jq" path="res://scenes/action_label.tscn" id="7_0c7d6"]
 
-[sub_resource type="GDScript" id="GDScript_3kxpc"]
-script/source = "extends Sprite2D
-
-var pos: Vector2 = Vector2.ZERO
-const speed: int = 10
-
-func _unhandled_input(event):
-	if event is InputEventKey:
-		if event.pressed and event.keycode == KEY_W:
-			pos.y += 10
-
-
-# Called when the node enters the scene tree for the first time.
-func _ready():
-	pos = Vector2(100, 200);
-
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(_delta):
-	position = pos
-"
-
 [node name="Level" type="Node2D"]
 script = ExtResource("1_hgata")
-
-[node name="logo" type="Sprite2D" parent="."]
-texture = ExtResource("1_ikucx")
-script = SubResource("GDScript_3kxpc")
 
 [node name="player_scn" parent="." instance=ExtResource("2_el2g4")]
 position = Vector2(348, 322)
@@ -60,13 +33,19 @@ anchor_right = 1.0
 offset_left = -132.0
 offset_bottom = 136.0
 grow_horizontal = 0
+size_flags_horizontal = 8
+size_flags_vertical = 4
 alignment = 2
 
 [node name="PanelContainer" type="PanelContainer" parent="CanvasLayer/VBoxContainer"]
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 6
 
 [node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/VBoxContainer/PanelContainer"]
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 4
 theme_override_constants/margin_left = 100
 theme_override_constants/margin_top = 100
 theme_override_constants/margin_right = 100
@@ -75,3 +54,5 @@ theme_override_constants/margin_bottom = 100
 [node name="GridContainer" type="GridContainer" parent="CanvasLayer/VBoxContainer/PanelContainer/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 4

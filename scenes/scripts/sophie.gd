@@ -1,35 +1,100 @@
 extends Node2D
 
-class SequentialScreen extends Screen: 
-	func next(first_run: bool = false):
-		is_dirty = true
-		
-		if !first_run:
-			active_action.data.set_active(false)
-			config.increment_action_index()
-			
-		active_action = config.get_current_action()
-		active_action.data.set_active(true)
-		
-		print("next_iter, current action is ", active_action.data.name)
+var screens: Array = [
+	BoxScreen.new(),
+	OrderScreen.new(),
+]
 
-	func is_active() -> bool: 
-		return !is_complete()
-		
-	func is_active_action(action: ActionListener) -> bool: 
-		return action.data.name == active_action.data.name 
+var using_controller: bool = true
+@export var action_label_scene: PackedScene
+@onready var screen_container: GridContainer =  %GridContainer
 
+func assign_inputs_for_action(screen:Screen, action:ActionListener):
+	if action.data.gamepad.length() != 0:
+		return
+		
+	ActionManager.instance().assign_and_increment(action.data)
+		
+
+# this cant be Array[Screen] because godot deletes the inner type idk
+func get_active_screens() -> Array:
+	return screens.filter(func(screen): return screen.is_active())
+
+func _unhandled_input(event):
+	ActionManager.instance().reset_count()
+	var old_controller = using_controller
+	
+	if event is InputEventJoypadButton:
+		using_controller = true
+		#print("using controller")
+		
+	if event is InputEventKey:
+		using_controller = false
+		#print("using keyboard")
+	
+	for screen in get_active_screens():
+		var action = screen.active_action
+		if action.is_active():
+			if old_controller != using_controller:
+				screen.is_dirty = true
+			if !screen.is_active_action(action):
+				continue
+				
+			if Input.is_key_pressed(action.data.key) or Input.is_action_just_pressed(action.data.gamepad):
+				print("action ", action.data.name, action.data.gamepad)
+				action.action(screen)
+				get_viewport().set_input_as_handled()
+				return
+	
+func create_action_button(screen: Screen, action: ActionListener) -> Control :
+	assign_inputs_for_action(screen, action)
+
+	var label = action_label_scene.instantiate().with_data(
+		action.data
+		.set_is_controller(using_controller)
+		.set_active(screen.is_active_action(action))
+	)
+	
+	if action.data.hide_label:
+		label.data.hide_label = true
+		
+	var wrapper = MarginContainer.new()
+	wrapper.add_child(label)
+	wrapper.add_theme_constant_override("theme_override_constants/margin_left", 100)
+	return wrapper
+		
+func render_actions():
+	var children = screen_container.get_children();
+	
+	var actives = get_active_screens()
+	if actives.size() == 0:
+		for child in children:
+			child.queue_free()
+		return
+		
+	var active_screen = actives[0]
+	if !active_screen.is_dirty:
+		return
+	active_screen.is_dirty = false
+	
+	for child in children:
+		child.queue_free()
+	
+	screen_container.columns = active_screen.num_items_per_row
+
+	active_screen.config.for_each_active(
+		func (action): 
+			screen_container.add_child(
+				create_action_button(active_screen, action)
+			)
+	)
+
+func _process(_delta):
+	render_actions()
+	pass
 
 class BoxScreen extends SequentialScreen: 
-	class BoxAction extends ActionListener: 
-		func _init(data: ActionData):
-			super(data)
-			
-		func action(screen:Screen): 
-			print("on action triggered: ", data.name)
-			screen.next()
-			
-	class BoxUnfold extends BoxAction:
+	class BoxUnfold extends SequentialAction:
 		func _init():
 			super(
 				ActionData.new()
@@ -37,7 +102,7 @@ class BoxScreen extends SequentialScreen:
 				.set_key(KEY_U)
 			)
 
-	class BoxBottom extends BoxAction:
+	class BoxBottom extends SequentialAction:
 		func _init():
 			super(
 				ActionData.new()
@@ -45,7 +110,7 @@ class BoxScreen extends SequentialScreen:
 				.set_key(KEY_B)
 			)
 
-	class BoxTape extends BoxAction:
+	class BoxTape extends SequentialAction:
 		func _init():
 			super(
 				ActionData.new()
@@ -87,6 +152,7 @@ class OrderScreen extends SequentialScreen:
 		return list
 	
 	func _init():
+		num_items_per_row = 1
 		var orders = create_order_letter("SHAM")
 		orders.append(CompleteAction.new())
 		var group = (
@@ -95,106 +161,3 @@ class OrderScreen extends SequentialScreen:
 		)
 		super("order", group)
 		next(true)
-
-var action_index = 0;
-var actions: Array[String] = [
-	"action_one",
-	"action_two",
-	"action_three",
-	"action_four",
-]
-
-var screens: Array = [
-	#BoxScreen.new(),
-	OrderScreen.new(),
-]
-
-var using_controller: bool = true
-@export var action_label_scene: PackedScene
-@onready var screen_container: GridContainer =  %GridContainer
-
-func assign_inputs_for_action(screen:Screen, action:ActionListener):
-	if action.data.gamepad.length() != 0:
-		return
-		
-	assert(action_index < actions.size(), "Showing more actions on screen than we have actions for")
-	action.data.gamepad = actions[action_index]
-	action_index += 1
-
-# this cant be Array[Screen] because godot deletes the inner type idk
-func get_active_screens() -> Array:
-	return screens.filter(func(screen): return screen.is_active())
-
-func _unhandled_input(event):
-	action_index = 0
-	var old_controller = using_controller
-	
-	if event is InputEventJoypadButton:
-		using_controller = true
-		#print("using controller")
-		
-	if event is InputEventKey:
-		using_controller = false
-		#print("using keyboard")
-	
-	for screen in get_active_screens():
-		var action = screen.active_action
-		if action.is_active():
-			if old_controller != using_controller:
-				screen.is_dirty = true
-			if !screen.is_active_action(action):
-				continue
-				
-			if Input.is_key_pressed(action.data.key) or Input.is_action_just_pressed(action.data.gamepad):
-				print("action ", action.data.name, action.data.gamepad)
-				action.action(screen)
-				get_viewport().set_input_as_handled()
-				return
-	
-	#if event.pressed and event.keycode == KEY_W:
-	#get_viewport().set_input_as_handled()
-
-func create_action_button(screen: Screen, action: ActionListener) -> Control :
-	assign_inputs_for_action(screen, action)
-
-	var label = action_label_scene.instantiate().with_data(
-		action.data
-		.set_is_controller(using_controller)
-		.set_active(screen.is_active_action(action))
-	)
-	
-	if action.data.hide_label:
-		label.data.hide_label = true
-		
-	var wrapper = MarginContainer.new()
-	wrapper.add_child(label)
-	wrapper.add_theme_constant_override("theme_override_constants/margin_left", 100)
-	return wrapper
-		
-func render_actions():
-	var children = screen_container.get_children();
-	
-	var actives = get_active_screens()
-	if actives.size() == 0:
-		for child in children:
-			child.queue_free()
-		return
-		
-	var active_screen = actives[0]
-	if !active_screen.is_dirty:
-		return
-	active_screen.is_dirty = false
-	
-	for child in children:
-		child.queue_free()
-
-	active_screen.config.for_each_active(
-		func (action): 
-			screen_container.add_child(
-				create_action_button(active_screen, action)
-			)
-	)
-
-func _process(_delta):
-	render_actions()
-	pass
