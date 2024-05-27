@@ -1,10 +1,12 @@
-[gd_scene load_steps=6 format=3 uid="uid://is7vjtxo3drv"]
+[gd_scene load_steps=8 format=3 uid="uid://is7vjtxo3drv"]
 
 [ext_resource type="Script" path="res://scripts/level.gd" id="1_sc7le"]
 [ext_resource type="Script" path="res://scripts/sophie.gd" id="2_2k81c"]
 [ext_resource type="PackedScene" uid="uid://b5o3tgfdgtldw" path="res://scenes/player.tscn" id="2_el2g4"]
 [ext_resource type="PackedScene" uid="uid://dphqnxcitwuq3" path="res://scenes/levels/fps_layer.tscn" id="5_70lhp"]
+[ext_resource type="PackedScene" uid="uid://drggxaxtuv255" path="res://scenes/order_queue_item.tscn" id="6_bo4rf"]
 [ext_resource type="PackedScene" uid="uid://2ewk74lau0jq" path="res://scenes/action_label.tscn" id="7_0c7d6"]
+[ext_resource type="PackedScene" uid="uid://bkh8fae2gm2hs" path="res://scenes/top_spacer.tscn" id="7_8tg4x"]
 
 [node name="Level" type="Node2D"]
 script = ExtResource("1_sc7le")
@@ -15,6 +17,12 @@ position = Vector2(348, 322)
 [node name="sophie" type="Node2D" parent="."]
 script = ExtResource("2_2k81c")
 action_label_scene = ExtResource("7_0c7d6")
+order_queue_item_scene = ExtResource("6_bo4rf")
+order_queue_top_spacer_scene = ExtResource("7_8tg4x")
+
+[node name="Timer" type="Timer" parent="sophie"]
+wait_time = 2.0
+one_shot = true
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
@@ -56,3 +64,21 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 4
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="CanvasLayer"]
+custom_minimum_size = Vector2(200, 200)
+anchors_preset = 9
+anchor_bottom = 1.0
+grow_vertical = 2
+size_flags_horizontal = 0
+size_flags_vertical = 3
+
+[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer/VBoxContainer2"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="OrderQueueGrid" type="GridContainer" parent="CanvasLayer/VBoxContainer2/PanelContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[connection signal="timeout" from="sophie/Timer" to="sophie" method="_on_timer_timeout"]

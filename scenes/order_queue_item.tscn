@@ -1,0 +1,35 @@
+[gd_scene load_steps=3 format=3 uid="uid://drggxaxtuv255"]
+
+[ext_resource type="Script" path="res://scenes/order_queue_item.gd" id="1_7li84"]
+
+[sub_resource type="Theme" id="Theme_yl7jh"]
+
+[node name="OrderQueueItem" type="Control"]
+custom_minimum_size = Vector2(2.08165e-12, 100)
+layout_mode = 3
+anchors_preset = 0
+size_flags_horizontal = 3
+size_flags_vertical = 0
+script = ExtResource("1_7li84")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ActionLabel" type="RichTextLabel" parent="HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme = SubResource("Theme_yl7jh")
+theme_override_font_sizes/normal_font_size = 50
+bbcode_enabled = true
+text = " "
+
+[node name="StateIcon" type="RichTextLabel" parent="HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3

@@ -40,7 +40,13 @@ class Item:
 		amount = amt
 		return self
 	
+var queue_position: int = -1
+var state: State = State.New
 var order_items: Array[Item]
+
+func update_state(new_state: State):
+	state = new_state
+	return self
 
 func get_items():
 	return order_items
@@ -50,10 +56,18 @@ func set_items(items: Array[Item]) -> OrderData:
 	return self
 
 
-static func make_example_order() -> OrderData:
+static func make_example_order() -> Array[Item]:
 	var example_order: Array[Item]= [
 		Item.new().set_type(ItemType.Shampoo).set_amount(1),
 		Item.new().set_type(ItemType.Chips).set_amount(2),
 		Item.new().set_type(ItemType.ToiletPaper).set_amount(10)
 	]
-	return OrderData.new().set_items(example_order)
+	example_order.shuffle()
+	return example_order
+
+static func make_new_order() -> OrderData: 
+	return (
+		OrderData.new()
+		.set_items(OrderData.make_example_order())
+		.update_state(State.New)
+	)

@@ -1,4 +1,4 @@
-class_name OrderScreen extends SequentialScreen
+class_name ProcureScreen extends SequentialScreen
 
 class OrderLetter extends ActionListener:
 	func _init(parent:String, key: Key):

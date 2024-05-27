@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://bkh8fae2gm2hs"]
+
+[node name="Top Spacer" type="Control"]
+custom_minimum_size = Vector2(100, 200)
+layout_mode = 3
+anchors_preset = 0
+size_flags_horizontal = 3
