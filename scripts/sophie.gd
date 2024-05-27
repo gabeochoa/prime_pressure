@@ -72,7 +72,10 @@ func process_queue_input(event):
 							screens.append(ShipScreen.new().set_on_complete(func(): 
 								order.last_ran_state = order.state
 								order.state = OrderData.State.Complete
-								print("lets go")))
+								print("lets go")
+								queue_slots[order.queue_position] = null
+								queue_dirty = true
+								))
 							)
 						)
 					queue_dirty = true
