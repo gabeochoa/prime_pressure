@@ -6,6 +6,7 @@ enum State {
 	Procure,
 	Pack,
 	Ship,
+	Complete,
 }
 
 enum ItemType {

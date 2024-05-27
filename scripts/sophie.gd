@@ -64,13 +64,19 @@ func process_queue_input(event):
 			#
 			var on_procure_complete = (
 				func(): 
-					print("on complete cb")
 					order.last_ran_state = order.state
 					order.state = OrderData.State.Pack
 					#
 					screens.append(
 						BoxScreen.new()
-						.set_on_complete(func(): print("nice "))
+						.set_on_complete(func(): 
+							order.last_ran_state = order.state
+							order.state = OrderData.State.Ship
+							screens.append(ShipScreen.new().set_on_complete(func(): 
+								order.last_ran_state = order.state
+								order.state = OrderData.State.Complete
+								print("lets go")))
+							)
 						)
 					queue_dirty = true
 			)
