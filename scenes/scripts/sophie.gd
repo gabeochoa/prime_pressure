@@ -1,20 +1,5 @@
 extends Node2D
 
-class InputSwitchHandler : 
-	var previous: bool = true
-	var using_controller: bool = true
-	func update_if_switched_input_type(event): 
-		previous = using_controller
-		if event is InputEventJoypadButton:
-			using_controller = true
-			#print("using controller")
-		if event is InputEventKey:
-			using_controller = false
-			#print("using keyboard")
-	func changed_since_last_input() -> bool:
-		return previous != using_controller
-	
-var controller_handler: InputSwitchHandler = InputSwitchHandler.new()
 
 var screens: Array = [
 	BoxScreen.new(),
@@ -31,12 +16,12 @@ func get_active_screens() -> Array:
 func _unhandled_input(event):
 	ActionManager.instance().reset_count()
 	
-	controller_handler.update_if_switched_input_type(event)
+	InputSwitchHandler.instance().update_if_switched_input_type(event)
 	
 	for screen in get_active_screens():
 		var action = screen.active_action
 		if action.is_active():
-			if controller_handler.changed_since_last_input():
+			if InputSwitchHandler.instance().changed_since_last_input():
 				screen.is_dirty = true
 			if !screen.is_active_action(action):
 				continue
@@ -52,7 +37,6 @@ func create_action_button(screen: Screen, action: ActionListener) -> Control :
 
 	var label = action_label_scene.instantiate().with_data(
 		action.data
-		.set_is_controller(controller_handler.using_controller)
 		.set_active(screen.is_active_action(action))
 	)
 	

@@ -4,7 +4,6 @@ var name: String
 var key: Key
 var gamepad: String
 var is_active: bool
-var use_controller: bool
 var hide_label: bool
 
 static func with_all(n: String, k: Key, g: String, is_controller: bool, active: bool):
@@ -29,10 +28,6 @@ func set_gamepad(g: String) -> ActionData:
 	gamepad = g
 	return self
 	
-func set_is_controller(ic: bool) -> ActionData: 
-	use_controller = ic
-	return self
-	
 func set_active(ic: bool) -> ActionData: 
 	is_active = ic
 	return self
@@ -43,7 +38,7 @@ func set_hide_label(hl: bool) -> ActionData:
 
 func get_image() -> Texture2D: 
 	var image
-	if use_controller:
+	if InputSwitchHandler.instance().using_controller:
 		image = get_image_for_gamepad() 
 	else:
 		image = get_image_for_key()
