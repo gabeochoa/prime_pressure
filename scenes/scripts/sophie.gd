@@ -29,6 +29,7 @@ func _unhandled_input(event):
 			if Input.is_key_pressed(action.data.key) or Input.is_action_just_pressed(action.data.gamepad):
 				print("action ", action.data.name, action.data.gamepad)
 				action.action(screen)
+				action.is_complete = true #TODO should this live somewhere else? 
 				get_viewport().set_input_as_handled()
 				return
 	
@@ -114,10 +115,10 @@ class BoxScreen extends SequentialScreen:
 
 class OrderScreen extends SequentialScreen: 
 	class OrderLetter extends ActionListener:
-		func _init(key: Key):
+		func _init(parent:String, key: Key):
 			super(
 				ActionData.new()
-				.set_name("order_letter_%s" % key)
+				.set_name("order_letter_%s_%s" % [parent, key])
 				.set_key(key)
 				.set_hide_label(true)
 			)
@@ -132,12 +133,15 @@ class OrderScreen extends SequentialScreen:
 			var char_as_int: int = character.to_ascii_buffer()[0] - "A".to_ascii_buffer()[0]
 			var key: Key = (char_as_int as Key) + KEY_A
 			print(" idk char %s %s %s key %s" % [character, character.to_ascii_buffer()[0], char_as_int, key])
-			list.append(OrderLetter.new(key))
+			list.append(OrderLetter.new(item, key))
 		return list
 	
 	func _init():
-		num_items_per_row = 1
-		var orders = create_order_letter("SHAM")
+		num_items_per_row = 4
+		var orders: Array[ActionListener] = []
+		orders.append_array(create_order_letter("SHAM"))
+		orders.append_array(create_order_letter("CHIP"))
+		orders.append_array(create_order_letter("TOIL"))
 		orders.append(CompleteAction.new())
 		var group = (
 			ActionGroup.new()

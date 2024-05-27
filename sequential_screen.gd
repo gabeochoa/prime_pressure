@@ -24,5 +24,5 @@ func is_active() -> bool:
 	return !is_complete()
 	
 func is_active_action(action: ActionListener) -> bool: 
-	return action.data.name == active_action.data.name 
+	return action.data.name == active_action.data.name and action.is_active()
 

@@ -2,12 +2,13 @@ class_name ActionListener
 
 var data: ActionData
 var is_empty: bool = false
+var is_complete: bool = false
 
 func _init(action_data: ActionData):
 	data = action_data
 	
 func is_active() -> bool: 
-	return !is_empty
+	return !is_empty and !is_complete
 	
 func action(_screen: Screen): 
 	assert(false, "class " + data.name + " needs to implement action()")

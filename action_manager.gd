@@ -14,9 +14,9 @@ static func instance() -> ActionManager:
 	return Globals._action_manager
 
 func assign_and_increment(actionData: ActionData):
-	assert(action_index < actions.size(), "Showing more actions on screen than we have actions for")
+	#assert(action_index < actions.size(), "Showing more actions on screen than we have actions for")
 	actionData.gamepad = actions[action_index]
-	action_index += 1
+	action_index = (action_index + 1) % actions.size()
 	
 func assign_input_if_missing(action:ActionListener):
 	if action.data.gamepad.length() != 0:
