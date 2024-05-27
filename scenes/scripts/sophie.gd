@@ -3,7 +3,7 @@ extends Node2D
 
 var screens: Array = [
 	BoxScreen.new(),
-	OrderScreen.new(),
+	OrderScreen.new(OrderData.make_example_order()),
 ]
 
 @export var action_label_scene: PackedScene
@@ -136,16 +136,18 @@ class OrderScreen extends SequentialScreen:
 			list.append(OrderLetter.new(item, key))
 		return list
 	
-	func _init():
+	func _init(order: OrderData):
 		num_items_per_row = 4
-		var orders: Array[ActionListener] = []
-		orders.append_array(create_order_letter("SHAM"))
-		orders.append_array(create_order_letter("CHIP"))
-		orders.append_array(create_order_letter("TOIL"))
-		orders.append(CompleteAction.new())
+		var order_actions: Array[ActionListener] = []
+		for item in order.get_items():
+			var type = item.type
+			var item_data = OrderData.items[type]
+			order_actions.append_array(create_order_letter(item_data.keys))
+			
+		order_actions.append(CompleteAction.new())
 		var group = (
 			ActionGroup.new()
-			.add_actions(orders)
+			.add_actions(order_actions)
 		)
 		super("order", group)
 		next(true)

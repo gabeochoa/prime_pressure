@@ -13,7 +13,7 @@ enum ItemType {
 	ToiletPaper
 } 
 
-const items: Dictionary = {
+static var items: Dictionary = {
 	ItemType.Shampoo: {
 		"en_name": "Shampoo",
 		"keys": "SHAM"
@@ -42,9 +42,18 @@ class Item:
 	
 var order_items: Array[Item]
 
+func get_items():
+	return order_items
+	
+func set_items(items: Array[Item]) -> OrderData:
+	order_items = items
+	return self
 
-var example_order = [
-	Item.new().set_name(ItemType.Shampoo).set_amount(1),
-	Item.new().set_name(ItemType.Chips).set_amount(2),
-	Item.new().set_name(ItemType.ToiletPaper).set_amount(10)
-]
+
+static func make_example_order() -> OrderData:
+	var example_order: Array[Item]= [
+		Item.new().set_type(ItemType.Shampoo).set_amount(1),
+		Item.new().set_type(ItemType.Chips).set_amount(2),
+		Item.new().set_type(ItemType.ToiletPaper).set_amount(10)
+	]
+	return OrderData.new().set_items(example_order)
