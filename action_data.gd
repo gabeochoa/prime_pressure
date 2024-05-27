@@ -43,20 +43,17 @@ func set_hide_label(hl: bool) -> ActionData:
 
 func get_image() -> Texture2D: 
 	var image
-	if is_active:
-		if use_controller:
-			image = get_image_for_gamepad() 
-		else:
-			image = get_image_for_key()
+	if use_controller:
+		image = get_image_for_gamepad() 
 	else:
-		image = load("res://graphics/face.png")
+		image = get_image_for_key()
 	return image
 	
 
 
 func get_image_for_key()-> Texture2D:
 	const prefix = "res://graphics/controls/keyboard_default/"
-	var make_keyboard = func(key_name): return prefix +  "keyboard_%s.png"%key_name
+	var make_keyboard = func(key_name): return prefix +  "keyboard_%s%s.png"% [key_name, "" if is_active else "_outline"]
 	
 	match key:
 		var letter when key >= KEY_A and key <= KEY_Z:
@@ -73,8 +70,8 @@ func get_image_for_key()-> Texture2D:
 	
 func get_image_for_gamepad()-> Texture2D:
 	const prefix = "res://graphics/controls/xbox_default/"
-	var make_button= func(button_name): return prefix +  "xbox_button_%s.png"%button_name
-	var make_= func(button_name): return prefix +  "xbox_%s.png"%button_name
+	var make_button= func(button_name): return prefix +  "xbox_button_%s%s.png"%[ button_name, "" if is_active else "_outline"]
+	var make_= func(button_name): return prefix +  "xbox_%s%s.png"% [button_name, "" if is_active else "_outline"]
 	match gamepad:
 		"action_one":
 			return load(make_button.call("a"))
