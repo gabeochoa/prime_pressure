@@ -40,9 +40,6 @@ func create_action_button(screen: Screen, action: ActionListener) -> Control :
 		.set_active(screen.is_active_action(action))
 	)
 	
-	if action.data.hide_label:
-		label.data.hide_label = true
-		
 	var wrapper = MarginContainer.new()
 	wrapper.add_child(label)
 	wrapper.add_theme_constant_override("theme_override_constants/margin_left", 100)
@@ -67,11 +64,11 @@ func render_actions():
 	
 	screen_container.columns = active_screen.num_items_per_row
 
-	active_screen.config.for_each(
+	active_screen.config.for_all(
 		func (action): 
 			screen_container.add_child(
 				create_action_button(active_screen, action)
-			)
+			),
 	)
 
 func _process(_delta):

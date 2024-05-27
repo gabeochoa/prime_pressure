@@ -23,9 +23,13 @@ func has_next() -> bool:
 	if action_index < actions.size(): return true
 	return children_index < children.size() and children[children_index].has_next()
 	
-func for_each(cb: Callable, active_only: bool = false) -> void: 
+func for_each(cb: Callable, from_beginning: bool = false, active_only: bool = false) -> void: 
 	var _old_action_index = action_index
 	var _old_children_index = children_index
+	
+	if from_beginning:
+		action_index = 0
+		children_index = 0
 	
 	# this would be a Array[Array[int]] but nested types arent allowed 
 	var children_indexes = []
@@ -55,9 +59,11 @@ func for_each(cb: Callable, active_only: bool = false) -> void:
 		child.children_index= children_indexes[i][1]
 		i+=1
 	
+func for_all(cb: Callable) -> void: 
+	for_each(cb, true, false)
 	
 func for_each_active(cb: Callable) -> void: 
-	for_each(cb, true)
+	for_each(cb, false, true)
 
 func get_current_child_action() -> ActionListener: 
 	if !children.size(): return ActionListener.get_empty()

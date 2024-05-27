@@ -12,7 +12,6 @@ static func with_all(n: String, k: Key, g: String, is_controller: bool, active: 
 		.set_name(n)
 		.set_key(k)
 		.set_gamepad(g)
-		.set_is_controller(is_controller)
 		.set_is_active(active)
 	)
 
@@ -43,8 +42,6 @@ func get_image() -> Texture2D:
 	else:
 		image = get_image_for_key()
 	return image
-	
-
 
 func get_image_for_key()-> Texture2D:
 	const prefix = "res://graphics/controls/keyboard_default/"
