@@ -9,12 +9,6 @@ var using_controller: bool = true
 @export var action_label_scene: PackedScene
 @onready var screen_container: GridContainer =  %GridContainer
 
-func assign_inputs_for_action(screen:Screen, action:ActionListener):
-	if action.data.gamepad.length() != 0:
-		return
-		
-	ActionManager.instance().assign_and_increment(action.data)
-		
 
 # this cant be Array[Screen] because godot deletes the inner type idk
 func get_active_screens() -> Array:
@@ -47,7 +41,7 @@ func _unhandled_input(event):
 				return
 	
 func create_action_button(screen: Screen, action: ActionListener) -> Control :
-	assign_inputs_for_action(screen, action)
+	ActionManager.instance().assign_input_if_missing(action)
 
 	var label = action_label_scene.instantiate().with_data(
 		action.data
