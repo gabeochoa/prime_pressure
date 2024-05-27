@@ -52,7 +52,9 @@ func render_actions():
 	if actives.size() == 0:
 		for child in children:
 			child.queue_free()
+		screen_container.get_parent().get_parent().hide()
 		return
+	screen_container.get_parent().get_parent().show()
 		
 	var active_screen = actives[0]
 	if !active_screen.is_dirty:

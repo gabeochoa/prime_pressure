@@ -1,7 +1,7 @@
 class_name InputSwitchHandler
 
-var previous: bool = true
-var using_controller: bool = true
+var previous: bool = false
+var using_controller: bool = false
 
 static func instance() -> InputSwitchHandler: 
 	if Globals._input_switch_handler == null:
