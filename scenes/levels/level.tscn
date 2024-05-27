@@ -11,9 +11,6 @@
 [node name="Level" type="Node2D"]
 script = ExtResource("1_sc7le")
 
-[node name="player_scn" parent="." instance=ExtResource("2_el2g4")]
-position = Vector2(348, 322)
-
 [node name="sophie" type="Node2D" parent="."]
 script = ExtResource("2_2k81c")
 action_label_scene = ExtResource("7_0c7d6")
@@ -23,6 +20,9 @@ order_queue_top_spacer_scene = ExtResource("7_8tg4x")
 [node name="Timer" type="Timer" parent="sophie"]
 wait_time = 2.0
 one_shot = true
+
+[node name="player_scn" parent="." instance=ExtResource("2_el2g4")]
+position = Vector2(348, 322)
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 

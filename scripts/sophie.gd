@@ -100,13 +100,14 @@ func gen_order_queue_item(index: int, order_in_slot: OrderData) :
 	if order_in_slot != null: 
 		match order_in_slot.state:
 			OrderData.State.New:
-				image = load("res://graphics/character_efb_mug.png")
+				image = load("res://graphics/order_new.png")
 			OrderData.State.Procure:
-				image = load("res://graphics/character_efb_mug.png")
+				image = load("res://graphics/order_procure.png")
 			OrderData.State.Pack:
-				image = load("res://graphics/character_efb_mug.png")
+				image = load("res://graphics/order_pack.png")
 			OrderData.State.Ship:
-				image = load("res://graphics/character_efb_mug.png")
+				image = load("res://graphics/order_ship.png")
+				
 	var order_ui_item = order_queue_item_scene.instantiate().with_data(
 		"order_queue_item_%s" % [index],
 		str(index+1),
