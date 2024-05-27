@@ -1,76 +1,6 @@
 extends Node2D
 
-
-'''
-	open the order
-		order the items  (type the first four letters, or four button presses)
-	wait for the order to be fetched 
-	grab box 
-		unfold
-		bottom
-		tape
-	place items 
-		order the items  (type the first four letters, or four button presses)
-		add paper 
-		top
-		tape
-		
-	1
-		sham
-		chip
-		toil
-	...
-	g
-		u
-		f
-		t
-	p
-		sham
-		chip
-		toil
-		p
-		t
-'''
-
-
-	
-class BoxScreen extends Screen: 
-	class BoxUnfold extends ActionListener:
-		func _init():
-			super(
-				ActionData.new()
-				.set_name("unfold")
-				.set_key(KEY_U)
-			)
-			
-		func action(screen:Screen): 
-			print("on action triggered: ", data.name)
-			screen.next()
-
-	class BoxBottom extends ActionListener:
-		func _init():
-			super(
-				ActionData.new()
-				.set_name("bottom")
-				.set_key(KEY_B)
-			)
-			
-		func action(screen:Screen): 
-			print("on action triggered: ", data.name)
-			screen.next()
-
-	class BoxTape extends ActionListener:
-		func _init():
-			super(
-				ActionData.new()
-				.set_name("tape")
-				.set_key(KEY_T)
-			)
-			
-		func action(screen:Screen): 
-			print("on action triggered: ", data.name)
-			screen.next()
-			
+class SequentialScreen extends Screen: 
 	func next(first_run: bool = false):
 		is_dirty = true
 		
@@ -83,6 +13,46 @@ class BoxScreen extends Screen:
 		
 		print("next_iter, current action is ", active_action.data.name)
 
+	func is_active() -> bool: 
+		return !is_complete()
+		
+	func is_active_action(action: ActionListener) -> bool: 
+		return action.data.name == active_action.data.name 
+
+
+class BoxScreen extends SequentialScreen: 
+	class BoxAction extends ActionListener: 
+		func _init(data: ActionData):
+			super(data)
+			
+		func action(screen:Screen): 
+			print("on action triggered: ", data.name)
+			screen.next()
+			
+	class BoxUnfold extends BoxAction:
+		func _init():
+			super(
+				ActionData.new()
+				.set_name("unfold")
+				.set_key(KEY_U)
+			)
+
+	class BoxBottom extends BoxAction:
+		func _init():
+			super(
+				ActionData.new()
+				.set_name("bottom")
+				.set_key(KEY_B)
+			)
+
+	class BoxTape extends BoxAction:
+		func _init():
+			super(
+				ActionData.new()
+				.set_name("tape")
+				.set_key(KEY_T)
+			)
+			
 	func _init():
 		super("box", ActionGroup.new().add_actions([
 			BoxUnfold.new(),
@@ -92,16 +62,8 @@ class BoxScreen extends Screen:
 		]))
 		next(true)
 		
-	func is_complete() -> bool: 
-		return complete
 
-	func is_active() -> bool: 
-		return !is_complete()
-		
-	func is_active_action(action: ActionListener) -> bool: 
-		return action.data.name == active_action.data.name 
-
-class OrderScreen extends Screen: 
+class OrderScreen extends SequentialScreen: 
 	class OrderLetter extends ActionListener:
 		func _init(key: Key):
 			super(
@@ -120,37 +82,19 @@ class OrderScreen extends Screen:
 		for character in item: 
 			var char_as_int: int = character.to_ascii_buffer()[0] - "A".to_ascii_buffer()[0]
 			var key: Key = (char_as_int as Key) + KEY_A
-			#print(" idk char %s %s %s key %s" % [character, character.to_ascii_buffer()[0], char, key])
+			print(" idk char %s %s %s key %s" % [character, character.to_ascii_buffer()[0], char_as_int, key])
 			list.append(OrderLetter.new(key))
 		return list
 	
-	func next():
-		is_dirty = true
-		active_action = config.get_current_action()
-
 	func _init():
+		var orders = create_order_letter("SHAM")
+		orders.append(CompleteAction.new())
 		var group = (
 			ActionGroup.new()
-			.add_child(
-				ActionGroup.new().add_actions(
-						create_order_letter("SHAM")
-					)
-			)
-			.add_actions(
-				[CompleteAction.new()]
-			))
+			.add_actions(orders)
+		)
 		super("order", group)
-		next()
-		
-	func is_complete() -> bool: 
-		return complete
-
-	func is_active() -> bool: 
-		return !is_complete()
-		
-	func is_active_action(action: ActionListener) -> bool: 
-		return action.data.name == active_action.data.name and action.is_active()
-			
+		next(true)
 
 var action_index = 0;
 var actions: Array[String] = [
@@ -161,8 +105,8 @@ var actions: Array[String] = [
 ]
 
 var screens: Array = [
-	BoxScreen.new(),
-	#OrderScreen.new(),
+	#BoxScreen.new(),
+	OrderScreen.new(),
 ]
 
 var using_controller: bool = true
@@ -232,7 +176,6 @@ func render_actions():
 	
 	var actives = get_active_screens()
 	if actives.size() == 0:
-		print("no active screens")
 		for child in children:
 			child.queue_free()
 		return

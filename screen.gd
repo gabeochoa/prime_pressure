@@ -29,3 +29,7 @@ func is_active() -> bool:
 
 func is_not_active() -> bool:
 	return !is_active()
+
+func is_complete() -> bool: 
+	return complete
+
