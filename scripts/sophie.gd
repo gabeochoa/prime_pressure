@@ -29,18 +29,15 @@ func process_screen_inputs(event):
 	if screen == null: return 
 	
 	var action = screen.active_action
-	if action.is_active():
-		if InputSwitchHandler.instance().changed_since_last_input():
-			screen.is_dirty = true
-		if !screen.is_active_action(action):
-			return
-			
-		if Input.is_key_pressed(action.data.key) or Input.is_action_just_pressed(action.data.gamepad):
-			print("action ", action.data.name, action.data.gamepad)
-			action.action(screen)
-			action.is_complete = true #TODO should this live somewhere else? 
-			get_viewport().set_input_as_handled()
-			return
+	if !action.is_active(): return
+	if InputSwitchHandler.instance().changed_since_last_input(): screen.is_dirty = true
+	if !screen.is_active_action(action): return
+		
+	if Input.is_key_pressed(action.data.key) or Input.is_action_just_pressed(action.data.gamepad):
+		print("action ", action.data.name, action.data.gamepad)
+		action.action(screen)
+		action.is_complete = true #TODO should this live somewhere else? 
+		get_viewport().set_input_as_handled()
 	
 func process_queue_input(event):
 	var index_triggered = -1

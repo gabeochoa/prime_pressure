@@ -6,7 +6,7 @@ var gamepad: String
 var is_active: bool
 var hide_label: bool
 
-static func with_all(n: String, k: Key, g: String, is_controller: bool, active: bool):
+static func with_all(n: String, k: Key, g: String, active: bool):
 	return (
 		ActionData.new()
 		.set_name(n)

@@ -81,8 +81,8 @@ func update_state(new_state: State):
 func get_items():
 	return order_items
 	
-func set_items(items: Array[Item]) -> OrderData:
-	order_items = items
+func set_items(it: Array[Item]) -> OrderData:
+	order_items = it
 	return self
 
 static func make_example_order() -> Array[Item]:
