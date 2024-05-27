@@ -12,22 +12,23 @@ enum State {
 enum ItemType {
 	Shampoo,
 	Chips, 
-	ToiletPaper
+	ToiletPaper,
+	Sheets,
+	Slippers,
+	Popcorn,
+	Leggings,
+	Soda
 } 
 
 static var items: Dictionary = {
-	ItemType.Shampoo: {
-		"en_name": "Shampoo",
-		"keys": "SHAM"
-	},
-	ItemType.Chips: {
-		"en_name": "Chips",
-		"keys": "CHIP"
-	},
-	ItemType.ToiletPaper: {
-		"en_name": "Toilet Paper",
-		"keys": "TOIL"
-	}
+	ItemType.Shampoo: { "en_name": "Shampoo", "keys": "SHAM" },
+	ItemType.Chips: { "en_name": "Chips", "keys": "CHIP" },
+	ItemType.ToiletPaper: { "en_name": "Toilet Paper", "keys": "TOIL" },
+	ItemType.Sheets: { "en_name": "Sheets", "keys": "SHEE" },
+	ItemType.Slippers: { "en_name": "Slippers", "keys": "SLIP" },
+	ItemType.Popcorn: { "en_name": "Popcorn", "keys": "CORN" },
+	ItemType.Leggings: { "en_name": "Leggings", "keys": "LEGG" },
+	ItemType.Soda: { "en_name": "Soda", "keys": "SODA" },
 }
 
 class Item:
@@ -86,12 +87,15 @@ func set_items(it: Array[Item]) -> OrderData:
 	return self
 
 static func make_example_order() -> Array[Item]:
-	var example_order: Array[Item]= [
-		Item.new().set_type(ItemType.Shampoo).set_amount(1),
-		Item.new().set_type(ItemType.Chips).set_amount(2),
-		Item.new().set_type(ItemType.ToiletPaper).set_amount(10)
-	]
-	example_order.shuffle()
+	var items = ItemType.keys()
+	items.shuffle()
+	
+	var example_order: Array[Item] = []
+	for i in range(0, 3):
+		var item_type  = items[i]
+		example_order.append(
+			Item.new().set_type(ItemType.get(item_type))
+		)
 	return example_order
 
 static func make_new_order() -> OrderData: 
