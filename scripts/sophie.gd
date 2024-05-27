@@ -233,3 +233,6 @@ func _on_timer_timeout():
 	queue_slots[next_slot] = order
 	queue_dirty = true
 	print("Added order into queue at slot ", next_slot)
+	
+	if find_empty_queue_slot() != -1:
+		timer.start()

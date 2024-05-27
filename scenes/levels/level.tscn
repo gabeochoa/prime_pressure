@@ -18,8 +18,7 @@ order_queue_item_scene = ExtResource("6_bo4rf")
 order_queue_top_spacer_scene = ExtResource("7_8tg4x")
 
 [node name="Timer" type="Timer" parent="sophie"]
-wait_time = 2.0
-one_shot = true
+wait_time = 10.0
 
 [node name="player_scn" parent="." instance=ExtResource("2_el2g4")]
 position = Vector2(348, 322)
