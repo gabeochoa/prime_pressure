@@ -55,15 +55,36 @@ func process_queue_input(event):
 	if queue_slots[index_triggered] == null: return
 	
 	var order = queue_slots[index_triggered]
-	if order.ran_state: return
+	if order.last_ran_state == order.state: return
 	
 	match order.state:
 		OrderData.State.New:
+			order.last_ran_state = OrderData.State.New
 			order.state = OrderData.State.Procure
-			screens.append(
-				ProcureScreen.new(order)
+			#
+			var on_procure_complete = (
+				func(): 
+					print("on complete cb")
+					order.last_ran_state = order.state
+					order.state = OrderData.State.Pack
+					#
+					screens.append(
+						BoxScreen.new()
+						.set_on_complete(func(): print("nice "))
+						)
+					queue_dirty = true
 			)
-			order.ran_state = true
+			
+			var on_complete_fn = (
+				func():
+					print("on complete fn")
+					order.procure_timer.start().on_complete(on_procure_complete)
+			)
+			screens.append(
+				ProcureScreen
+				.new(order)
+				.set_on_complete(on_complete_fn)
+			)
 			queue_dirty = true
 			pass
 		OrderData.State.Procure:
@@ -136,6 +157,7 @@ var queue_slots: Array[OrderData] = [
 func gen_order_queue_item(index: int, order_in_slot: OrderData) :
 	var image: Texture2D = null;
 	if order_in_slot != null: 
+		print("rendering slot with state ", order_in_slot.state)
 		match order_in_slot.state:
 			OrderData.State.New:
 				image = load("res://graphics/order_new.png")
@@ -158,10 +180,10 @@ func render_order_queue():
 	
 	if !queue_dirty: return
 	queue_dirty = false
+	print("Rendering Order Queue")
 	
 	for child in children:
 		child.queue_free()
-	
 	
 	var new_children = []
 	# TODO make global for max orders
@@ -177,7 +199,13 @@ func render_order_queue():
 func _ready():
 	timer.start()
 
-func _process(_delta):
+func run_order_timers(delta):
+	for order in queue_slots:
+		if order == null: continue
+		order._process(delta)
+
+func _process(delta):
+	run_order_timers(delta)
 	render_order_queue()
 	render_actions()
 	pass

@@ -11,7 +11,7 @@ class CompleteAction extends ActionListener:
 		
 	func action(screen:Screen): 
 		print("screen " + screen.name + " complete")
-		screen.complete = true;
+		screen.when_complete()
 
 var num_items_per_row: int = 1
 var complete: bool
@@ -19,6 +19,16 @@ var name: String
 var config : ActionGroup
 var active_action: ActionListener = ActionListener.get_empty()
 var is_dirty: bool = true
+
+var on_complete: Callable
+
+func when_complete():
+	complete = true;
+	if on_complete: on_complete.call()
+	
+func set_on_complete(cb: Callable) -> Screen:
+	on_complete = cb
+	return self
 
 func _init(n: String, c: ActionGroup):
 	name = n

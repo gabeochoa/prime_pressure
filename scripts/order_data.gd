@@ -1,6 +1,7 @@
 class_name OrderData 
 
 enum State {
+	None,
 	New,
 	Procure,
 	Pack,
@@ -42,8 +43,35 @@ class Item:
 	
 var queue_position: int = -1
 var state: State = State.New
-var ran_state: bool = false
+var last_ran_state: State = State.None
 var order_items: Array[Item]
+
+class ProcureTimer:
+	var started = false
+	var totalReset = 1 # number of seconds
+	var total = 0
+	var on_complete_cb: Callable
+	
+	func start() -> ProcureTimer: 
+		started = true
+		return self
+	
+	func on_complete(cb: Callable):
+		on_complete_cb = cb
+	
+	func pass_time(delta):
+		total += delta
+		#print("Procure timer at %s" % [total / totalReset ])
+		if total > totalReset:
+			on_complete_cb.call()
+			started = false
+			total = 0
+
+var procure_timer = ProcureTimer.new()
+
+func _process(delta):
+	if procure_timer.started:
+		procure_timer.pass_time(delta)
 
 func update_state(new_state: State):
 	state = new_state
@@ -55,7 +83,6 @@ func get_items():
 func set_items(items: Array[Item]) -> OrderData:
 	order_items = items
 	return self
-
 
 static func make_example_order() -> Array[Item]:
 	var example_order: Array[Item]= [
