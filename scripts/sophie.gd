@@ -77,26 +77,26 @@ func process_queue_input(_event):
 
 	match order.state:
 		OrderData.State.New:
+			order.update_state(OrderData.State.Procure)
+			queue_dirty = true
 			screens.append(
 				ProcureScreen
 				.new(order)
 				.set_on_complete(func():
-					order.update_state(OrderData.State.Procure)
+					order.update_state(OrderData.State.Pack)
 					)
 			)
+		OrderData.State.Procure:
 			queue_dirty = true
 			pass
-		OrderData.State.Procure:
+		OrderData.State.Pack:
 			screens.append(
 				BoxScreen.new()
 				.set_on_complete(func(): 
-					# TODO skipping pack since its not implemented
 					order.update_state(OrderData.State.Ship)
 					)	
 			)
 			queue_dirty = true
-			pass
-		OrderData.State.Pack:
 			pass
 		OrderData.State.Ship:
 			screens.append(
@@ -167,8 +167,8 @@ func render_actions():
 func gen_order_queue_item(index: int, order_in_slot: OrderData) :
 	var image: Texture2D = null;
 	if order_in_slot != null: 
-		print("rendering slot with state ", order_in_slot.state)
-		match order_in_slot.state:
+		print("rendering slot with state ", order_in_slot.icon_state, " (actual state ", order_in_slot.state)
+		match order_in_slot.icon_state:
 			OrderData.State.New:
 				image = load("res://graphics/order_new.png")
 			OrderData.State.Procure:
@@ -209,14 +209,14 @@ func render_order_queue():
 func _ready():
 	timer.start()
 
-func run_order_timers(delta):
+func run_order_processing(delta):
 	for order in queue_slots:
 		if order == null: continue
 		order._process(delta)
 
 func _process(delta):
 	remove_completed_screens()
-	run_order_timers(delta)
+	run_order_processing(delta)
 	render_order_queue()
 	render_actions()
 	pass

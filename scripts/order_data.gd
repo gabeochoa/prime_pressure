@@ -66,6 +66,7 @@ class Item:
 	
 var queue_position: int = -1
 var state: State = State.New
+var icon_state: State = State.New
 var last_ran_state: State = State.None
 var order_items: Array[Item]
 var timeAtState: float = 0
@@ -88,7 +89,6 @@ func get_ready_time_for_state():
 	# TODO log_warn
 	return 0
 
-
 func _process(delta):
 	timeAtState += delta
 	# print(" time at state ", state, " is " , timeAtState, " delta was ", delta)
@@ -99,6 +99,8 @@ func update_state(new_state: State):
 	state = new_state
 	timeAtState = 0
 	return self
+
+
 
 func get_items():
 	return order_items
