@@ -7,10 +7,10 @@ class_name OrderQueueItem extends Control
 var label: String = "" 
 var icon: Texture2D= null
 
-func with_data(name: String, label: String, icon: Texture2D) -> OrderQueueItem :
-	self.name = name
-	self.label = label
-	self.icon= icon
+func with_data(new_name: String, new_label: String, new_icon: Texture2D) -> OrderQueueItem :
+	self.name = new_name
+	self.label = new_label
+	self.icon= new_icon
 	return self
 
 # Called when the node enters the scene tree for the first time.

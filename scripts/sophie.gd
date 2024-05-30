@@ -40,8 +40,7 @@ func mark_screens_if_dirty():
 		if InputSwitchHandler.instance().changed_since_last_input(): 
 			screen.is_dirty = true
 
-	
-func process_screen_inputs(event):
+func process_screen_inputs(_event):
 	var active_screens = get_active_screens() 
 	if active_screens.size() == 0: return 
 	
@@ -59,7 +58,7 @@ func process_screen_inputs(event):
 		action.is_complete = true #TODO should this live somewhere else? 
 		get_viewport().set_input_as_handled() # consume the input 
 
-func process_queue_input(event):
+func process_queue_input(_event):
 	var index_triggered = -1
 	
 	for key in range(KEY_1, KEY_9):
@@ -73,53 +72,48 @@ func process_queue_input(event):
 	
 	var order = queue_slots[index_triggered]
 	if order.last_ran_state == order.state: return
-	
+
+	if !order.is_order_ready_for_screen(): return
+
 	match order.state:
 		OrderData.State.New:
-			order.last_ran_state = OrderData.State.New
-			order.state = OrderData.State.Procure
-			#
-			var on_procure_complete = (
-				func(): 
-					order.last_ran_state = order.state
-					order.state = OrderData.State.Pack
-					#
-					screens.append(
-						BoxScreen.new()
-						.set_on_complete(func(): 
-							order.last_ran_state = order.state
-							order.state = OrderData.State.Ship
-							screens.append(ShipScreen.new().set_on_complete(func(): 
-								order.last_ran_state = order.state
-								order.state = OrderData.State.Complete
-								print("lets go")
-								queue_slots[order.queue_position] = null
-								queue_dirty = true
-								))
-							)
-						)
-					queue_dirty = true
-			)
-			
-			var on_complete_fn = (
-				func():
-					print("on complete fn")
-					order.procure_timer.start().on_complete(on_procure_complete)
-			)
 			screens.append(
 				ProcureScreen
 				.new(order)
-				.set_on_complete(on_complete_fn)
+				.set_on_complete(func():
+					order.update_state(OrderData.State.Procure)
+					)
 			)
 			queue_dirty = true
 			pass
 		OrderData.State.Procure:
+			screens.append(
+				BoxScreen.new()
+				.set_on_complete(func(): 
+					# TODO skipping pack since its not implemented
+					order.update_state(OrderData.State.Ship)
+					)	
+			)
+			queue_dirty = true
 			pass
 		OrderData.State.Pack:
 			pass
 		OrderData.State.Ship:
+			screens.append(
+				ShipScreen.new()
+				.set_on_complete(func(): 
+					order.update_state(OrderData.State.Complete)
+					print("lets go")
+					)
+			)
+			queue_dirty = true
 			pass
-	
+		OrderData.State.Complete:
+			queue_slots[order.queue_position] = null
+			queue_dirty = true
+			pass
+
+	return 
 
 func _unhandled_input(event):
 	mark_screens_if_dirty()

@@ -1,8 +1,8 @@
 class_name SequentialScreen extends Screen
 	
 class SequentialAction extends ActionListener: 
-	func _init(data: ActionData):
-		super(data)
+	func _init(input_data: ActionData):
+		super(input_data)
 		
 	func action(screen:Screen): 
 		print("on action triggered: ", data.name)

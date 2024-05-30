@@ -16,7 +16,7 @@ func create_order_letter(item: String):
 	var list: Array[ActionListener] = []
 	for character in item: 
 		var char_as_int: int = character.to_ascii_buffer()[0] - "A".to_ascii_buffer()[0]
-		var key: Key = (char_as_int as Key) + KEY_A
+		var key: Key = (char_as_int + (KEY_A as int)) as Key
 		#print(" idk char %s %s %s key %s" % [character, character.to_ascii_buffer()[0], char_as_int, key])
 		list.append(OrderLetter.new(item, key))
 	return list
@@ -26,7 +26,7 @@ func _init(order: OrderData):
 	var order_actions: Array[ActionListener] = []
 	for item in order.get_items():
 		var type = item.type
-		var item_data = OrderData.items[type]
+		var item_data = OrderData.all_items[type]
 		order_actions.append_array(create_order_letter(item_data.keys))
 		# TODO add a number action for how many items they are buying 
 		# i tried just adding it again but typing TOIL 10 times is not fun

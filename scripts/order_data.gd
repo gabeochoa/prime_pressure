@@ -1,5 +1,26 @@
 class_name OrderData 
 
+class OrderTimer:
+	var started = false
+	var totalReset = 1 # number of seconds
+	var total = 0
+	var on_complete_cb: Callable
+	
+	func start() -> OrderTimer: 
+		started = true
+		return self
+	
+	func on_complete(cb: Callable):
+		on_complete_cb = cb
+	
+	func pass_time(delta):
+		total += delta
+		#print("Procure timer at %s" % [total / totalReset ])
+		if total > totalReset:
+			on_complete_cb.call()
+			started = false
+			total = 0
+
 enum State {
 	None,
 	New,
@@ -20,7 +41,7 @@ enum ItemType {
 	Soda
 } 
 
-static var items: Dictionary = {
+static var all_items: Dictionary = {
 	ItemType.Shampoo: { "en_name": "Shampoo", "keys": "SHAM" },
 	ItemType.Chips: { "en_name": "Chips", "keys": "CHIP" },
 	ItemType.ToiletPaper: { "en_name": "Toilet Paper", "keys": "TOIL" },
@@ -47,40 +68,36 @@ var queue_position: int = -1
 var state: State = State.New
 var last_ran_state: State = State.None
 var order_items: Array[Item]
-var timeAtState: int = 0
+var timeAtState: float = 0
+var order_timer = OrderTimer.new()
 
-class ProcureTimer:
-	var started = false
-	var totalReset = 1 # number of seconds
-	var total = 0
-	var on_complete_cb: Callable
-	
-	func start() -> ProcureTimer: 
-		started = true
-		return self
-	
-	func on_complete(cb: Callable):
-		on_complete_cb = cb
-	
-	func pass_time(delta):
-		total += delta
-		#print("Procure timer at %s" % [total / totalReset ])
-		if total > totalReset:
-			on_complete_cb.call()
-			started = false
-			total = 0
+func is_order_ready_for_screen(): 
+	# print("order ready? ", timeAtState, get_ready_time_for_state())
+	return timeAtState > get_ready_time_for_state() 
 
-var procure_timer = ProcureTimer.new()
+func get_ready_time_for_state(): 
+	match state:
+		OrderData.State.New:
+			return 0
+		OrderData.State.Procure:
+			return 3
+		OrderData.State.Pack:
+			return 0
+		OrderData.State.Ship:
+			return 0
+	# TODO log_warn
+	return 0
+
 
 func _process(delta):
 	timeAtState += delta
-	
-	if procure_timer.started:
-		procure_timer.pass_time(delta)
+	# print(" time at state ", state, " is " , timeAtState, " delta was ", delta)
 
 func update_state(new_state: State):
+	# print("update state from ", state, " to " , new_state)
 	if new_state != state:  timeAtState = 0
 	state = new_state
+	timeAtState = 0
 	return self
 
 func get_items():
