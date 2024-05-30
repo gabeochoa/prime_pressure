@@ -77,6 +77,8 @@ func process_queue_input(_event):
 	# TODO show clock
 	if order.timeAtState < order.get_ready_time_for_state(): return
 
+	if get_active_screens().size() != 0: return 
+
 	screens.append(order.open_next_screen())
 	queue_dirty = true
 
