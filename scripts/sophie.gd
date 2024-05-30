@@ -13,14 +13,14 @@ var screens: Array[Screen] = []
 var queue_dirty: bool =  true
 var queue_slots: Array[OrderData] = [
 	null,
-	null,
-	null,
-	null,
-	null,
-	null,
-	null,
-	null,
-	null,
+	# null,
+	# null,
+	# null,
+	# null,
+	# null,
+	# null,
+	# null,
+	# null,
 ]
 
 
@@ -35,10 +35,10 @@ func mark_screens_if_dirty():
 	var active_screens = get_active_screens() 
 	if active_screens.size() == 0: return 
 	
-	for screen in active_screens:
-		# if the user switched from keyboard to gamepad (or vice versa) 
-		if InputSwitchHandler.instance().changed_since_last_input(): 
-			screen.is_dirty = true
+	# mark all dirty if the user switched from keyboard to gamepad (or vice versa) 
+	var input_switched = InputSwitchHandler.instance().changed_since_last_input()
+	if !input_switched: return
+	for screen in active_screens: screen.is_dirty = input_switched
 
 func process_screen_inputs(_event):
 	var active_screens = get_active_screens() 
@@ -61,11 +61,12 @@ func process_screen_inputs(_event):
 func process_queue_input(_event):
 	var index_triggered = -1
 	
+	# TODO fix for controller
 	for key in range(KEY_1, KEY_9):
 		var index = key - KEY_1
-		if Input.is_key_pressed(key):
-			index_triggered = index
-			break
+		if !Input.is_key_pressed(key): continue
+		index_triggered = index
+		break
 	
 	if index_triggered == -1: return
 	if queue_slots[index_triggered] == null: return
@@ -73,45 +74,11 @@ func process_queue_input(_event):
 	var order = queue_slots[index_triggered]
 	if order.last_ran_state == order.state: return
 
-	if !order.is_order_ready_for_screen(): return
+	# TODO show clock
+	if order.timeAtState < order.get_ready_time_for_state(): return
 
-	match order.state:
-		OrderData.State.New:
-			order.update_state(OrderData.State.Procure)
-			queue_dirty = true
-			screens.append(
-				ProcureScreen
-				.new(order)
-				.set_on_complete(func():
-					order.update_state(OrderData.State.Pack)
-					)
-			)
-		OrderData.State.Procure:
-			queue_dirty = true
-			pass
-		OrderData.State.Pack:
-			screens.append(
-				BoxScreen.new()
-				.set_on_complete(func(): 
-					order.update_state(OrderData.State.Ship)
-					)	
-			)
-			queue_dirty = true
-			pass
-		OrderData.State.Ship:
-			screens.append(
-				ShipScreen.new()
-				.set_on_complete(func(): 
-					order.update_state(OrderData.State.Complete)
-					print("lets go")
-					)
-			)
-			queue_dirty = true
-			pass
-		OrderData.State.Complete:
-			queue_slots[order.queue_position] = null
-			queue_dirty = true
-			pass
+	screens.append(order.open_next_screen())
+	queue_dirty = true
 
 	return 
 
@@ -167,8 +134,8 @@ func render_actions():
 func gen_order_queue_item(index: int, order_in_slot: OrderData) :
 	var image: Texture2D = null;
 	if order_in_slot != null: 
-		print("rendering slot with state ", order_in_slot.icon_state, " (actual state ", order_in_slot.state)
-		match order_in_slot.icon_state:
+		print("rendering slot %s with state %s" % [order_in_slot.queue_position, order_in_slot.state])
+		match order_in_slot.state:
 			OrderData.State.New:
 				image = load("res://graphics/order_new.png")
 			OrderData.State.Procure:
@@ -212,6 +179,9 @@ func _ready():
 func run_order_processing(delta):
 	for order in queue_slots:
 		if order == null: continue
+		if order.should_clear_slot(): 
+			queue_slots[order.queue_position] = null
+			queue_dirty = true
 		order._process(delta)
 
 func _process(delta):
@@ -230,7 +200,7 @@ func find_empty_queue_slot() -> int:
 func _on_timer_timeout():
 	var next_slot = find_empty_queue_slot()
 	if next_slot == -1:
-		print("No empty queue slots, you lose buddy")
+		# print("No empty queue slots, you lose buddy")
 		return
 		
 	var order = OrderData.make_new_order()

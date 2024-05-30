@@ -66,22 +66,22 @@ class Item:
 	
 var queue_position: int = -1
 var state: State = State.New
-var icon_state: State = State.New
 var last_ran_state: State = State.None
 var order_items: Array[Item]
 var timeAtState: float = 0
 var order_timer = OrderTimer.new()
 
-func is_order_ready_for_screen(): 
-	# print("order ready? ", timeAtState, get_ready_time_for_state())
-	return timeAtState > get_ready_time_for_state() 
+var next_screen = null
+
+func should_clear_slot() -> bool: 
+	return state == State.Complete
 
 func get_ready_time_for_state(): 
 	match state:
 		OrderData.State.New:
 			return 0
 		OrderData.State.Procure:
-			return 3
+			return 0
 		OrderData.State.Pack:
 			return 0
 		OrderData.State.Ship:
@@ -89,9 +89,73 @@ func get_ready_time_for_state():
 	# TODO log_warn
 	return 0
 
+func fetch_next_screen():
+	if next_screen != null: return
+	match state:
+		OrderData.State.New:
+			next_screen = (
+				ProcureScreen
+				.new(self)
+				.set_on_complete(func():
+					print("procure complete")
+					next_screen = null
+					)
+				)
+		OrderData.State.Procure:
+			next_screen = (
+				BoxScreen.new()
+				.set_on_complete(func(): 
+					print("box complete")
+					next_screen = null
+					)	
+			)
+			pass
+		OrderData.State.Pack:
+			next_screen = (
+				ShipScreen.new()
+				.set_on_complete(func(): 
+					print("lets go")
+					next_screen = null
+					)
+			)
+			pass
+		OrderData.State.Ship:
+			next_screen = (
+				CompleteScreen.new()
+				.set_on_complete(func(): 
+					next_screen = null
+					)
+			)
+			pass
+		OrderData.State.Complete:
+			pass
+	pass
+
 func _process(delta):
 	timeAtState += delta
+	fetch_next_screen()
 	# print(" time at state ", state, " is " , timeAtState, " delta was ", delta)
+
+func open_next_screen() -> Screen: 
+	assert(next_screen != null, "Missing next screen")
+
+	match state: 
+		OrderData.State.New:
+			update_state(OrderData.State.Procure)
+			pass
+		OrderData.State.Procure:
+			update_state(OrderData.State.Pack)
+			pass
+		OrderData.State.Pack:
+			update_state(OrderData.State.Ship)
+			pass
+		OrderData.State.Ship:
+			update_state(OrderData.State.Complete)
+			pass
+		OrderData.State.Complete:
+			pass
+
+	return next_screen
 
 func update_state(new_state: State):
 	# print("update state from ", state, " to " , new_state)
@@ -99,7 +163,6 @@ func update_state(new_state: State):
 	state = new_state
 	timeAtState = 0
 	return self
-
 
 
 func get_items():
