@@ -1,6 +1,5 @@
 extends Node2D
 
-
 @export var action_label_scene: PackedScene
 @export var order_queue_item_scene: PackedScene
 @export var order_queue_top_spacer_scene: PackedScene
@@ -11,18 +10,39 @@ extends Node2D
 @onready var timer: Timer = $Timer
 
 var screens: Array[Screen] = []
+var queue_dirty: bool =  true
+var queue_slots: Array[OrderData] = [
+	null,
+	null,
+	null,
+	null,
+	null,
+	null,
+	null,
+	null,
+	null,
+]
+
 
 # this cant be Array[Screen] because godot deletes the inner type idk
 func get_active_screens() -> Array:
 	return screens.filter(func(screen): return screen.is_active())
-	
 
+func remove_completed_screens():
+	screens = screens.filter(func(screen): return !screen.is_complete())
+
+func mark_screens_if_dirty():
+	var active_screens = get_active_screens() 
+	if active_screens.size() == 0: return 
+	
+	for screen in active_screens:
+		# if the user switched from keyboard to gamepad (or vice versa) 
+		if InputSwitchHandler.instance().changed_since_last_input(): 
+			screen.is_dirty = true
+
+	
 func process_screen_inputs(event):
-	ActionManager.instance().reset_count()
-	
-	InputSwitchHandler.instance().update_if_switched_input_type(event)
-	
-	var active_screens = get_active_screens()
+	var active_screens = get_active_screens() 
 	if active_screens.size() == 0: return 
 	
 	var screen = active_screens[0]
@@ -30,15 +50,15 @@ func process_screen_inputs(event):
 	
 	var action = screen.active_action
 	if !action.is_active(): return
-	if InputSwitchHandler.instance().changed_since_last_input(): screen.is_dirty = true
 	if !screen.is_active_action(action): return
 		
-	if Input.is_key_pressed(action.data.key) or Input.is_action_just_pressed(action.data.gamepad):
+	if (Input.is_key_pressed(action.data.key) 
+	or Input.is_action_just_pressed(action.data.gamepad)):
 		print("action ", action.data.name, action.data.gamepad)
 		action.action(screen)
 		action.is_complete = true #TODO should this live somewhere else? 
-		get_viewport().set_input_as_handled()
-	
+		get_viewport().set_input_as_handled() # consume the input 
+
 func process_queue_input(event):
 	var index_triggered = -1
 	
@@ -102,7 +122,10 @@ func process_queue_input(event):
 	
 
 func _unhandled_input(event):
+	mark_screens_if_dirty()
 	process_queue_input(event)
+	ActionManager.instance().reset_count()
+	InputSwitchHandler.instance().update_if_switched_input_type(event)
 	process_screen_inputs(event)
 	
 func create_action_button(screen: Screen, action: ActionListener) -> Control :
@@ -130,8 +153,8 @@ func render_actions():
 	screen_container.get_parent().get_parent().show()
 		
 	var active_screen = actives[0]
-	if !active_screen.is_dirty:
-		return
+	if !active_screen.is_dirty: return
+
 	active_screen.is_dirty = false
 	
 	for child in children:
@@ -146,19 +169,6 @@ func render_actions():
 			),
 	)
 
-
-var queue_dirty: bool =  true
-var queue_slots: Array[OrderData] = [
-	null,
-	null,
-	null,
-	null,
-	null,
-	null,
-	null,
-	null,
-	null,
-]
 
 func gen_order_queue_item(index: int, order_in_slot: OrderData) :
 	var image: Texture2D = null;
@@ -211,6 +221,7 @@ func run_order_timers(delta):
 		order._process(delta)
 
 func _process(delta):
+	remove_completed_screens()
 	run_order_timers(delta)
 	render_order_queue()
 	render_actions()
@@ -232,6 +243,7 @@ func _on_timer_timeout():
 	order.queue_position = next_slot
 	queue_slots[next_slot] = order
 	queue_dirty = true
+
 	print("Added order into queue at slot ", next_slot)
 	
 	if find_empty_queue_slot() != -1:

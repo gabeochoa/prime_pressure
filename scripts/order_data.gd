@@ -47,6 +47,7 @@ var queue_position: int = -1
 var state: State = State.New
 var last_ran_state: State = State.None
 var order_items: Array[Item]
+var timeAtState: int = 0
 
 class ProcureTimer:
 	var started = false
@@ -72,10 +73,13 @@ class ProcureTimer:
 var procure_timer = ProcureTimer.new()
 
 func _process(delta):
+	timeAtState += delta
+	
 	if procure_timer.started:
 		procure_timer.pass_time(delta)
 
 func update_state(new_state: State):
+	if new_state != state:  timeAtState = 0
 	state = new_state
 	return self
 
