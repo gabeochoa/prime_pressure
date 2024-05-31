@@ -135,22 +135,24 @@ func render_actions():
 
 func gen_order_queue_item(index: int, order_in_slot: OrderData) :
 	var image: Texture2D = null;
-	if order_in_slot != null: 
-		print("rendering slot %s with state %s" % [order_in_slot.queue_position, order_in_slot.state])
-		match order_in_slot.state:
-			OrderData.State.New:
-				image = load("res://graphics/order_new.png")
-			OrderData.State.Procure:
-				image = load("res://graphics/order_procure.png")
-			OrderData.State.Pack:
-				image = load("res://graphics/order_pack.png")
-			OrderData.State.Ship:
-				image = load("res://graphics/order_ship.png")
+	if order_in_slot == null: return
+
+	print("rendering slot %s with state %s" % [order_in_slot.queue_position, order_in_slot.state])
+	match order_in_slot.state:
+		OrderData.State.New:
+			image = load("res://graphics/order_new.png")
+		OrderData.State.Procure:
+			image = load("res://graphics/order_procure.png")
+		OrderData.State.Pack:
+			image = load("res://graphics/order_pack.png")
+		OrderData.State.Ship:
+			image = load("res://graphics/order_ship.png")
 				
 	var order_ui_item = order_queue_item_scene.instantiate().with_data(
 		"order_queue_item_%s" % [index],
 		str(index+1),
 		image,
+		order_in_slot.get_percentage()
 	)
 	return order_ui_item
 

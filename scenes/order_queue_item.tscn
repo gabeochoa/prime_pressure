@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://drggxaxtuv255"]
 
-[ext_resource type="Script" path="res://scripts/order_queue_item.gd" id="1_7li84"]
-[ext_resource type="Script" path="res://scripts/circle_percent_renderer.gd" id="2_3x5xc"]
+[ext_resource type="Script" path="res://scripts/order_queue_item.gd" id="1_xk3uy"]
+[ext_resource type="Script" path="res://scripts/circle_percent_renderer.gd" id="2_gygf1"]
 
 [sub_resource type="Theme" id="Theme_yl7jh"]
 
@@ -11,20 +11,7 @@ layout_mode = 3
 anchors_preset = 0
 size_flags_horizontal = 3
 size_flags_vertical = 0
-script = ExtResource("1_7li84")
-
-[node name="Clock" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -40.0
-offset_top = -40.0
-grow_horizontal = 0
-grow_vertical = 0
-script = ExtResource("2_3x5xc")
+script = ExtResource("1_xk3uy")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 1
@@ -46,3 +33,13 @@ bbcode_enabled = true
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="Clock" type="Control" parent="."]
+layout_mode = 2
+anchors_preset = 0
+offset_left = 100.0
+offset_right = 100.0
+offset_bottom = 100.0
+grow_horizontal = 0
+grow_vertical = 0
+script = ExtResource("2_gygf1")

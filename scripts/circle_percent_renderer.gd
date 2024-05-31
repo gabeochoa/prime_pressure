@@ -1,6 +1,6 @@
 extends Control
 
-var percentage: float = 0
+@export var percentage: float = 0
 
 func update_pct(pct: float):
 	percentage = pct
@@ -18,7 +18,7 @@ func draw_filled_arc(center, radius, angle_from, angle_to, color):
 	draw_polygon(points_arc, colors)
 
 func _draw(): 
-	var center = Vector2(40, 10)
+	var center = Vector2(100, 75)
 	var radius = 25
 	var angle_from = 0
 	var angle_to = 360 * percentage

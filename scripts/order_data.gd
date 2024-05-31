@@ -81,13 +81,18 @@ func get_ready_time_for_state():
 		OrderData.State.New:
 			return 0
 		OrderData.State.Procure:
-			return 0
+			return 3
 		OrderData.State.Pack:
-			return 0
+			return 3
 		OrderData.State.Ship:
 			return 0
 	# TODO log_warn
 	return 0
+
+func get_percentage() -> float :
+	print(" time at ", timeAtState)
+	if get_ready_time_for_state() == 0: return 0
+	return timeAtState / get_ready_time_for_state()
 
 func fetch_next_screen():
 	if next_screen != null: return
