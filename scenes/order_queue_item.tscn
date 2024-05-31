@@ -1,16 +1,30 @@
-[gd_scene load_steps=3 format=3 uid="uid://drggxaxtuv255"]
+[gd_scene load_steps=4 format=3 uid="uid://drggxaxtuv255"]
 
 [ext_resource type="Script" path="res://scenes/order_queue_item.gd" id="1_7li84"]
+[ext_resource type="Script" path="res://scenes/circle_percent_renderer.gd" id="2_3x5xc"]
 
 [sub_resource type="Theme" id="Theme_yl7jh"]
 
 [node name="OrderQueueItem" type="Control"]
-custom_minimum_size = Vector2(2.08165e-12, 100)
+custom_minimum_size = Vector2(100, 100)
 layout_mode = 3
 anchors_preset = 0
 size_flags_horizontal = 3
 size_flags_vertical = 0
 script = ExtResource("1_7li84")
+
+[node name="Clock" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -40.0
+offset_top = -40.0
+grow_horizontal = 0
+grow_vertical = 0
+script = ExtResource("2_3x5xc")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 1
@@ -27,7 +41,6 @@ size_flags_horizontal = 3
 theme = SubResource("Theme_yl7jh")
 theme_override_font_sizes/normal_font_size = 50
 bbcode_enabled = true
-text = " "
 
 [node name="StateIcon" type="RichTextLabel" parent="HBoxContainer"]
 unique_name_in_owner = true
