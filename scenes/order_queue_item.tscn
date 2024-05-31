@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://drggxaxtuv255"]
 
-[ext_resource type="Script" path="res://scenes/order_queue_item.gd" id="1_7li84"]
-[ext_resource type="Script" path="res://scenes/circle_percent_renderer.gd" id="2_3x5xc"]
+[ext_resource type="Script" path="res://scripts/order_queue_item.gd" id="1_7li84"]
+[ext_resource type="Script" path="res://scripts/circle_percent_renderer.gd" id="2_3x5xc"]
 
 [sub_resource type="Theme" id="Theme_yl7jh"]
 

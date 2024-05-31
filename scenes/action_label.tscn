@@ -1,12 +1,12 @@
 [gd_scene load_steps=2 format=3 uid="uid://2ewk74lau0jq"]
 
-[ext_resource type="Script" path="res://scenes/levels/action_label.gd" id="1_5s4h5"]
+[ext_resource type="Script" path="res://scripts/action_label.gd" id="1_eg24a"]
 
 [node name="ActionLabel" type="RichTextLabel"]
 custom_minimum_size = Vector2(100, 100)
 size_flags_horizontal = 3
 size_flags_vertical = 3
-script = ExtResource("1_5s4h5")
+script = ExtResource("1_eg24a")
 
 [node name="RichTextLabel" type="RichTextLabel" parent="."]
 unique_name_in_owner = true
