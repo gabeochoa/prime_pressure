@@ -20,6 +20,15 @@ struct ProcessOrderSelection : afterhours::System<> {
         afterhours::EntityHelper::get_singleton<OrderQueue>();
     OrderQueue &queue = queue_entity.get<OrderQueue>();
 
+    if (selected_order.order_id.has_value()) {
+      auto it = std::find(queue.active_orders.begin(),
+                          queue.active_orders.end(),
+                          selected_order.order_id.value());
+      if (it == queue.active_orders.end()) {
+        selected_order.order_id.reset();
+      }
+    }
+
     for (int key = raylib::KEY_ONE; key <= raylib::KEY_NINE; ++key) {
       if (!raylib::IsKeyPressed(key)) {
         continue;
@@ -45,6 +54,10 @@ struct ProcessOrderSelection : afterhours::System<> {
                               queue.active_orders.end(), order_id);
           if (it != queue.active_orders.end()) {
             queue.active_orders.erase(it);
+          }
+          if (selected_order.order_id.has_value() &&
+              selected_order.order_id.value() == order_id) {
+            selected_order.order_id.reset();
           }
           break;
         }
