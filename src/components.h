@@ -7,6 +7,7 @@ enum struct ItemType { Book, Pen, Mug, Cup, Bag, Box, Toy, Hat, Key, Map };
 
 struct Order : afterhours::BaseComponent {
   std::vector<ItemType> items;
+  std::vector<ItemType> selected_items;
   bool is_complete = false;
   int items_completed = 0;
 };
@@ -65,4 +66,14 @@ struct OrderQueue : afterhours::BaseComponent {
   std::vector<afterhours::EntityID> pending_orders;
   std::vector<afterhours::EntityID> active_orders;
   int max_active_orders = 3;
+};
+
+enum struct ViewState { Computer, Warehouse, Boxing };
+
+struct ActiveView : afterhours::BaseComponent {
+  ViewState current_view = ViewState::Computer;
+};
+
+struct SelectedOrder : afterhours::BaseComponent {
+  std::optional<afterhours::EntityID> order_id;
 };

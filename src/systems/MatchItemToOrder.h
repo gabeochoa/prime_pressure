@@ -13,6 +13,13 @@ static std::string to_lower(const std::string &str) {
 }
 
 struct MatchItemToOrder : afterhours::System<> {
+  bool should_run(float) const override {
+    const afterhours::Entity &view_entity =
+        afterhours::EntityHelper::get_singleton<ActiveView>();
+    const ActiveView &active_view = view_entity.get<ActiveView>();
+    return active_view.current_view == ViewState::Warehouse;
+  }
+
   void once(float) override {
     afterhours::Entity &buffer_entity =
         afterhours::EntityHelper::get_singleton<TypingBuffer>();
@@ -23,39 +30,49 @@ struct MatchItemToOrder : afterhours::System<> {
 
     std::string lower_buffer = to_lower(buffer.buffer);
 
-    afterhours::Entity &queue_entity =
-        afterhours::EntityHelper::get_singleton<OrderQueue>();
-    OrderQueue &queue = queue_entity.get<OrderQueue>();
+    const afterhours::Entity &selected_order_entity =
+        afterhours::EntityHelper::get_singleton<SelectedOrder>();
+    const SelectedOrder &selected_order =
+        selected_order_entity.get<SelectedOrder>();
 
-    for (afterhours::EntityID order_id : queue.active_orders) {
-      for (afterhours::Entity &order_entity : afterhours::EntityQuery()
-                                                  .whereID(order_id)
-                                                  .whereHasComponent<Order>()
-                                                  .gen()) {
-        Order &order = order_entity.get<Order>();
+    if (!selected_order.order_id.has_value()) {
+      return;
+    }
 
-        for (ItemType item_type : order.items) {
-          std::string item_name = item_type_to_string(item_type);
-          std::string lower_item = to_lower(item_name);
+    for (afterhours::Entity &order_entity :
+         afterhours::EntityQuery()
+             .whereID(selected_order.order_id.value())
+             .whereHasComponent<Order>()
+             .gen()) {
+      Order &order = order_entity.get<Order>();
 
-          if (lower_buffer == lower_item) {
-            for (afterhours::Entity &item_entity :
-                 afterhours::EntityQuery()
-                     .whereHasComponent<Item>()
-                     .whereLambda([item_type](const afterhours::Entity &e) {
-                       return e.hasTag(GameTag::IsOnShelf) &&
-                              e.get<Item>().type == item_type;
-                     })
-                     .gen()) {
-              item_entity.disableTag(GameTag::IsOnShelf);
-              item_entity.enableTag(GameTag::IsGrabbed);
-              buffer.buffer.clear();
-              return;
+      for (ItemType item_type : order.items) {
+        std::string item_name = item_type_to_string(item_type);
+        std::string lower_item = to_lower(item_name);
+
+        if (lower_buffer == lower_item) {
+          int selected_count = 0;
+          for (ItemType selected : order.selected_items) {
+            if (selected == item_type) {
+              selected_count++;
             }
           }
+
+          int needed_count = 0;
+          for (ItemType needed : order.items) {
+            if (needed == item_type) {
+              needed_count++;
+            }
+          }
+
+          if (selected_count < needed_count) {
+            order.selected_items.push_back(item_type);
+            buffer.buffer.clear();
+            return;
+          }
         }
-        break;
       }
+      break;
     }
   }
 };

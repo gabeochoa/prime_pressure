@@ -7,7 +7,7 @@
 struct BeginWorldRender : afterhours::System<> {
   virtual void once(float) const override {
     render_backend::BeginTextureMode(mainRT);
-    render_backend::ClearBackground(raylib::DARKGRAY);
+    render_backend::ClearBackground(raylib::BLACK);
   }
 };
 

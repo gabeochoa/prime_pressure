@@ -9,7 +9,11 @@ struct ProcessTypingInput : afterhours::System<TypingBuffer> {
     int key = raylib::GetCharPressed();
 
     if (key > 0) {
-      buffer.buffer += static_cast<char>(key);
+      char c = static_cast<char>(key);
+      if (c >= '0' && c <= '9') {
+        return;
+      }
+      buffer.buffer += c;
       buffer.last_input_time = 0.0f;
     }
 
