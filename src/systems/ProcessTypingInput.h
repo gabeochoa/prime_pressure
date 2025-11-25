@@ -21,6 +21,10 @@ struct ProcessTypingInput : afterhours::System<TypingBuffer> {
       buffer.buffer.pop_back();
     }
 
+    if (raylib::IsKeyPressed(raylib::KEY_ENTER)) {
+      buffer.buffer.clear();
+    }
+
     buffer.last_input_time += dt;
 
     if (buffer.last_input_time > 5.0f) {
