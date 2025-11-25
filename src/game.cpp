@@ -107,6 +107,9 @@ void game() {
   }
 
   while (running && !raylib::WindowShouldClose()) {
+    if (raylib::IsKeyPressed(raylib::KEY_ESCAPE)) {
+      running = false;
+    }
     float dt = raylib::GetFrameTime();
     systems.run(dt);
   }
