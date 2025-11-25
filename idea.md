@@ -21,12 +21,29 @@ A typing-based game similar to Cook Serve Delicious, set in an Amazon warehouse.
 4. ✅ Basic render loop (clear screen, present)
 5. ✅ Verify window opens and closes properly
 
-### Phase 2: MVP (Simple Typing)
-1. Create basic components (Order, Item, TypingBuffer, Box, OrderQueue)
-2. Implement typing input system: TypingBuffer component, ProcessTypingInput system, keyboard input handling
-3. Implement item matching system: MatchItemToOrder system, case-insensitive matching
-4. Implement grab and box mechanics: GrabItem system, BoxItem system, item state management
-5. Create basic rendering systems: RenderOrders, RenderTypingBuffer, RenderBox, simple UI layout
+### Phase 2: MVP (Order & Warehouse Screens)
+1. Create basic components (Order, OrderItem, TypingBuffer, SelectedOrder, IsSelected, ActiveView)
+2. Implement order selection system: ProcessOrderSelection system, number key + ENTER handling
+   - Prevent switching orders mid-way (TODO: allow switching later)
+   - TODO: Allow deselecting orders
+3. Implement view switching: ActiveView component, ProcessViewSwitch system, TAB key handling
+   - Clear typing buffer when switching views
+4. Implement typing input system: TypingBuffer component, ProcessTypingInput system, keyboard input handling
+   - Case-insensitive matching
+   - Match as you type (immediate feedback)
+   - ENTER key clears buffer manually
+   - Red error state when no possible matches remain
+   - TODO: Visual error state for wrong items
+5. Implement item selection tracking: ProcessItemSelection system, mark items as selected when typed
+   - Items can be collected in any order
+   - Duplicate items require multiple typing (one per instance)
+6. Implement order completion: ProcessOrderCompletion system, mark order complete when all items selected
+   - TODO: Order completion animation/feedback
+7. Implement order generation: ProcessOrderGeneration system, spawn orders every 90 seconds
+   - Only spawns if fewer than 3 active orders
+   - Maximum 3 active orders
+8. Create basic rendering systems: RenderOrderView, RenderWarehouseView, RenderTypingBuffer, simple UI layout
+9. Visual feedback: highlight selected orders (green), highlight selected items (green with checkmark), red typing buffer on error
 
 ### Phase 3: Pressure Systems
 1. Add timer system: Timer component, UpdateTimers system, order timeout handling, RenderTimer UI
@@ -47,61 +64,133 @@ A typing-based game similar to Cook Serve Delicious, set in an Amazon warehouse.
 ## Game Name
 **Prime Pressure**
 
+## Gameplay Loop
+
+### Core Flow (Phase 2 MVP - Order & Warehouse Screens)
+
+1. **Order Screen**: Orders appear on screen
+   - Player sees list of orders with numbers (1, 2, 3, etc.)
+   - Player presses a number key (1-9) then ENTER to select an order
+   - Selected order turns green/highlighted
+   - Only one order can be selected at a time
+   - Order shows list of items needed
+
+2. **Warehouse Screen**: Type items from selected order
+   - Player presses TAB to switch to warehouse screen
+   - Player types item names from the selected order
+   - Each item typed gets marked as selected (turns green in the order list)
+   - Visual feedback shows which items have been selected
+   - Continue typing until all items in the order are selected
+
+3. **Complete Order**: Mark order as finished
+   - Once all items in order list are fully selected, return to Order Screen
+   - Press the same number key again to mark the order as complete
+   - Order is removed or marked as completed
+
+**Note**: Boxing screen will be implemented later. Focus is on Order and Warehouse screens for Phase 2 MVP.
+
+### Detailed Mechanics
+
+**Order Selection:**
+- Orders are numbered by position (1st = 1, 2nd = 2, 3rd = 3)
+- Press number key (1-9) then ENTER to select an order
+- Only one order can be selected at a time
+- TODO: Allow switching orders mid-way (currently prevented)
+- TODO: Allow deselecting orders (ESC key or similar)
+
+**Item Collection:**
+- Items can be collected in any order (no specific sequence required)
+- Orders can have duplicate items (e.g., "book, book, pen")
+- Typing an item name selects one instance of that item
+- For duplicates, must type the item name multiple times (once per instance)
+- Case-insensitive matching (typing "BOOK" or "book" both work)
+
+**Typing Mechanics:**
+- Match as you type (immediate feedback, no need to press ENTER)
+- Typing buffer clears when pressing TAB to switch views
+- Press ENTER at any time to manually clear the typing buffer
+- Typing buffer turns RED when no possible matching items remain in the current order
+- TODO: Visual error state for wrong items (items not in order, already selected)
+
+**Order Completion:**
+- Once all items in an order are selected, return to Order Screen
+- Press the same number key again to mark order as complete
+- TODO: Order completion animation/feedback
+- Completed orders are removed from active list
+
+**Order Generation:**
+- New orders spawn automatically every 90 seconds
+- Only spawns if there are fewer than 3 active orders
+- Maximum of 3 active orders at a time
+
+**View Behavior:**
+- Order Screen: Number keys + ENTER work for order selection
+- Warehouse Screen: Typing input matches against selected order's items
+- Typing buffer is always visible but context-sensitive
+
 ## Visual Design & Layout
 
 ### Screen Layout (Phase 2 MVP)
 
 **90s Terminal/Component Screen Aesthetic**
 
-The game uses a view-switching system where the player switches between three views using TAB:
-1. **Computer Screen (Left)** - Shows orders
-2. **Shelf View (Center)** - Shows available items
-3. **Box View (Right)** - Shows packed items
+The game uses a view-switching system where the player switches between two views using TAB:
+1. **Order Screen** - Shows orders, select with number+ENTER
+2. **Warehouse Screen** - Type items from selected order
 
 **View Switching:**
-- Press TAB to cycle through views: Computer → Shelf → Box → Computer
+- Press TAB to switch between Order ↔ Warehouse
 - Typing input is context-sensitive based on current view
 - Typing buffer is always visible at the bottom regardless of view
 
 **Layout:**
 
+**Order Screen:**
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  [COMPUTER VIEW]  [SHELF VIEW]  [BOX VIEW]            │
+│  [ORDER SCREEN]  [WAREHOUSE SCREEN]                    │
 │  (Press TAB to switch)                                 │
 │                                                          │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │ > COMPUTER VIEW                                  │  │
+│  │ > ORDER SCREEN                                   │  │
 │  │                                                  │  │
-│  │  Order 1: book, pen, mug                        │  │
-│  │  Order 2: cup, bag                              │  │
-│  │  Order 3: toy, hat                              │  │
+│  │  1. book, pen, mug                              │  │
+│  │  2. cup, bag                                    │  │
+│  │  3. toy, hat                                    │  │
 │  │                                                  │  │
-│  │  [Type item names to match orders]              │  │
+│  │  [Press number + ENTER to select order]          │  │
+│  │  Selected order turns green                     │  │
 │  └──────────────────────────────────────────────────┘  │
 │                                                          │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │ > SHELF VIEW                                      │  │
-│  │                                                  │  │
-│  │  Available Items:                                │  │
-│  │  [book] [pen] [mug] [cup] [bag]                 │  │
-│  │  [box]  [toy] [hat] [key] [map]                 │  │
-│  │                                                  │  │
-│  │  [Type item name to grab from shelf]            │  │
+│  │ TYPING:                                          │  │
+│  │ (Always visible)                                 │  │
 │  └──────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Warehouse Screen:**
+```
+┌─────────────────────────────────────────────────────────┐
+│  [ORDER SCREEN]  [WAREHOUSE SCREEN]                    │
+│  (Press TAB to switch)                                 │
 │                                                          │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │ > BOX VIEW                                        │  │
+│  │ > WAREHOUSE SCREEN                                │  │
 │  │                                                  │  │
-│  │  Box: 3/10                                       │  │
-│  │  [book] [pen] [mug]                              │  │
+│  │  Selected Order: 1                               │  │
+│  │  Items needed:                                   │  │
+│  │    book ✓ (green)                                │  │
+│  │    pen                                           │  │
+│  │    mug ✓ (green)                                 │  │
 │  │                                                  │  │
-│  │  [Type item name to pack into box]              │  │
+│  │  [Type item names from order]                    │  │
+│  │  [Each typed item turns green when selected]     │  │
 │  └──────────────────────────────────────────────────┘  │
 │                                                          │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │ TYPING: book                                     │  │
-│  │ (Always visible, context-sensitive)              │  │
+│  │ (Always visible)                                 │  │
 │  └──────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -116,38 +205,44 @@ The game uses a view-switching system where the player switches between three vi
 ### Visual Elements
 
 **View System:**
-- Three distinct views that player switches between with TAB
+- Two distinct views that player switches between with TAB
 - Only one view visible at a time (full screen)
 - Terminal/console aesthetic with monospace font
 - Green text on black background (classic 90s terminal look)
 
-**Computer View (Left):**
-- Shows list of active orders
+**Order Screen:**
+- Shows list of active orders with numbers (1, 2, 3, etc.)
 - Each order displays: order number, list of items needed
-- Typing matches items in orders (for grabbing)
-- Terminal-style header: "> COMPUTER VIEW"
+- Player selects order by pressing number key (1-9) then ENTER
+- Selected order turns green/highlighted
+- Only one order can be selected at a time
+- Shows which order is currently selected
+- Terminal-style header: "> ORDER SCREEN"
 - Simple text list format
+- Instructions: "[Press number + ENTER to select order]"
 
-**Shelf View (Center):**
-- Shows all available items on shelves
-- Grid/list of item names in brackets: [book] [pen] [mug]...
-- Typing matches items on shelf (for grabbing)
-- Visual feedback when typing matches an item (highlight in green)
-- Terminal-style header: "> SHELF VIEW"
-
-**Box View (Right):**
-- Shows current box contents
-- Displays capacity: "Box: 3/10"
-- List of packed items: [book] [pen] [mug]
-- Typing matches items in hand/grabbed state (for packing)
-- Terminal-style header: "> BOX VIEW"
+**Warehouse Screen:**
+- Shows the currently selected order and its items
+- Displays which items have been selected (marked with ✓ and green color)
+- Player types item names from the selected order
+- Items can be collected in any order
+- Each item typed gets marked as selected (turns green in the list)
+- For duplicate items, must type the item name multiple times (once per instance)
+- Visual feedback: selected items show checkmark and green color
+- Terminal-style header: "> WAREHOUSE SCREEN"
+- Shows order number at top: "Selected Order: 1"
+- Instructions: "[Type item names from order]"
+- Match as you type (immediate feedback, no ENTER needed)
 
 **Typing Buffer (Always Visible):**
 - Fixed position at bottom of screen
 - Shows current typing input: "TYPING: book"
 - Always visible regardless of current view
 - Context-sensitive: typing affects items in current view
-- Green/yellow text for visibility
+- Green/yellow text for normal typing
+- Red text when no possible matches remain
+- Clears when pressing TAB to switch views
+- Press ENTER to manually clear buffer
 - Terminal-style box border
 
 ### Rendering Approach
@@ -157,9 +252,10 @@ The game uses a view-switching system where the player switches between three vi
 - Text-based rendering (simple and fast)
 - Use raylib::DrawText for all elements
 - Color scheme:
-  - Green: headers, active text, matched items
+  - Green: headers, active text, matched items, selected orders/items
   - White/Gray: normal text, item lists
-  - Yellow: typing buffer
+  - Yellow: typing buffer (normal state)
+  - Red: typing buffer (error state - no possible matches)
   - Black background (terminal style)
 - ASCII-style borders/boxes using characters or simple rectangles
 - View switching animation (optional: fade or slide)
@@ -175,31 +271,63 @@ The game uses a view-switching system where the player switches between three vi
 ### Component Rendering Strategy
 
 **View Management:**
-1. **ActiveView Component**: Tracks current view (Computer/Shelf/Box)
+1. **ActiveView Component**: Tracks current view (Order/Warehouse)
 2. **ProcessViewSwitch**: System to handle TAB key for view switching
 3. **RenderCurrentView**: System that renders the appropriate view based on ActiveView
 
+**Order Selection:**
+1. **SelectedOrder Component**: Tracks which order is currently selected (stores order number/ID)
+2. **ProcessOrderSelection**: System to handle number key + ENTER for order selection
+3. **Order Component**: Contains order data (order number, list of items, completion status)
+
+**Item Selection Tracking:**
+1. **OrderItem Component**: Represents an item in an order
+2. **IsSelected Component**: Tag component marking an item as selected
+3. **ProcessItemSelection**: System to mark items as selected when typed in warehouse view
+
 **View-Specific Rendering:**
-1. **RenderComputerView**: Shows orders list (only when ActiveView == Computer)
-2. **RenderShelfView**: Shows available items on shelves (only when ActiveView == Shelf)
-3. **RenderBoxView**: Shows box contents (only when ActiveView == Box)
-4. **RenderTypingBuffer**: Always renders typing buffer at bottom (regardless of view)
+1. **RenderOrderView**: Shows orders list (only when ActiveView == Order)
+   - Renders all orders with numbers
+   - Highlights selected order in green
+   - Shows selection instructions
+2. **RenderWarehouseView**: Shows selected order and items (only when ActiveView == Warehouse)
+   - Shows selected order number
+   - Renders order items list
+   - Highlights selected items in green with checkmark
+   - Shows typing instructions
+3. **RenderTypingBuffer**: Always renders typing buffer at bottom (regardless of view)
 
 **Input Handling:**
-1. **ProcessTypingInput**: Context-sensitive based on ActiveView
-   - Computer view: matches against order items
-   - Shelf view: matches against shelf items
-   - Box view: matches against grabbed items (for packing)
-2. **ProcessViewSwitch**: Handles TAB key to cycle through views
+1. **ProcessOrderSelection**: Handles number key (1-9) + ENTER to select order
+   - Sets SelectedOrder component
+   - Only one order selected at a time
+   - TODO: Prevent switching orders mid-way (for now, block switching)
+   - TODO: Allow deselecting orders
+2. **ProcessTypingInput**: Context-sensitive based on ActiveView
+   - Order view: number keys + ENTER work for order selection
+   - Warehouse view: matches typed items against selected order's items (as you type)
+   - Case-insensitive matching
+   - When item matches, adds IsSelected tag to one instance of that item
+   - For duplicate items, must type multiple times
+   - Clears buffer when TAB is pressed
+   - ENTER key clears buffer manually
+   - Sets error state (red) when no possible matches remain
+3. **ProcessViewSwitch**: Handles TAB key to switch between Order ↔ Warehouse
+   - Clears typing buffer when switching views
+4. **ProcessOrderCompletion**: Handles number key press when all items selected
+   - When order is fully selected and player presses number again, marks order complete
+   - TODO: Add completion animation/feedback
+5. **ProcessOrderGeneration**: Spawns new orders every 90 seconds
+   - Only spawns if fewer than 3 active orders
+   - Maximum 3 active orders at a time
 
 ### Layout Constants
 
 ```cpp
 // View states
 enum struct ViewState {
-  Computer,
-  Shelf,
-  Box
+  Order,
+  Warehouse
 };
 
 // Typing buffer (always visible)
