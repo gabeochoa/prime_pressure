@@ -21,29 +21,42 @@ A typing-based game similar to Cook Serve Delicious, set in an Amazon warehouse.
 4. ✅ Basic render loop (clear screen, present)
 5. ✅ Verify window opens and closes properly
 
-### Phase 2: MVP (Order & Warehouse Screens)
-1. Create basic components (Order, OrderItem, TypingBuffer, SelectedOrder, IsSelected, ActiveView)
-2. Implement order selection system: ProcessOrderSelection system, number key + ENTER handling
-   - Prevent switching orders mid-way (TODO: allow switching later)
+### Phase 2: MVP (Order & Warehouse Screens) ✅
+1. ✅ Create basic components (Order, TypingBuffer, SelectedOrder, ActiveView)
+2. ✅ Implement order selection system: ProcessOrderSelection system, number key handling (no ENTER needed)
+   - ✅ Only works when no order is currently selected
+   - TODO: Allow switching orders mid-way
    - TODO: Allow deselecting orders
-3. Implement view switching: ActiveView component, ProcessViewSwitch system, TAB key handling
-   - Clear typing buffer when switching views
-4. Implement typing input system: TypingBuffer component, ProcessTypingInput system, keyboard input handling
-   - Case-insensitive matching
-   - Match as you type (immediate feedback)
-   - ENTER key clears buffer manually
-   - Red error state when no possible matches remain
+3. ✅ Implement view switching: ActiveView component, ProcessViewSwitch system, TAB/Shift+TAB key handling
+   - ✅ Bidirectional view switching (TAB forward, Shift+TAB backward)
+   - ✅ Clear typing buffer when switching views
+   - ✅ Three views: Computer, Warehouse, Boxing
+4. ✅ Implement typing input system: TypingBuffer component, ProcessTypingInput system, keyboard input handling
+   - ✅ Case-insensitive matching
+   - ✅ Match as you type (immediate feedback)
+   - ✅ ENTER key clears buffer manually
+   - ✅ Number keys excluded from typing buffer
+   - TODO: Red error state when no possible matches remain
    - TODO: Visual error state for wrong items
-5. Implement item selection tracking: ProcessItemSelection system, mark items as selected when typed
-   - Items can be collected in any order
-   - Duplicate items require multiple typing (one per instance)
-6. Implement order completion: ProcessOrderCompletion system, mark order complete when all items selected
+5. ✅ Implement item selection tracking: MatchItemToOrder system, mark items as selected when typed
+   - ✅ Items can be collected in any order
+   - ✅ Duplicate items require multiple typing (one per instance)
+   - ✅ Only matches against selected order
+   - ✅ Tracks selected items in Order.selected_items
+6. TODO: Implement order completion: ProcessOrderCompletion system, mark order complete when all items selected
    - TODO: Order completion animation/feedback
-7. Implement order generation: ProcessOrderGeneration system, spawn orders every 90 seconds
-   - Only spawns if fewer than 3 active orders
-   - Maximum 3 active orders
-8. Create basic rendering systems: RenderOrderView, RenderWarehouseView, RenderTypingBuffer, simple UI layout
-9. Visual feedback: highlight selected orders (green), highlight selected items (green with checkmark), red typing buffer on error
+7. ✅ Implement order generation: GenerateOrders system, spawn orders every 1 second (testing)
+   - ✅ Only spawns if fewer than 3 active orders
+   - ✅ Maximum 3 active orders
+   - TODO: Change interval to 90 seconds
+8. ✅ Create basic rendering systems: RenderComputerView, RenderWarehouseView, RenderBoxingView, RenderTypingBuffer
+   - ✅ Terminal-style UI with borders
+   - ✅ Black background, green headers
+   - ✅ Typing buffer always visible at bottom
+9. ✅ Visual feedback: highlight selected orders (green), highlight selected items (green/yellow with checkmark)
+   - ✅ Selected orders highlighted in green on Computer view
+   - ✅ Selected items show checkmark and color coding on Warehouse view
+   - TODO: Red typing buffer on error
 
 ### Phase 3: Pressure Systems
 1. Add timer system: Timer component, UpdateTimers system, order timeout handling, RenderTimer UI
@@ -93,9 +106,10 @@ A typing-based game similar to Cook Serve Delicious, set in an Amazon warehouse.
 
 **Order Selection:**
 - Orders are numbered by position (1st = 1, 2nd = 2, 3rd = 3)
-- Press number key (1-9) then ENTER to select an order
+- Press number key (1-9) to select an order (no ENTER needed)
 - Only one order can be selected at a time
-- TODO: Allow switching orders mid-way (currently prevented)
+- Only works when no order is currently selected
+- TODO: Allow switching orders mid-way
 - TODO: Allow deselecting orders (ESC key or similar)
 
 **Item Collection:**
@@ -124,9 +138,13 @@ A typing-based game similar to Cook Serve Delicious, set in an Amazon warehouse.
 - Maximum of 3 active orders at a time
 
 **View Behavior:**
-- Order Screen: Number keys + ENTER work for order selection
+- Computer Screen: Number keys work for order selection (when no order selected)
 - Warehouse Screen: Typing input matches against selected order's items
+- Boxing Screen: Placeholder (coming soon)
 - Typing buffer is always visible but context-sensitive
+- Press TAB to cycle forward (Computer → Warehouse → Boxing → Computer)
+- Press Shift+TAB to cycle backward (Computer → Boxing → Warehouse → Computer)
+- Press ESC to close the game
 
 ## Visual Design & Layout
 
@@ -134,9 +152,10 @@ A typing-based game similar to Cook Serve Delicious, set in an Amazon warehouse.
 
 **90s Terminal/Component Screen Aesthetic**
 
-The game uses a view-switching system where the player switches between two views using TAB:
-1. **Order Screen** - Shows orders, select with number+ENTER
+The game uses a view-switching system where the player switches between three views using TAB:
+1. **Computer Screen** - Shows orders, select with number keys
 2. **Warehouse Screen** - Type items from selected order
+3. **Boxing Screen** - Placeholder for future functionality
 
 **View Switching:**
 - Press TAB to switch between Order ↔ Warehouse
@@ -145,20 +164,20 @@ The game uses a view-switching system where the player switches between two view
 
 **Layout:**
 
-**Order Screen:**
+**Computer Screen:**
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  [ORDER SCREEN]  [WAREHOUSE SCREEN]                    │
+│  [COMPUTER]  [WAREHOUSE]  [BOXING]                    │
 │  (Press TAB to switch)                                 │
 │                                                          │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │ > ORDER SCREEN                                   │  │
+│  │ > COMPUTER SCREEN                                │  │
 │  │                                                  │  │
 │  │  1. book, pen, mug                              │  │
 │  │  2. cup, bag                                    │  │
 │  │  3. toy, hat                                    │  │
 │  │                                                  │  │
-│  │  [Press number + ENTER to select order]          │  │
+│  │  [Press number key to select order]              │  │
 │  │  Selected order turns green                     │  │
 │  └──────────────────────────────────────────────────┘  │
 │                                                          │
@@ -172,7 +191,7 @@ The game uses a view-switching system where the player switches between two view
 **Warehouse Screen:**
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  [ORDER SCREEN]  [WAREHOUSE SCREEN]                    │
+│  [COMPUTER]  [WAREHOUSE]  [BOXING]                    │
 │  (Press TAB to switch)                                 │
 │                                                          │
 │  ┌──────────────────────────────────────────────────┐  │
@@ -210,16 +229,17 @@ The game uses a view-switching system where the player switches between two view
 - Terminal/console aesthetic with monospace font
 - Green text on black background (classic 90s terminal look)
 
-**Order Screen:**
+**Computer Screen:**
 - Shows list of active orders with numbers (1, 2, 3, etc.)
 - Each order displays: order number, list of items needed
-- Player selects order by pressing number key (1-9) then ENTER
+- Player selects order by pressing number key (1-9) (no ENTER needed)
 - Selected order turns green/highlighted
 - Only one order can be selected at a time
+- Only works when no order is currently selected
 - Shows which order is currently selected
-- Terminal-style header: "> ORDER SCREEN"
+- Terminal-style header: "> COMPUTER SCREEN"
 - Simple text list format
-- Instructions: "[Press number + ENTER to select order]"
+- Instructions: "[Press number key to select order]"
 
 **Warehouse Screen:**
 - Shows the currently selected order and its items

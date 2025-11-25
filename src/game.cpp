@@ -10,6 +10,8 @@
 #include "systems/GenerateOrders.h"
 #include "systems/GrabItem.h"
 #include "systems/MatchItemToOrder.h"
+#include "systems/ProcessBoxingInput.h"
+#include "systems/ProcessBoxingOrderSelection.h"
 #include "systems/ProcessOrderSelection.h"
 #include "systems/ProcessTypingInput.h"
 #include "systems/ProcessViewSwitch.h"
@@ -70,6 +72,12 @@ void game() {
     afterhours::EntityHelper::registerSingleton<SelectedOrder>(
         selected_order_entity);
 
+    afterhours::Entity &boxing_progress_entity =
+        afterhours::EntityHelper::createEntity();
+    boxing_progress_entity.addComponent<BoxingProgress>();
+    afterhours::EntityHelper::registerSingleton<BoxingProgress>(
+        boxing_progress_entity);
+
     afterhours::Entity &box_entity = afterhours::EntityHelper::createEntity();
     Box &box = box_entity.addComponent<Box>();
     box.capacity = 10;
@@ -84,7 +92,10 @@ void game() {
     systems.register_update_system(std::make_unique<GenerateOrders>());
     systems.register_update_system(std::make_unique<ProcessViewSwitch>());
     systems.register_update_system(std::make_unique<ProcessOrderSelection>());
+    systems.register_update_system(
+        std::make_unique<ProcessBoxingOrderSelection>());
     systems.register_update_system(std::make_unique<ProcessTypingInput>());
+    systems.register_update_system(std::make_unique<ProcessBoxingInput>());
     systems.register_update_system(std::make_unique<MatchItemToOrder>());
     systems.register_update_system(std::make_unique<GrabItem>());
     systems.register_update_system(std::make_unique<BoxItem>());

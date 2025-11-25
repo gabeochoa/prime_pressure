@@ -9,7 +9,17 @@ struct Order : afterhours::BaseComponent {
   std::vector<ItemType> items;
   std::vector<ItemType> selected_items;
   bool is_complete = false;
+  bool is_shipped = false;
+  bool is_fully_complete = false;
   int items_completed = 0;
+};
+
+enum struct BoxingState { None, FoldBox, PutItems, Fold, Tape, Ship };
+
+struct BoxingProgress : afterhours::BaseComponent {
+  std::optional<afterhours::EntityID> order_id;
+  BoxingState state = BoxingState::None;
+  int items_placed = 0;
 };
 
 inline std::string item_type_to_string(ItemType type) {
@@ -77,3 +87,24 @@ struct ActiveView : afterhours::BaseComponent {
 struct SelectedOrder : afterhours::BaseComponent {
   std::optional<afterhours::EntityID> order_id;
 };
+
+inline std::map<ItemType, int> count_items(const std::vector<ItemType> &items) {
+  std::map<ItemType, int> counts;
+  for (ItemType item_type : items) {
+    counts[item_type]++;
+  }
+  return counts;
+}
+
+inline bool all_items_selected(const Order &order) {
+  std::map<ItemType, int> item_counts = count_items(order.items);
+  std::map<ItemType, int> selected_counts = count_items(order.selected_items);
+
+  for (const auto &[item_type, needed_count] : item_counts) {
+    int selected_count = selected_counts[item_type];
+    if (selected_count < needed_count) {
+      return false;
+    }
+  }
+  return true;
+}

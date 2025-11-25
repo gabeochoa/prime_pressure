@@ -5,14 +5,20 @@
 #include <afterhours/ah.h>
 
 struct RenderWarehouseView : afterhours::System<> {
-  void once(float) const override {
+  bool should_run(float) override {
     const afterhours::Entity &view_entity =
         afterhours::EntityHelper::get_singleton<ActiveView>();
     const ActiveView &active_view = view_entity.get<ActiveView>();
+    return active_view.current_view == ViewState::Warehouse;
+  }
+  bool should_run(float) const override {
+    const afterhours::Entity &view_entity =
+        afterhours::EntityHelper::get_singleton<ActiveView>();
+    const ActiveView &active_view = view_entity.get<ActiveView>();
+    return active_view.current_view == ViewState::Warehouse;
+  }
 
-    if (active_view.current_view != ViewState::Warehouse) {
-      return;
-    }
+  void once(float) const override {
 
     int screen_width = mainRT.texture.width;
     int screen_height = mainRT.texture.height;
@@ -61,37 +67,25 @@ struct RenderWarehouseView : afterhours::System<> {
                    .gen()) {
             const Order &order = order_entity.get<Order>();
 
-            std::map<ItemType, int> item_counts;
-            for (ItemType item_type : order.items) {
-              item_counts[item_type]++;
-            }
-
-            std::map<ItemType, int> selected_counts;
-            for (ItemType item_type : order.selected_items) {
-              selected_counts[item_type]++;
-            }
+            std::map<ItemType, int> item_counts = count_items(order.items);
+            std::map<ItemType, int> selected_counts =
+                count_items(order.selected_items);
 
             for (const auto &[item_type, needed_count] : item_counts) {
               int selected_count = selected_counts[item_type];
               std::string item_name = item_type_to_string(item_type);
               std::string display_text = "  " + item_name;
 
+              raylib::Color item_color = raylib::WHITE;
               if (selected_count > 0) {
                 display_text += " ✓";
-                if (selected_count >= needed_count) {
-                  raylib::DrawText(display_text.c_str(),
-                                   static_cast<int>(box_x + 30),
-                                   static_cast<int>(y), 16, raylib::GREEN);
-                } else {
-                  raylib::DrawText(display_text.c_str(),
-                                   static_cast<int>(box_x + 30),
-                                   static_cast<int>(y), 16, raylib::YELLOW);
-                }
-              } else {
-                raylib::DrawText(display_text.c_str(),
-                                 static_cast<int>(box_x + 30),
-                                 static_cast<int>(y), 16, raylib::WHITE);
+                item_color = (selected_count >= needed_count) ? raylib::GREEN
+                                                              : raylib::YELLOW;
               }
+
+              raylib::DrawText(display_text.c_str(),
+                               static_cast<int>(box_x + 30),
+                               static_cast<int>(y), 16, item_color);
               y += 25.0f;
             }
             break;

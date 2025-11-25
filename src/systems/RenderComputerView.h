@@ -5,14 +5,20 @@
 #include <afterhours/ah.h>
 
 struct RenderComputerView : afterhours::System<> {
-  void once(float) const override {
+  bool should_run(float) override {
     const afterhours::Entity &view_entity =
         afterhours::EntityHelper::get_singleton<ActiveView>();
     const ActiveView &active_view = view_entity.get<ActiveView>();
+    return active_view.current_view == ViewState::Computer;
+  }
+  bool should_run(float) const override {
+    const afterhours::Entity &view_entity =
+        afterhours::EntityHelper::get_singleton<ActiveView>();
+    const ActiveView &active_view = view_entity.get<ActiveView>();
+    return active_view.current_view == ViewState::Computer;
+  }
 
-    if (active_view.current_view != ViewState::Computer) {
-      return;
-    }
+  void once(float) const override {
 
     int screen_width = mainRT.texture.width;
     int screen_height = mainRT.texture.height;
@@ -60,7 +66,13 @@ struct RenderComputerView : afterhours::System<> {
           }
         }
 
-        raylib::Color text_color = is_selected ? raylib::GREEN : raylib::WHITE;
+        if (order.is_shipped) {
+          order_text += " [SHIPPED]";
+        }
+
+        raylib::Color text_color =
+            order.is_shipped ? raylib::YELLOW
+                             : (is_selected ? raylib::GREEN : raylib::WHITE);
         raylib::DrawText(order_text.c_str(), static_cast<int>(box_x + 20),
                          static_cast<int>(y), 20, text_color);
         y += 30.0f;

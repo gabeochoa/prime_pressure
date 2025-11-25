@@ -3,29 +3,33 @@
 #include "../components.h"
 #include <afterhours/ah.h>
 
-struct ProcessOrderSelection : afterhours::System<> {
+struct ProcessBoxingOrderSelection : afterhours::System<> {
   bool should_run(float) const override {
     const afterhours::Entity &view_entity =
         afterhours::EntityHelper::get_singleton<ActiveView>();
     const ActiveView &active_view = view_entity.get<ActiveView>();
-    return active_view.current_view == ViewState::Computer;
+    if (active_view.current_view != ViewState::Boxing) {
+      return false;
+    }
+
+    const afterhours::Entity &boxing_progress_entity =
+        afterhours::EntityHelper::get_singleton<BoxingProgress>();
+    const BoxingProgress &boxing_progress =
+        boxing_progress_entity.get<BoxingProgress>();
+    return !boxing_progress.order_id.has_value();
   }
 
   void once(float) override {
-    afterhours::Entity &selected_order_entity =
-        afterhours::EntityHelper::get_singleton<SelectedOrder>();
-    SelectedOrder &selected_order = selected_order_entity.get<SelectedOrder>();
-
-    afterhours::Entity &queue_entity =
-        afterhours::EntityHelper::get_singleton<OrderQueue>();
-    OrderQueue &queue = queue_entity.get<OrderQueue>();
-
     for (int key = raylib::KEY_ONE; key <= raylib::KEY_NINE; ++key) {
       if (!raylib::IsKeyPressed(key)) {
         continue;
       }
 
       int order_index = key - raylib::KEY_ONE;
+      const afterhours::Entity &queue_entity =
+          afterhours::EntityHelper::get_singleton<OrderQueue>();
+      const OrderQueue &queue = queue_entity.get<OrderQueue>();
+
       if (order_index < 0 ||
           order_index >= static_cast<int>(queue.active_orders.size())) {
         break;
@@ -39,19 +43,19 @@ struct ProcessOrderSelection : afterhours::System<> {
                                                   .gen()) {
         Order &order = order_entity.get<Order>();
 
-        if (order.is_shipped && !order.is_fully_complete) {
-          order.is_fully_complete = true;
-          auto it = std::find(queue.active_orders.begin(),
-                              queue.active_orders.end(), order_id);
-          if (it != queue.active_orders.end()) {
-            queue.active_orders.erase(it);
-          }
+        if (!all_items_selected(order) || order.is_shipped) {
           break;
         }
 
-        if (!selected_order.order_id.has_value() && !order.is_shipped) {
-          selected_order.order_id = order_id;
-        }
+        afterhours::Entity &boxing_progress_entity =
+            afterhours::EntityHelper::get_singleton<BoxingProgress>();
+        BoxingProgress &boxing_progress =
+            boxing_progress_entity.get<BoxingProgress>();
+
+        order.is_complete = true;
+        boxing_progress.order_id = order_id;
+        boxing_progress.state = BoxingState::FoldBox;
+        boxing_progress.items_placed = 0;
         break;
       }
       break;
