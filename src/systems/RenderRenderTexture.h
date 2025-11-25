@@ -1,12 +1,9 @@
+#include "../game.h"
 #include "LetterboxLayout.h"
 
-using namespace afterhours;
-
-struct RenderRenderTexture : System<window_manager::ProvidesCurrentResolution> {
+struct RenderRenderTexture : afterhours::System<> {
   virtual ~RenderRenderTexture() {}
-  virtual void for_each_with(const Entity &,
-                             const window_manager::ProvidesCurrentResolution &,
-                             float) const override {
+  virtual void once(float) const override {
     const int window_w = raylib::GetScreenWidth();
     const int window_h = raylib::GetScreenHeight();
     const int content_w = mainRT.texture.width;

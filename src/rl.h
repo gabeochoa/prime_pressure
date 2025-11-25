@@ -62,3 +62,8 @@ using raylib::Rectangle;
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
+
+// Owned by game.cpp
+extern bool running;
+extern raylib::RenderTexture2D mainRT;
+extern raylib::RenderTexture2D screenRT;

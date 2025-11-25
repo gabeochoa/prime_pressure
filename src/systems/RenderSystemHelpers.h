@@ -4,19 +4,24 @@
 #include "../render_backend.h"
 #include <afterhours/ah.h>
 
-using namespace afterhours;
-
-struct BeginWorldRender : System<> {
+struct BeginWorldRender : afterhours::System<> {
   virtual void once(float) const override {
     render_backend::BeginTextureMode(mainRT);
     render_backend::ClearBackground(raylib::DARKGRAY);
   }
 };
 
-struct EndWorldRender : System<> {
+struct EndWorldRender : afterhours::System<> {
   virtual void once(float) const override { render_backend::EndTextureMode(); }
 };
 
-struct EndDrawing : System<> {
+struct BeginPostProcessingRender : afterhours::System<> {
+  virtual void once(float) const override {
+    render_backend::BeginDrawing();
+    render_backend::ClearBackground(raylib::BLACK);
+  }
+};
+
+struct EndDrawing : afterhours::System<> {
   virtual void once(float) const override { render_backend::EndDrawing(); }
 };

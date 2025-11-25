@@ -1,13 +1,12 @@
 #pragma once
 
 #include "../game.h"
+#include "../render_backend.h"
 #include <afterhours/ah.h>
 #include <afterhours/src/plugins/window_manager.h>
 
-using namespace afterhours;
-
-struct UpdateRenderTexture : System<> {
-  window_manager::Resolution resolution;
+struct UpdateRenderTexture : afterhours::System<> {
+  afterhours::window_manager::Resolution resolution;
 
   virtual ~UpdateRenderTexture() {}
 
@@ -16,9 +15,9 @@ struct UpdateRenderTexture : System<> {
   }
 
   void once(float) override {
-    const window_manager::ProvidesCurrentResolution *pcr =
-        EntityHelper::get_singleton_cmp<
-            window_manager::ProvidesCurrentResolution>();
+    const afterhours::window_manager::ProvidesCurrentResolution *pcr =
+        afterhours::EntityHelper::get_singleton_cmp<
+            afterhours::window_manager::ProvidesCurrentResolution>();
     if (pcr && pcr->current_resolution != resolution) {
       resolution = pcr->current_resolution;
       raylib::UnloadRenderTexture(mainRT);
