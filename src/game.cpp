@@ -6,10 +6,10 @@
 #include "preload.h"
 #include "render_backend.h"
 #include "settings.h"
-#include <afterhours/src/plugins/files.h>
 #include "systems/BoxItem.h"
 #include "systems/GenerateOrders.h"
 #include "systems/GrabItem.h"
+#include "systems/ManageConveyorItems.h"
 #include "systems/MatchItemToOrder.h"
 #include "systems/ProcessBoxingInput.h"
 #include "systems/ProcessBoxingOrderSelection.h"
@@ -24,12 +24,14 @@
 #include "systems/RenderSystemHelpers.h"
 #include "systems/RenderTypingBuffer.h"
 #include "systems/RenderWarehouseView.h"
+#include "systems/SpawnConveyorItems.h"
 #include "systems/SpawnItems.h"
 #include "systems/TestSystem.h"
 #include "systems/UpdateRenderTexture.h"
 #include "testing/test_input.h"
 #include "testing/test_macros.h"
 #include "testing/tests/all_tests.h"
+#include <afterhours/src/plugins/files.h>
 
 #include <afterhours/src/plugins/animation.h>
 #include <chrono>
@@ -108,9 +110,11 @@ void game() {
     systems.register_update_system(std::make_unique<ProcessOrderSelection>());
     systems.register_update_system(
         std::make_unique<ProcessBoxingOrderSelection>());
+    systems.register_update_system(std::make_unique<SpawnConveyorItems>());
     systems.register_update_system(std::make_unique<ProcessTypingInput>());
     systems.register_update_system(std::make_unique<ProcessBoxingInput>());
     systems.register_update_system(std::make_unique<MatchItemToOrder>());
+    systems.register_update_system(std::make_unique<ManageConveyorItems>());
     systems.register_update_system(std::make_unique<GrabItem>());
     systems.register_update_system(std::make_unique<BoxItem>());
     systems.register_update_system(std::make_unique<UpdateRenderTexture>());
@@ -232,9 +236,11 @@ void run_test(const std::string &test_name, bool slow_mode) {
     systems.register_update_system(std::make_unique<ProcessOrderSelection>());
     systems.register_update_system(
         std::make_unique<ProcessBoxingOrderSelection>());
+    systems.register_update_system(std::make_unique<SpawnConveyorItems>());
     systems.register_update_system(std::make_unique<ProcessTypingInput>());
     systems.register_update_system(std::make_unique<ProcessBoxingInput>());
     systems.register_update_system(std::make_unique<MatchItemToOrder>());
+    systems.register_update_system(std::make_unique<ManageConveyorItems>());
     systems.register_update_system(std::make_unique<GrabItem>());
     systems.register_update_system(std::make_unique<BoxItem>());
     systems.register_update_system(std::make_unique<UpdateRenderTexture>());

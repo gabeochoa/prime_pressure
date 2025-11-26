@@ -60,7 +60,8 @@ TEST(test_boxing_workflow) {
   co_await TestApp::wait_for_frames(2);
 
   co_await TestApp::wait_for_condition(
-      []() { return TestApp::get_boxing_state() == BoxingState::PutItems; }, 60);
+      []() { return TestApp::get_boxing_state() == BoxingState::PutItems; },
+      60);
 
   // Place items (P key for each item)
   int total_items = TestApp::get_total_items_to_box();
@@ -95,4 +96,3 @@ TEST(test_boxing_workflow) {
 
   co_return;
 }
-

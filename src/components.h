@@ -89,6 +89,15 @@ struct SelectedOrder : afterhours::BaseComponent {
   std::optional<afterhours::EntityID> order_id;
 };
 
+struct ConveyorItem : afterhours::BaseComponent {
+  ItemType type;
+  float x_position = 0.0f;
+  float speed = 0.3f;
+  bool is_moving = false;
+  int vertical_index = 0;
+  afterhours::EntityID order_id;
+};
+
 inline std::map<ItemType, int> count_items(const std::vector<ItemType> &items) {
   std::map<ItemType, int> counts;
   for (ItemType item_type : items) {

@@ -26,6 +26,13 @@ constexpr float INSTRUCTION_PADDING_PCT = 60.0f / 720.0f;
 constexpr float TYPING_BUFFER_TIMEOUT = 5.0f;
 constexpr float ORDER_GENERATION_INTERVAL = 1.0f;
 
+constexpr float CONVEYOR_START_X_PCT = 0.0f;
+constexpr float CONVEYOR_END_X_PCT = 1.0f;
+constexpr float CONVEYOR_Y_PCT = 0.5f;
+constexpr float CONVEYOR_SPEED = 0.3f;
+constexpr float CONVEYOR_BELT_HEIGHT_PCT = 80.0f / 720.0f;
+constexpr float CONVEYOR_ITEM_VERTICAL_SPACING_PCT = 40.0f / 720.0f;
+
 inline float pct_to_pixels_x(float pct, int screen_width) {
   return pct * static_cast<float>(screen_width);
 }

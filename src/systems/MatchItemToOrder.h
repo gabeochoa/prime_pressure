@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../components.h"
+#include "../ui_constants.h"
 #include <afterhours/ah.h>
 
 static std::string to_lower(const std::string &str) {
@@ -64,6 +65,24 @@ struct MatchItemToOrder : afterhours::System<> {
 
         if (lower_buffer == lower_item) {
           order.selected_items.push_back(item_type);
+
+          auto conveyor_opt =
+              afterhours::EntityQuery()
+                  .whereHasComponent<ConveyorItem>()
+                  .whereLambda([&](const afterhours::Entity &entity) {
+                    const ConveyorItem &conveyor_item =
+                        entity.get<ConveyorItem>();
+                    return conveyor_item.type == item_type &&
+                           conveyor_item.order_id ==
+                               selected_order.order_id.value() &&
+                           !conveyor_item.is_moving;
+                  })
+                  .gen_first();
+          if (conveyor_opt.has_value()) {
+            ConveyorItem &conveyor_item = conveyor_opt->get<ConveyorItem>();
+            conveyor_item.is_moving = true;
+          }
+
           buffer.buffer.clear();
           buffer.has_error = false;
           return;

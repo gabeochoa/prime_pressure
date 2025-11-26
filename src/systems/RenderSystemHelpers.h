@@ -69,9 +69,10 @@ static void draw_view_header(const char *text, float x_pct, float y_pct,
                      static_cast<float>(font_size), 1.0f, text_color);
 }
 
-static void draw_instruction_text(const char *text, float x_pct, float y_pct,
-                                  int screen_width, int screen_height,
-                                  raylib::Font font = raylib::GetFontDefault()) {
+static void
+draw_instruction_text(const char *text, float x_pct, float y_pct,
+                      int screen_width, int screen_height,
+                      raylib::Font font = raylib::GetFontDefault()) {
   float x = ui_constants::pct_to_pixels_x(x_pct, screen_width);
   float y = ui_constants::pct_to_pixels_y(y_pct, screen_height);
   int font_size = ui_constants::pct_to_font_size(
