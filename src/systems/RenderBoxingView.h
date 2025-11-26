@@ -225,8 +225,8 @@ static void render_box(float center_x_pct, float center_y_pct, int screen_width,
   float box_x = center_x - box_width / 2.0f;
   float box_y = center_y - box_height / 2.0f;
 
-  raylib::Color box_color =
-      ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Primary);
+  // Tan cardboard color (RGB: 210, 180, 140)
+  raylib::Color box_color = raylib::Color{210, 180, 140, 255};
 
   if (boxing_progress.state == BoxingState::None) {
     draw_dotted_rectangle(box_x, box_y, box_width, box_height, box_color);
@@ -239,6 +239,17 @@ static void render_box(float center_x_pct, float center_y_pct, int screen_width,
     raylib::DrawRectangle(static_cast<int>(box_x), static_cast<int>(box_y),
                           static_cast<int>(box_width),
                           static_cast<int>(box_height), box_color);
+
+    // Draw off-white tape stripe when taped
+    if (boxing_progress.state >= BoxingState::Tape) {
+      raylib::Color tape_color = raylib::Color{250, 248, 240, 255}; // Off-white
+      float stripe_width = box_width;
+      float stripe_height = box_height * 0.08f; // 8% of box height
+      float stripe_y = box_y + box_height / 2.0f - stripe_height / 2.0f;
+      raylib::DrawRectangle(static_cast<int>(box_x), static_cast<int>(stripe_y),
+                            static_cast<int>(stripe_width),
+                            static_cast<int>(stripe_height), tape_color);
+    }
   } else {
     raylib::DrawRectangleLines(static_cast<int>(box_x), static_cast<int>(box_y),
                                static_cast<int>(box_width),
