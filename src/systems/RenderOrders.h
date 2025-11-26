@@ -13,7 +13,7 @@ struct RenderOrders : afterhours::System<> {
     const OrderQueue &queue = queue_entity.get<OrderQueue>();
 
     float y = 80.0f;
-    for (afterhours::EntityID order_id : queue.active_orders) {
+    for (afterhours::EntityID order_id : queue.in_progress_orders) {
       if (order_id == -1) {
         continue;
       }

@@ -10,6 +10,8 @@
 #include "systems/GenerateOrders.h"
 #include "systems/GrabItem.h"
 #include "systems/ManageConveyorItems.h"
+#include "systems/ManageInProgressOrderTag.h"
+#include "systems/ManageSelectedOrderTag.h"
 #include "systems/MatchItemToOrder.h"
 #include "systems/ProcessBoxingInput.h"
 #include "systems/ProcessOrderSelection.h"
@@ -71,7 +73,7 @@ void game() {
     afterhours::Entity &order_queue_entity =
         afterhours::EntityHelper::createEntity();
     OrderQueue &order_queue = order_queue_entity.addComponent<OrderQueue>();
-    order_queue.max_active_orders = 3;
+    order_queue.max_in_progress_orders = 3;
     afterhours::EntityHelper::registerSingleton<OrderQueue>(order_queue_entity);
 
     afterhours::Entity &active_view_entity =
@@ -104,6 +106,9 @@ void game() {
     afterhours::window_manager::register_update_systems(systems);
 
     systems.register_update_system(std::make_unique<SpawnItems>());
+    systems.register_update_system(
+        std::make_unique<ManageInProgressOrderTag>());
+    systems.register_update_system(std::make_unique<ManageSelectedOrderTag>());
     systems.register_update_system(std::make_unique<GenerateOrders>());
     systems.register_update_system(std::make_unique<ProcessViewSwitch>());
     systems.register_update_system(std::make_unique<ProcessOrderSelection>());
@@ -195,7 +200,7 @@ void run_test(const std::string &test_name, bool slow_mode) {
     afterhours::Entity &order_queue_entity =
         afterhours::EntityHelper::createEntity();
     OrderQueue &order_queue = order_queue_entity.addComponent<OrderQueue>();
-    order_queue.max_active_orders = 3;
+    order_queue.max_in_progress_orders = 3;
     afterhours::EntityHelper::registerSingleton<OrderQueue>(order_queue_entity);
 
     afterhours::Entity &active_view_entity =
@@ -228,6 +233,9 @@ void run_test(const std::string &test_name, bool slow_mode) {
     afterhours::window_manager::register_update_systems(systems);
 
     systems.register_update_system(std::make_unique<SpawnItems>());
+    systems.register_update_system(
+        std::make_unique<ManageInProgressOrderTag>());
+    systems.register_update_system(std::make_unique<ManageSelectedOrderTag>());
     systems.register_update_system(std::make_unique<GenerateOrders>());
     systems.register_update_system(std::make_unique<ProcessViewSwitch>());
     systems.register_update_system(std::make_unique<ProcessOrderSelection>());

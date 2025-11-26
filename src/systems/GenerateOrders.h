@@ -23,7 +23,7 @@ struct GenerateOrders : afterhours::System<> {
     OrderQueue &queue = queue_entity.get<OrderQueue>();
 
     if (test_input::test_mode && !initial_order_generated &&
-        queue.active_orders.empty()) {
+        queue.in_progress_orders.empty()) {
       generate_order(queue);
       initial_order_generated = true;
       return;
@@ -33,15 +33,15 @@ struct GenerateOrders : afterhours::System<> {
 
     int valid_order_count = 0;
     int first_empty_slot = -1;
-    for (size_t i = 0; i < queue.active_orders.size(); ++i) {
-      if (queue.active_orders[i] != -1) {
+    for (size_t i = 0; i < queue.in_progress_orders.size(); ++i) {
+      if (queue.in_progress_orders[i] != -1) {
         valid_order_count++;
       } else if (first_empty_slot == -1) {
         first_empty_slot = static_cast<int>(i);
       }
     }
 
-    if (valid_order_count >= queue.max_active_orders) {
+    if (valid_order_count >= queue.max_in_progress_orders) {
       return;
     }
 
@@ -52,7 +52,7 @@ struct GenerateOrders : afterhours::System<> {
     if (first_empty_slot >= 0) {
       fill_empty_slot(queue, first_empty_slot);
     } else {
-    generate_order(queue);
+      generate_order(queue);
     }
     time_since_last_order = 0.0f;
   }
@@ -77,7 +77,7 @@ private:
     Order &order = order_entity.addComponent<Order>();
     order.items = order_items;
 
-    queue.active_orders.push_back(order_entity.id);
+    queue.in_progress_orders.push_back(order_entity.id);
   }
 
   void fill_empty_slot(OrderQueue &queue, int slot_index) {
@@ -99,6 +99,6 @@ private:
     Order &order = order_entity.addComponent<Order>();
     order.items = order_items;
 
-    queue.active_orders[slot_index] = order_entity.id;
+    queue.in_progress_orders[slot_index] = order_entity.id;
   }
 };

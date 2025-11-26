@@ -63,7 +63,7 @@ struct RenderComputerView : ComputerViewRenderSystem {
     int instruction_font_size = ui_constants::pct_to_font_size(
         ui_constants::INSTRUCTION_FONT_SIZE_PCT, screen_height);
 
-    if (queue.active_orders.empty()) {
+    if (queue.in_progress_orders.empty()) {
       raylib::DrawText(
           "(No orders available)",
           static_cast<int>(ui_constants::pct_to_pixels_x(
@@ -74,7 +74,7 @@ struct RenderComputerView : ComputerViewRenderSystem {
       y += ui_constants::ORDER_ITEM_SPACING_PCT;
     }
 
-    for (afterhours::EntityID order_id : queue.active_orders) {
+    for (afterhours::EntityID order_id : queue.in_progress_orders) {
       if (order_id == -1) {
         continue;
       }

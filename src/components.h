@@ -115,7 +115,9 @@ enum struct GameTag : afterhours::TagId {
   IsGrabbed = 1,
   IsBoxed = 2,
   IsBox = 3,
-  IsActiveOrder = 4
+  IsInProgressOrder = 4,
+  IsOnConveyor = 5,
+  IsSelectedOrder = 6
 };
 
 struct TypingBuffer : afterhours::BaseComponent {
@@ -131,8 +133,8 @@ struct Box : afterhours::BaseComponent {
 
 struct OrderQueue : afterhours::BaseComponent {
   std::vector<afterhours::EntityID> pending_orders;
-  std::vector<afterhours::EntityID> active_orders;
-  int max_active_orders = 3;
+  std::vector<afterhours::EntityID> in_progress_orders;
+  int max_in_progress_orders = 3;
 };
 
 enum struct ViewState { Computer, Warehouse, Boxing };

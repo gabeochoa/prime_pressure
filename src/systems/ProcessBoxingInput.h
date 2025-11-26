@@ -30,11 +30,11 @@ struct ProcessBoxingInput : afterhours::System<> {
 
         int order_index = key - raylib::KEY_ONE;
         if (order_index < 0 ||
-            order_index >= static_cast<int>(queue.active_orders.size())) {
+            order_index >= static_cast<int>(queue.in_progress_orders.size())) {
           break;
         }
 
-        afterhours::EntityID order_id = queue.active_orders[order_index];
+        afterhours::EntityID order_id = queue.in_progress_orders[order_index];
         if (order_id == -1) {
           break;
         }

@@ -41,7 +41,7 @@ struct BoxItem
         afterhours::EntityHelper::get_singleton<OrderQueue>();
     OrderQueue &queue = queue_entity.get<OrderQueue>();
 
-    for (afterhours::EntityID order_id : queue.active_orders) {
+    for (afterhours::EntityID order_id : queue.in_progress_orders) {
       if (order_id == -1) {
         continue;
       }

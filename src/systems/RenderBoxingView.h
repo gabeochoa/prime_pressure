@@ -61,7 +61,7 @@ static void render_order_selection_list(float box_x, float &y,
   y += ui_constants::ORDER_ITEM_SPACING_PCT;
 
   int order_number = 1;
-  for (afterhours::EntityID order_id : queue.active_orders) {
+  for (afterhours::EntityID order_id : queue.in_progress_orders) {
     if (order_id == -1) {
       order_number++;
       continue;
@@ -125,7 +125,7 @@ static void render_order_selection_list(float box_x, float &y,
   }
 
   bool all_shipped_or_empty = true;
-  for (afterhours::EntityID order_id : queue.active_orders) {
+  for (afterhours::EntityID order_id : queue.in_progress_orders) {
     if (order_id == -1) {
       continue;
     }
@@ -144,7 +144,7 @@ static void render_order_selection_list(float box_x, float &y,
     }
   }
 
-  if (queue.active_orders.empty() || all_shipped_or_empty) {
+  if (queue.in_progress_orders.empty() || all_shipped_or_empty) {
     raylib::DrawTextEx(
         uiFont, "No orders available",
         raylib::Vector2{
@@ -182,7 +182,7 @@ static void render_items_list(float left_x, float start_y,
       }
     }
   } else {
-    for (afterhours::EntityID order_id : queue.active_orders) {
+    for (afterhours::EntityID order_id : queue.in_progress_orders) {
       if (order_id == -1) {
         continue;
       }
@@ -242,7 +242,7 @@ static void render_items_list(float left_x, float start_y,
     }
   } else {
     bool has_items = false;
-    for (afterhours::EntityID order_id : queue.active_orders) {
+    for (afterhours::EntityID order_id : queue.in_progress_orders) {
       if (order_id == -1) {
         continue;
       }

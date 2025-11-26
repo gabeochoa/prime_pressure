@@ -81,7 +81,7 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
       const OrderQueue &queue = queue_entity.get<OrderQueue>();
 
       int order_number = 1;
-      for (afterhours::EntityID order_id : queue.active_orders) {
+      for (afterhours::EntityID order_id : queue.in_progress_orders) {
         if (order_id == -1) {
           order_number++;
           continue;
@@ -139,7 +139,7 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
     for (const ConveyorItem &conveyor_item :
          afterhours::EntityQuery()
              .whereHasComponent<ConveyorItem>()
-             .whereNotMarkedForCleanup()
+             .whereHasTag(GameTag::IsOnConveyor)
              .gen_as<ConveyorItem>()) {
       bool order_has_been_selected = false;
       for (const Order &order : afterhours::EntityQuery()
@@ -175,7 +175,7 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
       for (const ConveyorItem &conveyor_item :
            afterhours::EntityQuery()
                .whereHasComponent<ConveyorItem>()
-               .whereNotMarkedForCleanup()
+               .whereHasTag(GameTag::IsOnConveyor)
                .gen_as<ConveyorItem>()) {
         if (conveyor_item.order_id == order_id_for_position &&
             std::abs(conveyor_item.x_position - x_position) < 0.001f) {

@@ -4,7 +4,9 @@
 #include "../ui_constants.h"
 #include <afterhours/ah.h>
 
-struct ManageConveyorItems : afterhours::System<ConveyorItem> {
+struct ManageConveyorItems
+    : afterhours::System<ConveyorItem,
+                         afterhours::tags::All<GameTag::IsOnConveyor>> {
   void for_each_with(afterhours::Entity &entity, ConveyorItem &item,
                      float dt) override {
     if (!item.is_moving) {
@@ -24,7 +26,7 @@ struct ManageConveyorItems : afterhours::System<ConveyorItem> {
         break;
       }
       if (added_to_ready) {
-        entity.cleanup = true;
+        entity.disableTag(GameTag::IsOnConveyor);
       }
     }
   }
