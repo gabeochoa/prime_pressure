@@ -48,5 +48,6 @@ struct ProcessViewSwitch : afterhours::System<> {
     TypingBuffer &buffer = buffer_entity.get<TypingBuffer>();
     buffer.buffer.clear();
     buffer.has_error = false;
+    buffer.last_input_time = 0.0f;
   }
 };

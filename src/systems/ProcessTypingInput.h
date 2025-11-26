@@ -4,6 +4,19 @@
 #include <afterhours/ah.h>
 
 struct ProcessTypingInput : afterhours::System<TypingBuffer> {
+  bool should_run(float) override {
+    const afterhours::Entity &view_entity =
+        afterhours::EntityHelper::get_singleton<ActiveView>();
+    const ActiveView &active_view = view_entity.get<ActiveView>();
+    return active_view.current_view == ViewState::Warehouse;
+  }
+  bool should_run(float) const override {
+    const afterhours::Entity &view_entity =
+        afterhours::EntityHelper::get_singleton<ActiveView>();
+    const ActiveView &active_view = view_entity.get<ActiveView>();
+    return active_view.current_view == ViewState::Warehouse;
+  }
+
   void for_each_with(afterhours::Entity &entity, TypingBuffer &buffer,
                      float dt) override {
     (void)entity;
