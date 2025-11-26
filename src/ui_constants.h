@@ -29,7 +29,8 @@ constexpr float ORDER_GENERATION_INTERVAL = 1.0f;
 constexpr float CONVEYOR_START_X_PCT = 0.005f;
 constexpr float CONVEYOR_END_X_PCT = 1.0f;
 constexpr float CONVEYOR_Y_PCT = 0.5f;
-constexpr float CONVEYOR_SPEED = 0.3f;
+constexpr float CONVEYOR_SPEED =
+    (CONVEYOR_END_X_PCT - CONVEYOR_START_X_PCT) / 10.0f;
 constexpr float CONVEYOR_BELT_HEIGHT_PCT = 80.0f / 720.0f;
 constexpr float CONVEYOR_ITEM_VERTICAL_SPACING_PCT = 40.0f / 720.0f;
 

@@ -16,7 +16,7 @@ get_boxing_status_text(const BoxingProgress &boxing_progress,
         "Press 'B' to fold the box",
         ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Secondary)};
   case BoxingState::PutItems: {
-    int total_items = static_cast<int>(order.selected_items.size());
+    int total_items = static_cast<int>(order.ready_items.size());
     std::string text = "Press 'P' to put items in box (" +
                        std::to_string(boxing_progress.items_placed) + "/" +
                        std::to_string(total_items) + ")";
@@ -43,50 +43,101 @@ get_boxing_status_text(const BoxingProgress &boxing_progress,
 
 static void render_order_selection_list(float box_x, float &y,
                                         const OrderQueue &queue,
+                                        const BoxingProgress &boxing_progress,
                                         int screen_width, int screen_height) {
   int body_font_size = ui_constants::pct_to_font_size(
       ui_constants::BODY_FONT_SIZE_PCT, screen_height);
+  int instruction_font_size = ui_constants::pct_to_font_size(
+      ui_constants::INSTRUCTION_FONT_SIZE_PCT, screen_height);
 
-  bool has_ready_order = false;
+  raylib::DrawTextEx(
+      uiFont, "Select Order:",
+      raylib::Vector2{
+          ui_constants::pct_to_pixels_x(
+              box_x + ui_constants::CONTENT_PADDING_PCT, screen_width),
+          ui_constants::pct_to_pixels_y(y, screen_height)},
+      static_cast<float>(body_font_size), 1.0f,
+      ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+  y += ui_constants::ORDER_ITEM_SPACING_PCT;
+
+  int order_number = 1;
   for (afterhours::EntityID order_id : queue.active_orders) {
     for (const Order &order : afterhours::EntityQuery()
                                   .whereID(order_id)
                                   .whereHasComponent<Order>()
                                   .gen_as<Order>()) {
-      if (all_items_selected(order) && !order.is_shipped) {
-        has_ready_order = true;
+      if (order.is_shipped) {
         break;
       }
+
+      bool is_ready = all_items_ready(order);
+      bool is_selected = boxing_progress.order_id.has_value() &&
+                         boxing_progress.order_id.value() == order_id;
+
+      std::string order_text = std::to_string(order_number) + ". Order #" +
+                               std::to_string(order_number);
+
+      raylib::Color text_color =
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+      if (is_selected) {
+        text_color = ui_constants::get_theme_color(
+            afterhours::ui::Theme::Usage::Primary);
+      } else if (is_ready) {
+        text_color = ui_constants::get_theme_color(
+            afterhours::ui::Theme::Usage::Primary);
+      }
+
+      raylib::DrawTextEx(
+          uiFont, order_text.c_str(),
+          raylib::Vector2{ui_constants::pct_to_pixels_x(
+                              box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
+                              screen_width),
+                          ui_constants::pct_to_pixels_y(y, screen_height)},
+          static_cast<float>(instruction_font_size), 1.0f, text_color);
+
+      std::string status_text;
+      if (is_ready) {
+        status_text = " - Ready";
+      } else {
+        int ready_count = static_cast<int>(order.ready_items.size());
+        int total_count = static_cast<int>(order.items.size());
+        status_text = " - Waiting for items (" + std::to_string(ready_count) +
+                      "/" + std::to_string(total_count) + ")";
+      }
+
+      raylib::DrawTextEx(
+          uiFont, status_text.c_str(),
+          raylib::Vector2{ui_constants::pct_to_pixels_x(
+                              box_x + ui_constants::CONTENT_PADDING_PCT * 3.0f,
+                              screen_width),
+                          ui_constants::pct_to_pixels_y(y, screen_height)},
+          static_cast<float>(instruction_font_size), 1.0f,
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+
+      y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
       break;
     }
-    if (has_ready_order) {
-      break;
-    }
+    order_number++;
   }
 
-  if (has_ready_order) {
+  if (queue.active_orders.empty() ||
+      std::all_of(queue.active_orders.begin(), queue.active_orders.end(),
+                  [](afterhours::EntityID order_id) {
+                    for (const Order &order : afterhours::EntityQuery()
+                                                  .whereID(order_id)
+                                                  .whereHasComponent<Order>()
+                                                  .gen_as<Order>()) {
+                      return order.is_shipped;
+                    }
+                    return false;
+                  })) {
     raylib::DrawTextEx(
-        uiFont, "Order ready to box",
+        uiFont, "No orders available",
         raylib::Vector2{
             ui_constants::pct_to_pixels_x(
                 box_x + ui_constants::CONTENT_PADDING_PCT, screen_width),
             ui_constants::pct_to_pixels_y(y, screen_height)},
-        static_cast<float>(body_font_size), 1.0f,
-        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Primary));
-    y += ui_constants::ORDER_ITEM_SPACING_PCT;
-
-    draw_instruction_text("[Press 'B' to start boxing]",
-                          box_x + ui_constants::CONTENT_PADDING_PCT,
-                          y + ui_constants::HEADER_PADDING_PCT, screen_width,
-                          screen_height, uiFont);
-  } else {
-    raylib::DrawTextEx(
-        uiFont, "No orders ready to box",
-        raylib::Vector2{
-            ui_constants::pct_to_pixels_x(
-                box_x + ui_constants::CONTENT_PADDING_PCT, screen_width),
-            ui_constants::pct_to_pixels_y(y, screen_height)},
-        static_cast<float>(body_font_size), 1.0f,
+        static_cast<float>(instruction_font_size), 1.0f,
         ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
   }
 }
@@ -122,10 +173,8 @@ static void render_items_list(float left_x, float start_y,
                                     .whereID(order_id)
                                     .whereHasComponent<Order>()
                                     .gen_as<Order>()) {
-        if (all_items_selected(order) && !order.is_shipped &&
-            !order.selected_items.empty()) {
-          std::map<ItemType, int> item_counts =
-              count_items(order.selected_items);
+        if (!order.is_shipped && !order.ready_items.empty()) {
+          std::map<ItemType, int> item_counts = count_items(order.ready_items);
           items_to_display += static_cast<int>(item_counts.size());
         }
         break;
@@ -175,10 +224,8 @@ static void render_items_list(float left_x, float start_y,
                                     .whereID(order_id)
                                     .whereHasComponent<Order>()
                                     .gen_as<Order>()) {
-        if (all_items_selected(order) && !order.is_shipped &&
-            !order.selected_items.empty()) {
-          std::map<ItemType, int> item_counts =
-              count_items(order.selected_items);
+        if (!order.is_shipped && !order.ready_items.empty()) {
+          std::map<ItemType, int> item_counts = count_items(order.ready_items);
           for (const auto &[item_type, count] : item_counts) {
             std::string item_text =
                 item_type_to_string(item_type) + " x" + std::to_string(count);
@@ -407,8 +454,8 @@ struct RenderBoxingView : BoxingViewRenderSystem {
     float y = content_start_y;
 
     if (!boxing_progress.order_id.has_value()) {
-      render_order_selection_list(right_x, y, queue, screen_width,
-                                  screen_height);
+      render_order_selection_list(right_x, y, queue, boxing_progress,
+                                  screen_width, screen_height);
     } else {
       for (const Order &order : afterhours::EntityQuery()
                                     .whereID(boxing_progress.order_id.value())

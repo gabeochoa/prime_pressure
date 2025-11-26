@@ -8,60 +8,51 @@
 
 struct SpawnConveyorItems : afterhours::System<> {
   void once(float) override {
-    const afterhours::Entity &selected_order_entity =
-        afterhours::EntityHelper::get_singleton<SelectedOrder>();
-    const SelectedOrder &selected_order =
-        selected_order_entity.get<SelectedOrder>();
+    const afterhours::Entity &queue_entity =
+        afterhours::EntityHelper::get_singleton<OrderQueue>();
+    const OrderQueue &queue = queue_entity.get<OrderQueue>();
 
-    if (!selected_order.order_id.has_value()) {
-      return;
-    }
-
-    // Check if there are any conveyor items for this order currently
-    bool has_conveyor_items = false;
-    for (const ConveyorItem &existing_item :
-         afterhours::EntityQuery()
-             .whereHasComponent<ConveyorItem>()
-             .whereNotMarkedForCleanup()
-             .gen_as<ConveyorItem>()) {
-      if (existing_item.order_id == selected_order.order_id.value()) {
-        has_conveyor_items = true;
-        break;
-      }
-    }
-
-    // Get the order to check if items have been typed
-    for (const Order &order : afterhours::EntityQuery()
-                                  .whereID(selected_order.order_id.value())
-                                  .whereHasComponent<Order>()
-                                  .gen_as<Order>()) {
-
-      // If conveyor items already exist OR items have been typed, don't spawn
-      // (items have been typed means they were spawned and shouldn't respawn)
-      if (has_conveyor_items || !order.selected_items.empty()) {
-        return;
-      }
-
-      // Spawn all items for this order
-      std::map<ItemType, int> item_counts = count_items(order.items);
-      int vertical_index = 0;
-
-      for (const auto &[item_type, count] : item_counts) {
-        for (int i = 0; i < count; ++i) {
-          afterhours::Entity &conveyor_item_entity =
-              afterhours::EntityHelper::createEntity();
-          ConveyorItem &conveyor_item =
-              conveyor_item_entity.addComponent<ConveyorItem>();
-          conveyor_item.type = item_type;
-          conveyor_item.x_position = ui_constants::CONVEYOR_START_X_PCT;
-          conveyor_item.speed = ui_constants::CONVEYOR_SPEED;
-          conveyor_item.order_id = selected_order.order_id.value();
-          conveyor_item.vertical_index = vertical_index;
-          conveyor_item.is_moving = false;
-          vertical_index++;
+    for (afterhours::EntityID order_id : queue.active_orders) {
+      bool has_conveyor_items = false;
+      for (const ConveyorItem &existing_item :
+           afterhours::EntityQuery()
+               .whereHasComponent<ConveyorItem>()
+               .whereNotMarkedForCleanup()
+               .gen_as<ConveyorItem>()) {
+        if (existing_item.order_id == order_id) {
+          has_conveyor_items = true;
+          break;
         }
       }
-      break;
+
+      for (const Order &order : afterhours::EntityQuery()
+                                    .whereID(order_id)
+                                    .whereHasComponent<Order>()
+                                    .gen_as<Order>()) {
+        if (has_conveyor_items || !order.selected_items.empty()) {
+          break;
+        }
+
+        std::map<ItemType, int> item_counts = count_items(order.items);
+        int vertical_index = 0;
+
+        for (const auto &[item_type, count] : item_counts) {
+          for (int i = 0; i < count; ++i) {
+            afterhours::Entity &conveyor_item_entity =
+                afterhours::EntityHelper::createEntity();
+            ConveyorItem &conveyor_item =
+                conveyor_item_entity.addComponent<ConveyorItem>();
+            conveyor_item.type = item_type;
+            conveyor_item.x_position = ui_constants::CONVEYOR_START_X_PCT;
+            conveyor_item.speed = ui_constants::CONVEYOR_SPEED;
+            conveyor_item.order_id = order_id;
+            conveyor_item.vertical_index = vertical_index;
+            conveyor_item.is_moving = false;
+            vertical_index++;
+          }
+        }
+        break;
+      }
     }
   }
 };

@@ -124,39 +124,50 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
       }
     }
 
-    if (selected_order.order_id.has_value()) {
-      float start_y =
-          belt_y - (belt_height / 2.0f) +
-          ui_constants::pct_to_pixels_y(
-              ui_constants::CONVEYOR_ITEM_VERTICAL_SPACING_PCT, screen_height);
+    const afterhours::Entity &queue_entity_render =
+        afterhours::EntityHelper::get_singleton<OrderQueue>();
+    const OrderQueue &queue_render = queue_entity_render.get<OrderQueue>();
 
-      for (const ConveyorItem &conveyor_item :
-           afterhours::EntityQuery()
-               .whereHasComponent<ConveyorItem>()
-               .gen_as<ConveyorItem>()) {
+    float start_y =
+        belt_y - (belt_height / 2.0f) +
+        ui_constants::pct_to_pixels_y(
+            ui_constants::CONVEYOR_ITEM_VERTICAL_SPACING_PCT, screen_height);
 
-        if (conveyor_item.order_id == selected_order.order_id.value()) {
-          float screen_x =
-              belt_start_x + (conveyor_item.x_position * belt_width);
-          float item_y =
-              start_y + (conveyor_item.vertical_index *
-                         ui_constants::pct_to_pixels_y(
-                             ui_constants::CONVEYOR_ITEM_VERTICAL_SPACING_PCT,
-                             screen_height));
-          std::string item_text = format_item_with_key(conveyor_item.type);
-
-          raylib::Color item_color =
-              ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
-          if (conveyor_item.is_moving) {
-            item_color = ui_constants::get_theme_color(
-                afterhours::ui::Theme::Usage::Primary);
-          }
-
-          raylib::DrawTextEx(
-              uiFont, item_text.c_str(), raylib::Vector2{screen_x, item_y},
-              static_cast<float>(body_font_size), 1.0f, item_color);
+    for (const ConveyorItem &conveyor_item :
+         afterhours::EntityQuery()
+             .whereHasComponent<ConveyorItem>()
+             .whereNotMarkedForCleanup()
+             .gen_as<ConveyorItem>()) {
+      bool is_active_order = false;
+      for (afterhours::EntityID order_id : queue_render.active_orders) {
+        if (conveyor_item.order_id == order_id) {
+          is_active_order = true;
+          break;
         }
       }
+
+      if (!is_active_order) {
+        continue;
+      }
+
+      float screen_x = belt_start_x + (conveyor_item.x_position * belt_width);
+      float item_y =
+          start_y + (conveyor_item.vertical_index *
+                     ui_constants::pct_to_pixels_y(
+                         ui_constants::CONVEYOR_ITEM_VERTICAL_SPACING_PCT,
+                         screen_height));
+      std::string item_text = format_item_with_key(conveyor_item.type);
+
+      raylib::Color item_color =
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+      if (conveyor_item.is_moving) {
+        item_color = ui_constants::get_theme_color(
+            afterhours::ui::Theme::Usage::Primary);
+      }
+
+      raylib::DrawTextEx(uiFont, item_text.c_str(),
+                         raylib::Vector2{screen_x, item_y},
+                         static_cast<float>(body_font_size), 1.0f, item_color);
     }
 
     float instruction_y =

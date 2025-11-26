@@ -18,67 +18,74 @@ struct ProcessBoxingInput : afterhours::System<> {
     BoxingProgress &boxing_progress =
         boxing_progress_entity.get<BoxingProgress>();
 
+    const afterhours::Entity &queue_entity =
+        afterhours::EntityHelper::get_singleton<OrderQueue>();
+    const OrderQueue &queue = queue_entity.get<OrderQueue>();
+
+    if (!boxing_progress.order_id.has_value()) {
+      for (int key = raylib::KEY_ONE; key <= raylib::KEY_NINE; ++key) {
+        if (!game_input::IsKeyPressed(key)) {
+          continue;
+        }
+
+        int order_index = key - raylib::KEY_ONE;
+        if (order_index < 0 ||
+            order_index >= static_cast<int>(queue.active_orders.size())) {
+          break;
+        }
+
+        afterhours::EntityID order_id = queue.active_orders[order_index];
+
+        std::vector<ItemType> items_to_create;
+        bool order_is_ready = false;
+
+        for (Order &order : afterhours::EntityQuery()
+                                .whereID(order_id)
+                                .whereHasComponent<Order>()
+                                .gen_as<Order>()) {
+          if (all_items_ready(order) && !order.is_shipped) {
+            order_is_ready = true;
+            items_to_create = order.ready_items;
+            order.is_complete = true;
+            break;
+          }
+        }
+
+        if (order_is_ready) {
+          for (afterhours::EntityID item_id : boxing_progress.boxing_items) {
+            auto opt_entity = afterhours::EntityHelper::getEntityForID(item_id);
+            if (opt_entity.has_value()) {
+              opt_entity.value()->cleanup = true;
+            }
+          }
+          boxing_progress.boxing_items.clear();
+
+          for (ItemType item_type : items_to_create) {
+            afterhours::Entity &boxing_item_entity =
+                afterhours::EntityHelper::createEntity();
+            BoxingItemStatus &boxing_item =
+                boxing_item_entity.addComponent<BoxingItemStatus>();
+            boxing_item.type = item_type;
+            boxing_item.is_placed = false;
+            boxing_progress.boxing_items.push_back(boxing_item_entity.id);
+          }
+
+          boxing_progress.order_id = order_id;
+          boxing_progress.state = BoxingState::None;
+          boxing_progress.items_placed = 0;
+          return;
+        }
+        break;
+      }
+    }
+
     bool b_pressed = game_input::IsKeyPressed(raylib::KEY_B);
 
     if (b_pressed) {
       if (!boxing_progress.order_id.has_value()) {
-        const afterhours::Entity &queue_entity =
-            afterhours::EntityHelper::get_singleton<OrderQueue>();
-        const OrderQueue &queue = queue_entity.get<OrderQueue>();
-
-        afterhours::EntityID ready_order_id = -1;
-        for (afterhours::EntityID order_id : queue.active_orders) {
-          for (const Order &order : afterhours::EntityQuery()
-                                        .whereID(order_id)
-                                        .whereHasComponent<Order>()
-                                        .gen_as<Order>()) {
-            bool all_selected = all_items_selected(order);
-            if (all_selected && !order.is_shipped) {
-              ready_order_id = order_id;
-              break;
-            }
-            break;
-          }
-          if (ready_order_id != -1) {
-            break;
-          }
-        }
-
-        if (ready_order_id != -1) {
-          for (Order &order : afterhours::EntityQuery()
-                                  .whereID(ready_order_id)
-                                  .whereHasComponent<Order>()
-                                  .gen_as<Order>()) {
-            for (afterhours::EntityID item_id : boxing_progress.boxing_items) {
-              auto opt_entity =
-                  afterhours::EntityHelper::getEntityForID(item_id);
-              if (opt_entity.has_value()) {
-                opt_entity.value()->cleanup = true;
-              }
-            }
-            boxing_progress.boxing_items.clear();
-
-            for (ItemType item_type : order.selected_items) {
-              afterhours::Entity &boxing_item_entity =
-                  afterhours::EntityHelper::createEntity();
-              BoxingItemStatus &boxing_item =
-                  boxing_item_entity.addComponent<BoxingItemStatus>();
-              boxing_item.type = item_type;
-              boxing_item.is_placed = false;
-              boxing_progress.boxing_items.push_back(boxing_item_entity.id);
-            }
-
-            order.is_complete = true;
-            boxing_progress.order_id = ready_order_id;
-            boxing_progress.state = BoxingState::PutItems;
-            boxing_progress.items_placed = 0;
-            return;
-          }
-        }
         return;
       }
 
-      // Skip FoldBox state - go directly to PutItems when starting boxing
       if (boxing_progress.state == BoxingState::None) {
         boxing_progress.state = BoxingState::PutItems;
         return;

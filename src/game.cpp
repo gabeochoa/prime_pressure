@@ -12,7 +12,6 @@
 #include "systems/ManageConveyorItems.h"
 #include "systems/MatchItemToOrder.h"
 #include "systems/ProcessBoxingInput.h"
-#include "systems/ProcessBoxingOrderSelection.h"
 #include "systems/ProcessOrderSelection.h"
 #include "systems/ProcessTypingInput.h"
 #include "systems/ProcessViewSwitch.h"
@@ -108,8 +107,6 @@ void game() {
     systems.register_update_system(std::make_unique<GenerateOrders>());
     systems.register_update_system(std::make_unique<ProcessViewSwitch>());
     systems.register_update_system(std::make_unique<ProcessOrderSelection>());
-    systems.register_update_system(
-        std::make_unique<ProcessBoxingOrderSelection>());
     systems.register_update_system(std::make_unique<SpawnConveyorItems>());
     systems.register_update_system(std::make_unique<ProcessTypingInput>());
     systems.register_update_system(std::make_unique<ProcessBoxingInput>());
@@ -234,8 +231,6 @@ void run_test(const std::string &test_name, bool slow_mode) {
     systems.register_update_system(std::make_unique<GenerateOrders>());
     systems.register_update_system(std::make_unique<ProcessViewSwitch>());
     systems.register_update_system(std::make_unique<ProcessOrderSelection>());
-    systems.register_update_system(
-        std::make_unique<ProcessBoxingOrderSelection>());
     systems.register_update_system(std::make_unique<SpawnConveyorItems>());
     systems.register_update_system(std::make_unique<ProcessTypingInput>());
     systems.register_update_system(std::make_unique<ProcessBoxingInput>());

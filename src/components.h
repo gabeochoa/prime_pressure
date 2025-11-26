@@ -10,6 +10,7 @@ enum struct ItemType { Book, Pen, Mug, Cup, Bag, Box, Toy, Hat, Key, Map };
 struct Order : afterhours::BaseComponent {
   std::vector<ItemType> items;
   std::vector<ItemType> selected_items;
+  std::vector<ItemType> ready_items;
   bool is_complete = false;
   bool is_shipped = false;
   bool is_fully_complete = false;
@@ -167,6 +168,19 @@ inline bool all_items_selected(const Order &order) {
   for (const auto &[item_type, needed_count] : item_counts) {
     int selected_count = selected_counts[item_type];
     if (selected_count < needed_count) {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline bool all_items_ready(const Order &order) {
+  std::map<ItemType, int> item_counts = count_items(order.items);
+  std::map<ItemType, int> ready_counts = count_items(order.ready_items);
+
+  for (const auto &[item_type, needed_count] : item_counts) {
+    int ready_count = ready_counts[item_type];
+    if (ready_count < needed_count) {
       return false;
     }
   }
