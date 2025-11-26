@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../components.h"
-#include "../testing/test_input.h"
+#include "../input_wrapper.h"
 #include <afterhours/ah.h>
 
 struct ProcessTypingInput : afterhours::System<TypingBuffer> {
@@ -25,7 +25,7 @@ struct ProcessTypingInput : afterhours::System<TypingBuffer> {
         afterhours::EntityHelper::get_singleton<ActiveView>();
     const ActiveView &active_view = view_entity.get<ActiveView>();
 
-    int key = test_input::get_char_pressed();
+    int key = game_input::GetCharPressed();
 
     if (key > 0) {
       char c = static_cast<char>(key);
@@ -45,12 +45,12 @@ struct ProcessTypingInput : afterhours::System<TypingBuffer> {
       buffer.last_input_time = 0.0f;
     }
 
-    if (test_input::is_key_pressed(raylib::KEY_BACKSPACE) &&
+    if (game_input::IsKeyPressed(raylib::KEY_BACKSPACE) &&
         !buffer.buffer.empty()) {
       buffer.buffer.pop_back();
     }
 
-    if (test_input::is_key_pressed(raylib::KEY_ENTER)) {
+    if (game_input::IsKeyPressed(raylib::KEY_ENTER)) {
       buffer.buffer.clear();
     }
 

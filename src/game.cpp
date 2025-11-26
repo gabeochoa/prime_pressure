@@ -31,10 +31,8 @@
 #include "testing/tests/all_tests.h"
 
 #include <afterhours/src/plugins/animation.h>
-#include <thread>
 #include <chrono>
 #include <thread>
-#include <chrono>
 
 bool running = true;
 raylib::RenderTexture2D mainRT;
@@ -92,8 +90,8 @@ void game() {
     box_entity.enableTag(GameTag::IsBox);
   }
 
-  TestSystem* test_system_ptr = nullptr;
-  
+  TestSystem *test_system_ptr = nullptr;
+
   {
     afterhours::input::register_update_systems(systems);
     afterhours::window_manager::register_update_systems(systems);
@@ -110,7 +108,7 @@ void game() {
     systems.register_update_system(std::make_unique<GrabItem>());
     systems.register_update_system(std::make_unique<BoxItem>());
     systems.register_update_system(std::make_unique<UpdateRenderTexture>());
-    
+
     auto test_system = std::make_unique<TestSystem>();
     test_system_ptr = test_system.get();
     systems.register_update_system(std::move(test_system));
@@ -137,30 +135,32 @@ void game() {
     }
     float dt = raylib::GetFrameTime();
     systems.run(dt);
-    
+
     if (test_system_ptr && test_system_ptr->is_complete()) {
       std::string error = test_system_ptr->get_error();
       if (!error.empty()) {
-        std::cout << "Test '" << test_system_ptr->get_test_name() << "' failed: " << error << std::endl;
+        std::cout << "Test '" << test_system_ptr->get_test_name()
+                  << "' failed: " << error << std::endl;
         running = false;
       } else {
-        std::cout << "Test '" << test_system_ptr->get_test_name() << "' passed!" << std::endl;
+        std::cout << "Test '" << test_system_ptr->get_test_name() << "' passed!"
+                  << std::endl;
         running = false;
       }
     }
   }
 }
 
-void run_test(const std::string& test_name, bool slow_mode) {
-  TestRegistry& registry = TestRegistry::get();
+void run_test(const std::string &test_name, bool slow_mode) {
+  TestRegistry &registry = TestRegistry::get();
   auto it = registry.tests.find(test_name);
   if (it == registry.tests.end()) {
     std::cout << "Test '" << test_name << "' not found" << std::endl;
     return;
   }
-  
+
   test_input::slow_test_mode = slow_mode;
-  
+
   mainRT = raylib::LoadRenderTexture(Settings::get().get_screen_width(),
                                      Settings::get().get_screen_height());
   screenRT = raylib::LoadRenderTexture(Settings::get().get_screen_width(),
@@ -210,8 +210,8 @@ void run_test(const std::string& test_name, bool slow_mode) {
     box_entity.enableTag(GameTag::IsBox);
   }
 
-  TestSystem* test_system_ptr = nullptr;
-  
+  TestSystem *test_system_ptr = nullptr;
+
   {
     afterhours::input::register_update_systems(systems);
     afterhours::window_manager::register_update_systems(systems);
@@ -228,7 +228,7 @@ void run_test(const std::string& test_name, bool slow_mode) {
     systems.register_update_system(std::make_unique<GrabItem>());
     systems.register_update_system(std::make_unique<BoxItem>());
     systems.register_update_system(std::make_unique<UpdateRenderTexture>());
-    
+
     auto test_system = std::make_unique<TestSystem>();
     test_system_ptr = test_system.get();
     systems.register_update_system(std::move(test_system));
@@ -258,18 +258,20 @@ void run_test(const std::string& test_name, bool slow_mode) {
     }
     float dt = raylib::GetFrameTime();
     systems.run(dt);
-    
+
     if (test_input::slow_test_mode) {
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    
+
     if (test_system_ptr && test_system_ptr->is_complete()) {
       std::string error = test_system_ptr->get_error();
       if (!error.empty()) {
-        std::cout << "Test '" << test_system_ptr->get_test_name() << "' failed: " << error << std::endl;
+        std::cout << "Test '" << test_system_ptr->get_test_name()
+                  << "' failed: " << error << std::endl;
         running = false;
       } else {
-        std::cout << "Test '" << test_system_ptr->get_test_name() << "' passed!" << std::endl;
+        std::cout << "Test '" << test_system_ptr->get_test_name() << "' passed!"
+                  << std::endl;
         running = false;
       }
     }

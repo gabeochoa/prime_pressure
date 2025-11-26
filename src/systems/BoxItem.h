@@ -1,13 +1,14 @@
 #pragma once
 
 #include "../components.h"
+#include "../input_wrapper.h"
 #include <afterhours/ah.h>
 
 struct BoxItem
     : afterhours::System<Item, afterhours::tags::All<GameTag::IsGrabbed>> {
   void for_each_with(afterhours::Entity &item_entity, Item &item,
                      float) override {
-    if (!raylib::IsKeyPressed(raylib::KEY_SPACE)) {
+    if (!game_input::IsKeyPressed(raylib::KEY_SPACE)) {
       return;
     }
 

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "../rl.h"
-#include <queue>
 #include <optional>
+#include <queue>
 
 namespace test_input {
 struct KeyPress {
@@ -22,5 +21,7 @@ void reset_frame();
 
 bool is_key_pressed(int key);
 int get_char_pressed();
-}
 
+extern bool key_consumed_this_frame;
+extern bool char_consumed_this_frame;
+} // namespace test_input

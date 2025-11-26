@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../components.h"
-#include "../testing/test_input.h"
+#include "../input_wrapper.h"
 #include <afterhours/ah.h>
 
 struct ProcessOrderSelection : afterhours::System<> {
@@ -30,7 +30,7 @@ struct ProcessOrderSelection : afterhours::System<> {
       }
     }
 
-    if (test_input::is_key_pressed(raylib::KEY_ESCAPE) &&
+    if (game_input::IsKeyPressed(raylib::KEY_ESCAPE) &&
         selected_order.order_id.has_value()) {
       selected_order.order_id.reset();
       afterhours::Entity &buffer_entity =
@@ -42,7 +42,7 @@ struct ProcessOrderSelection : afterhours::System<> {
     }
 
     for (int key = raylib::KEY_ONE; key <= raylib::KEY_NINE; ++key) {
-      if (!test_input::is_key_pressed(key)) {
+      if (!game_input::IsKeyPressed(key)) {
         continue;
       }
 

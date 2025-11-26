@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../components.h"
-#include "../testing/test_input.h"
+#include "../input_wrapper.h"
 #include <afterhours/ah.h>
 
 struct ProcessBoxingInput : afterhours::System<> {
@@ -30,13 +30,13 @@ struct ProcessBoxingInput : afterhours::System<> {
       Order &order = order_entity.get<Order>();
 
       if (boxing_progress.state == BoxingState::FoldBox &&
-          test_input::is_key_pressed(raylib::KEY_B)) {
+          game_input::IsKeyPressed(raylib::KEY_B)) {
         boxing_progress.state = BoxingState::PutItems;
         break;
       }
 
       if (boxing_progress.state == BoxingState::PutItems &&
-          test_input::is_key_pressed(raylib::KEY_P)) {
+          game_input::IsKeyPressed(raylib::KEY_P)) {
         boxing_progress.items_placed++;
         int total_items = static_cast<int>(order.selected_items.size());
         if (boxing_progress.items_placed >= total_items) {
@@ -46,19 +46,19 @@ struct ProcessBoxingInput : afterhours::System<> {
       }
 
       if (boxing_progress.state == BoxingState::Fold &&
-          test_input::is_key_pressed(raylib::KEY_F)) {
+          game_input::IsKeyPressed(raylib::KEY_F)) {
         boxing_progress.state = BoxingState::Tape;
         break;
       }
 
       if (boxing_progress.state == BoxingState::Tape &&
-          test_input::is_key_pressed(raylib::KEY_T)) {
+          game_input::IsKeyPressed(raylib::KEY_T)) {
         boxing_progress.state = BoxingState::Ship;
         break;
       }
 
       if (boxing_progress.state == BoxingState::Ship &&
-          test_input::is_key_pressed(raylib::KEY_S)) {
+          game_input::IsKeyPressed(raylib::KEY_S)) {
         order.is_shipped = true;
         boxing_progress.order_id.reset();
         boxing_progress.state = BoxingState::None;

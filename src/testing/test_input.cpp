@@ -1,4 +1,5 @@
 #include "test_input.h"
+#include "../rl.h"
 
 namespace test_input {
 std::queue<KeyPress> input_queue;
@@ -26,20 +27,20 @@ void clear_queue() {
   }
 }
 
-static bool key_consumed_this_frame = false;
-static bool char_consumed_this_frame = false;
+bool key_consumed_this_frame = false;
+bool char_consumed_this_frame = false;
 
 bool is_key_pressed(int key) {
   if (!test_mode || input_queue.empty() || key_consumed_this_frame) {
     return raylib::IsKeyPressed(key);
   }
-  
+
   if (!input_queue.front().is_char && input_queue.front().key == key) {
     input_queue.pop();
     key_consumed_this_frame = true;
     return true;
   }
-  
+
   return raylib::IsKeyPressed(key);
 }
 
@@ -47,14 +48,14 @@ int get_char_pressed() {
   if (!test_mode || input_queue.empty() || char_consumed_this_frame) {
     return raylib::GetCharPressed();
   }
-  
+
   if (input_queue.front().is_char) {
     char c = input_queue.front().char_value;
     input_queue.pop();
     char_consumed_this_frame = true;
     return static_cast<int>(c);
   }
-  
+
   return raylib::GetCharPressed();
 }
 
@@ -62,5 +63,4 @@ void reset_frame() {
   key_consumed_this_frame = false;
   char_consumed_this_frame = false;
 }
-}
-
+} // namespace test_input

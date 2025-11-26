@@ -29,14 +29,15 @@ int main(int argc, char *argv[]) {
         << "  -h, --height <pixels>         Screen height (default: 720)\n";
     std::cout << "  --list-tests                 List all available tests\n";
     std::cout << "  --run-test <name>            Run a specific test\n";
-    std::cout << "  --slow-test                  Run test in slow mode (visible)\n";
+    std::cout
+        << "  --slow-test                  Run test in slow mode (visible)\n";
     return 0;
   }
 
   if (cmdl["--list-tests"]) {
-    TestRegistry& registry = TestRegistry::get();
+    TestRegistry &registry = TestRegistry::get();
     std::cout << "Available tests:\n";
-    for (const auto& [name, func] : registry.tests) {
+    for (const auto &[name, func] : registry.tests) {
       std::cout << "  - " << name << "\n";
     }
     return 0;
@@ -45,7 +46,7 @@ int main(int argc, char *argv[]) {
   std::string test_name;
   if (cmdl({"--run-test"}) >> test_name) {
     bool slow_mode = cmdl["--slow-test"];
-    
+
     int screenWidth, screenHeight;
     cmdl({"-w", "--width"}, 1280) >> screenWidth;
     cmdl({"-h", "--height"}, 720) >> screenHeight;
