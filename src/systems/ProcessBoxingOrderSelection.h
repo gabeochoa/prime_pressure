@@ -38,11 +38,10 @@ struct ProcessBoxingOrderSelection : afterhours::System<> {
 
       afterhours::EntityID order_id = queue.active_orders[order_index];
 
-      for (afterhours::Entity &order_entity : afterhours::EntityQuery()
-                                                  .whereID(order_id)
-                                                  .whereHasComponent<Order>()
-                                                  .gen()) {
-        Order &order = order_entity.get<Order>();
+      for (Order &order : afterhours::EntityQuery()
+                              .whereID(order_id)
+                              .whereHasComponent<Order>()
+                              .gen_as<Order>()) {
 
         if (!all_items_selected(order) || order.is_shipped) {
           break;

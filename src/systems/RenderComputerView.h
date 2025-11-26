@@ -66,12 +66,10 @@ struct RenderComputerView : ComputerViewRenderSystem {
       bool is_selected = selected_order.order_id.has_value() &&
                          selected_order.order_id.value() == order_id;
 
-      for (const afterhours::Entity &order_entity :
-           afterhours::EntityQuery()
-               .whereID(order_id)
-               .whereHasComponent<Order>()
-               .gen()) {
-        const Order &order = order_entity.get<Order>();
+      for (const Order &order : afterhours::EntityQuery()
+                                    .whereID(order_id)
+                                    .whereHasComponent<Order>()
+                                    .gen_as<Order>()) {
 
         std::string order_text = std::to_string(order_number) + ". ";
         for (size_t i = 0; i < order.items.size(); ++i) {

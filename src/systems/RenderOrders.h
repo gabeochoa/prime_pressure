@@ -14,12 +14,10 @@ struct RenderOrders : afterhours::System<> {
 
     float y = 80.0f;
     for (afterhours::EntityID order_id : queue.active_orders) {
-      for (const afterhours::Entity &order_entity :
-           afterhours::EntityQuery()
-               .whereID(order_id)
-               .whereHasComponent<Order>()
-               .gen()) {
-        const Order &order = order_entity.get<Order>();
+      for (const Order &order : afterhours::EntityQuery()
+                                    .whereID(order_id)
+                                    .whereHasComponent<Order>()
+                                    .gen_as<Order>()) {
 
         std::string order_text = "Order: ";
         for (size_t i = 0; i < order.items.size(); ++i) {

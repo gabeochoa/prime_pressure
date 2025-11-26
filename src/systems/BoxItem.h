@@ -42,11 +42,10 @@ struct BoxItem
     OrderQueue &queue = queue_entity.get<OrderQueue>();
 
     for (afterhours::EntityID order_id : queue.active_orders) {
-      for (afterhours::Entity &order_entity : afterhours::EntityQuery()
-                                                  .whereID(order_id)
-                                                  .whereHasComponent<Order>()
-                                                  .gen()) {
-        Order &order = order_entity.get<Order>();
+      for (Order &order : afterhours::EntityQuery()
+                              .whereID(order_id)
+                              .whereHasComponent<Order>()
+                              .gen_as<Order>()) {
 
         auto it = std::find(order.items.begin(), order.items.end(), item.type);
         if (it != order.items.end()) {

@@ -19,12 +19,11 @@ struct SpawnConveyorItems : afterhours::System<> {
 
     // Check if there are any conveyor items for this order currently
     bool has_conveyor_items = false;
-    for (const afterhours::Entity &conveyor_entity :
+    for (const ConveyorItem &existing_item :
          afterhours::EntityQuery()
              .whereHasComponent<ConveyorItem>()
              .whereNotMarkedForCleanup()
-             .gen()) {
-      const ConveyorItem &existing_item = conveyor_entity.get<ConveyorItem>();
+             .gen_as<ConveyorItem>()) {
       if (existing_item.order_id == selected_order.order_id.value()) {
         has_conveyor_items = true;
         break;
@@ -32,12 +31,10 @@ struct SpawnConveyorItems : afterhours::System<> {
     }
 
     // Get the order to check if items have been typed
-    for (const afterhours::Entity &order_entity :
-         afterhours::EntityQuery()
-             .whereID(selected_order.order_id.value())
-             .whereHasComponent<Order>()
-             .gen()) {
-      const Order &order = order_entity.get<Order>();
+    for (const Order &order : afterhours::EntityQuery()
+                                  .whereID(selected_order.order_id.value())
+                                  .whereHasComponent<Order>()
+                                  .gen_as<Order>()) {
 
       // If conveyor items already exist OR items have been typed, don't spawn
       // (items have been typed means they were spawned and shouldn't respawn)

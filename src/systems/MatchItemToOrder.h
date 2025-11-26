@@ -43,12 +43,10 @@ struct MatchItemToOrder : afterhours::System<> {
     }
 
     bool found_match = false;
-    for (afterhours::Entity &order_entity :
-         afterhours::EntityQuery()
-             .whereID(selected_order.order_id.value())
-             .whereHasComponent<Order>()
-             .gen()) {
-      Order &order = order_entity.get<Order>();
+    for (Order &order : afterhours::EntityQuery()
+                            .whereID(selected_order.order_id.value())
+                            .whereHasComponent<Order>()
+                            .gen_as<Order>()) {
 
       std::map<ItemType, int> item_counts = count_items(order.items);
       std::map<ItemType, int> selected_counts =

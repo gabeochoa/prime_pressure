@@ -80,12 +80,10 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
               ui_constants::get_theme_color(
                   afterhours::ui::Theme::Usage::Font));
 
-          for (const afterhours::Entity &order_entity :
-               afterhours::EntityQuery()
-                   .whereID(order_id)
-                   .whereHasComponent<Order>()
-                   .gen()) {
-            const Order &order = order_entity.get<Order>();
+          for (const Order &order : afterhours::EntityQuery()
+                                        .whereID(order_id)
+                                        .whereHasComponent<Order>()
+                                        .gen_as<Order>()) {
 
             int total_items = static_cast<int>(order.items.size());
             int selected_items_count =
@@ -118,9 +116,10 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
           ui_constants::pct_to_pixels_y(
               ui_constants::CONVEYOR_ITEM_VERTICAL_SPACING_PCT, screen_height);
 
-      for (const afterhours::Entity &conveyor_entity :
-           afterhours::EntityQuery().whereHasComponent<ConveyorItem>().gen()) {
-        const ConveyorItem &conveyor_item = conveyor_entity.get<ConveyorItem>();
+      for (const ConveyorItem &conveyor_item :
+           afterhours::EntityQuery()
+               .whereHasComponent<ConveyorItem>()
+               .gen_as<ConveyorItem>()) {
 
         if (conveyor_item.order_id == selected_order.order_id.value()) {
           float screen_x =

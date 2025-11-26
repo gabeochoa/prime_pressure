@@ -22,12 +22,10 @@ struct ProcessBoxingInput : afterhours::System<> {
       return;
     }
 
-    for (afterhours::Entity &order_entity :
-         afterhours::EntityQuery()
-             .whereID(boxing_progress.order_id.value())
-             .whereHasComponent<Order>()
-             .gen()) {
-      Order &order = order_entity.get<Order>();
+    for (Order &order : afterhours::EntityQuery()
+                            .whereID(boxing_progress.order_id.value())
+                            .whereHasComponent<Order>()
+                            .gen_as<Order>()) {
 
       if (boxing_progress.state == BoxingState::FoldBox &&
           game_input::IsKeyPressed(raylib::KEY_B)) {

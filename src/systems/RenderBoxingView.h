@@ -60,12 +60,10 @@ static void render_order_selection_list(float box_x, float &y,
 
   int order_number = 1;
   for (afterhours::EntityID order_id : queue.active_orders) {
-    for (const afterhours::Entity &order_entity :
-         afterhours::EntityQuery()
-             .whereID(order_id)
-             .whereHasComponent<Order>()
-             .gen()) {
-      const Order &order = order_entity.get<Order>();
+    for (const Order &order : afterhours::EntityQuery()
+                                  .whereID(order_id)
+                                  .whereHasComponent<Order>()
+                                  .gen_as<Order>()) {
 
       if (all_items_selected(order) && !order.is_shipped) {
         std::string order_text =
@@ -194,12 +192,10 @@ struct RenderBoxingView : BoxingViewRenderSystem {
       const OrderQueue &queue = queue_entity.get<OrderQueue>();
       render_order_selection_list(box_x, y, queue, screen_width, screen_height);
     } else {
-      for (const afterhours::Entity &order_entity :
-           afterhours::EntityQuery()
-               .whereID(boxing_progress.order_id.value())
-               .whereHasComponent<Order>()
-               .gen()) {
-        const Order &order = order_entity.get<Order>();
+      for (const Order &order : afterhours::EntityQuery()
+                                    .whereID(boxing_progress.order_id.value())
+                                    .whereHasComponent<Order>()
+                                    .gen_as<Order>()) {
         render_boxing_progress(box_x, y, boxing_progress, order, screen_width,
                                screen_height);
         break;
