@@ -82,6 +82,10 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
 
       int order_number = 1;
       for (afterhours::EntityID order_id : queue.active_orders) {
+        if (order_id == -1) {
+          order_number++;
+          continue;
+        }
         if (order_id == selected_order.order_id.value()) {
           std::string order_label = "Order #" + std::to_string(order_number);
           raylib::DrawTextEx(

@@ -14,6 +14,9 @@ struct RenderOrders : afterhours::System<> {
 
     float y = 80.0f;
     for (afterhours::EntityID order_id : queue.active_orders) {
+      if (order_id == -1) {
+        continue;
+      }
       for (const Order &order : afterhours::EntityQuery()
                                     .whereID(order_id)
                                     .whereHasComponent<Order>()

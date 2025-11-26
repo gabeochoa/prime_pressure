@@ -75,6 +75,9 @@ struct RenderComputerView : ComputerViewRenderSystem {
     }
 
     for (afterhours::EntityID order_id : queue.active_orders) {
+      if (order_id == -1) {
+        continue;
+      }
       bool is_selected = selected_order.order_id.has_value() &&
                          selected_order.order_id.value() == order_id;
 

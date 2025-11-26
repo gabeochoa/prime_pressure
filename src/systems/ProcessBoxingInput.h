@@ -35,6 +35,9 @@ struct ProcessBoxingInput : afterhours::System<> {
         }
 
         afterhours::EntityID order_id = queue.active_orders[order_index];
+        if (order_id == -1) {
+          break;
+        }
 
         std::vector<ItemType> items_to_create;
         bool order_is_ready = false;

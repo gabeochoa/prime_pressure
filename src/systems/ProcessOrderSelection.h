@@ -53,6 +53,9 @@ struct ProcessOrderSelection : afterhours::System<> {
       }
 
       afterhours::EntityID order_id = queue.active_orders[order_index];
+      if (order_id == -1) {
+        break;
+      }
 
       for (Order &order : afterhours::EntityQuery()
                               .whereID(order_id)
@@ -64,7 +67,14 @@ struct ProcessOrderSelection : afterhours::System<> {
           auto it = std::find(queue.active_orders.begin(),
                               queue.active_orders.end(), order_id);
           if (it != queue.active_orders.end()) {
-            queue.active_orders.erase(it);
+            int position = static_cast<int>(it - queue.active_orders.begin());
+            if (!queue.pending_orders.empty()) {
+              afterhours::EntityID new_order_id = queue.pending_orders.front();
+              queue.pending_orders.erase(queue.pending_orders.begin());
+              queue.active_orders[position] = new_order_id;
+            } else {
+              queue.active_orders[position] = -1;
+            }
           }
           if (selected_order.order_id.has_value() &&
               selected_order.order_id.value() == order_id) {

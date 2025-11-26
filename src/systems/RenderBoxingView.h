@@ -62,6 +62,10 @@ static void render_order_selection_list(float box_x, float &y,
 
   int order_number = 1;
   for (afterhours::EntityID order_id : queue.active_orders) {
+    if (order_id == -1) {
+      order_number++;
+      continue;
+    }
     for (const Order &order : afterhours::EntityQuery()
                                   .whereID(order_id)
                                   .whereHasComponent<Order>()
@@ -120,17 +124,27 @@ static void render_order_selection_list(float box_x, float &y,
     order_number++;
   }
 
-  if (queue.active_orders.empty() ||
-      std::all_of(queue.active_orders.begin(), queue.active_orders.end(),
-                  [](afterhours::EntityID order_id) {
-                    for (const Order &order : afterhours::EntityQuery()
-                                                  .whereID(order_id)
-                                                  .whereHasComponent<Order>()
-                                                  .gen_as<Order>()) {
-                      return order.is_shipped;
-                    }
-                    return false;
-                  })) {
+  bool all_shipped_or_empty = true;
+  for (afterhours::EntityID order_id : queue.active_orders) {
+    if (order_id == -1) {
+      continue;
+    }
+    for (const Order &order : afterhours::EntityQuery()
+                                  .whereID(order_id)
+                                  .whereHasComponent<Order>()
+                                  .gen_as<Order>()) {
+      if (!order.is_shipped) {
+        all_shipped_or_empty = false;
+        break;
+      }
+      break;
+    }
+    if (!all_shipped_or_empty) {
+      break;
+    }
+  }
+
+  if (queue.active_orders.empty() || all_shipped_or_empty) {
     raylib::DrawTextEx(
         uiFont, "No orders available",
         raylib::Vector2{
@@ -169,6 +183,9 @@ static void render_items_list(float left_x, float start_y,
     }
   } else {
     for (afterhours::EntityID order_id : queue.active_orders) {
+      if (order_id == -1) {
+        continue;
+      }
       for (const Order &order : afterhours::EntityQuery()
                                     .whereID(order_id)
                                     .whereHasComponent<Order>()
@@ -226,6 +243,9 @@ static void render_items_list(float left_x, float start_y,
   } else {
     bool has_items = false;
     for (afterhours::EntityID order_id : queue.active_orders) {
+      if (order_id == -1) {
+        continue;
+      }
       for (const Order &order : afterhours::EntityQuery()
                                     .whereID(order_id)
                                     .whereHasComponent<Order>()

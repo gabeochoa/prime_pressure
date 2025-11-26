@@ -31,8 +31,17 @@ struct GenerateOrders : afterhours::System<> {
 
     time_since_last_order += dt;
 
-    if (static_cast<int>(queue.active_orders.size()) >=
-        queue.max_active_orders) {
+    int valid_order_count = 0;
+    int first_empty_slot = -1;
+    for (size_t i = 0; i < queue.active_orders.size(); ++i) {
+      if (queue.active_orders[i] != -1) {
+        valid_order_count++;
+      } else if (first_empty_slot == -1) {
+        first_empty_slot = static_cast<int>(i);
+      }
+    }
+
+    if (valid_order_count >= queue.max_active_orders) {
       return;
     }
 
@@ -40,7 +49,11 @@ struct GenerateOrders : afterhours::System<> {
       return;
     }
 
-    generate_order(queue);
+    if (first_empty_slot >= 0) {
+      fill_empty_slot(queue, first_empty_slot);
+    } else {
+      generate_order(queue);
+    }
     time_since_last_order = 0.0f;
   }
 
@@ -65,5 +78,27 @@ private:
     order.items = order_items;
 
     queue.active_orders.push_back(order_entity.id);
+  }
+
+  void fill_empty_slot(OrderQueue &queue, int slot_index) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> item_count_dist(1, 3);
+    std::uniform_int_distribution<> item_index_dist(
+        0, static_cast<int>(simple_items.size() - 1));
+
+    int item_count = item_count_dist(gen);
+    std::vector<ItemType> order_items;
+
+    for (int i = 0; i < item_count; ++i) {
+      ItemType selected_item = simple_items[item_index_dist(gen)];
+      order_items.push_back(selected_item);
+    }
+
+    afterhours::Entity &order_entity = afterhours::EntityHelper::createEntity();
+    Order &order = order_entity.addComponent<Order>();
+    order.items = order_items;
+
+    queue.active_orders[slot_index] = order_entity.id;
   }
 };

@@ -15,6 +15,9 @@ struct SpawnConveyorItems : afterhours::System<> {
     int global_vertical_offset = 0;
 
     for (afterhours::EntityID order_id : queue.active_orders) {
+      if (order_id == -1) {
+        continue;
+      }
       bool has_conveyor_items = false;
       for (const ConveyorItem &existing_item :
            afterhours::EntityQuery()
