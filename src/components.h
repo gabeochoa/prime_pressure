@@ -14,6 +14,7 @@ struct Order : afterhours::BaseComponent {
   bool is_complete = false;
   bool is_shipped = false;
   bool is_fully_complete = false;
+  bool has_been_selected = false;
   int items_completed = 0;
 };
 

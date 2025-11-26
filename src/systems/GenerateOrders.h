@@ -52,7 +52,7 @@ struct GenerateOrders : afterhours::System<> {
     if (first_empty_slot >= 0) {
       fill_empty_slot(queue, first_empty_slot);
     } else {
-      generate_order(queue);
+    generate_order(queue);
     }
     time_since_last_order = 0.0f;
   }

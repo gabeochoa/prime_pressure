@@ -14,10 +14,14 @@ struct SpawnConveyorItems : afterhours::System<> {
 
     int global_vertical_offset = 0;
 
+    std::vector<std::pair<afterhours::EntityID, std::map<ItemType, int>>>
+        orders_to_spawn;
+
     for (afterhours::EntityID order_id : queue.active_orders) {
       if (order_id == -1) {
         continue;
       }
+
       bool has_conveyor_items = false;
       for (const ConveyorItem &existing_item :
            afterhours::EntityQuery()
@@ -53,26 +57,30 @@ struct SpawnConveyorItems : afterhours::System<> {
         }
 
         std::map<ItemType, int> item_counts = count_items(order.items);
-        int vertical_index = global_vertical_offset;
-
-        for (const auto &[item_type, count] : item_counts) {
-          for (int i = 0; i < count; ++i) {
-            afterhours::Entity &conveyor_item_entity =
-                afterhours::EntityHelper::createEntity();
-            ConveyorItem &conveyor_item =
-                conveyor_item_entity.addComponent<ConveyorItem>();
-            conveyor_item.type = item_type;
-            conveyor_item.x_position = ui_constants::CONVEYOR_START_X_PCT;
-            conveyor_item.speed = ui_constants::CONVEYOR_SPEED;
-            conveyor_item.order_id = order_id;
-            conveyor_item.vertical_index = vertical_index;
-            conveyor_item.is_moving = false;
-            vertical_index++;
-          }
-        }
-        global_vertical_offset = vertical_index;
+        orders_to_spawn.push_back({order_id, item_counts});
         break;
       }
+    }
+
+    for (const auto &[order_id, item_counts] : orders_to_spawn) {
+      int vertical_index = global_vertical_offset;
+
+      for (const auto &[item_type, count] : item_counts) {
+        for (int i = 0; i < count; ++i) {
+          afterhours::Entity &conveyor_item_entity =
+              afterhours::EntityHelper::createEntity();
+          ConveyorItem &conveyor_item =
+              conveyor_item_entity.addComponent<ConveyorItem>();
+          conveyor_item.type = item_type;
+          conveyor_item.x_position = ui_constants::CONVEYOR_START_X_PCT;
+          conveyor_item.speed = ui_constants::CONVEYOR_SPEED;
+          conveyor_item.order_id = order_id;
+          conveyor_item.vertical_index = vertical_index;
+          conveyor_item.is_moving = false;
+          vertical_index++;
+        }
+      }
+      global_vertical_offset = vertical_index;
     }
   }
 };

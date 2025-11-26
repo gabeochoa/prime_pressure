@@ -14,14 +14,18 @@ struct ManageConveyorItems : afterhours::System<ConveyorItem> {
     item.x_position += item.speed * dt;
 
     if (item.x_position >= ui_constants::CONVEYOR_END_X_PCT) {
+      bool added_to_ready = false;
       for (Order &order : afterhours::EntityQuery()
                               .whereID(item.order_id)
                               .whereHasComponent<Order>()
                               .gen_as<Order>()) {
         order.ready_items.push_back(item.type);
+        added_to_ready = true;
         break;
       }
-      entity.cleanup = true;
+      if (added_to_ready) {
+        entity.cleanup = true;
+      }
     }
   }
 };

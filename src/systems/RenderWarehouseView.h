@@ -128,37 +128,32 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
       }
     }
 
-    if (!selected_order.order_id.has_value()) {
-      float instruction_y =
-          box_y + box_height - ui_constants::INSTRUCTION_PADDING_PCT;
-      draw_instruction_text(
-          "[COMPUTER] [WAREHOUSE] [BOXING] (Press TAB to switch)",
-          box_x + ui_constants::HEADER_PADDING_PCT, instruction_y, screen_width,
-          screen_height, uiFont);
-      draw_instruction_text("[Select an order on the computer screen]",
-                            box_x + ui_constants::HEADER_PADDING_PCT,
-                            instruction_y + ui_constants::HEADER_PADDING_PCT,
-                            screen_width, screen_height, uiFont);
-      return;
-    }
-
     float start_y =
         belt_y - (belt_height / 2.0f) +
         ui_constants::pct_to_pixels_y(
             ui_constants::CONVEYOR_ITEM_VERTICAL_SPACING_PCT, screen_height);
 
     std::map<float, std::map<ItemType, int>> grouped_items;
+    std::map<float, afterhours::EntityID> position_to_order;
 
     for (const ConveyorItem &conveyor_item :
          afterhours::EntityQuery()
              .whereHasComponent<ConveyorItem>()
              .whereNotMarkedForCleanup()
              .gen_as<ConveyorItem>()) {
-      if (conveyor_item.order_id != selected_order.order_id.value()) {
+      bool order_has_been_selected = false;
+      for (const Order &order : afterhours::EntityQuery()
+                                    .whereID(conveyor_item.order_id)
+                                    .whereHasComponent<Order>()
+                                    .gen_as<Order>()) {
+        order_has_been_selected = order.has_been_selected;
+        break;
+      }
+      if (!order_has_been_selected) {
         continue;
       }
-
       grouped_items[conveyor_item.x_position][conveyor_item.type]++;
+      position_to_order[conveyor_item.x_position] = conveyor_item.order_id;
     }
 
     int vertical_index = 0;
@@ -170,13 +165,19 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
                          ui_constants::CONVEYOR_ITEM_VERTICAL_SPACING_PCT,
                          screen_height));
 
+      afterhours::EntityID order_id_for_position =
+          position_to_order[x_position];
+      bool is_selected_order =
+          selected_order.order_id.has_value() &&
+          selected_order.order_id.value() == order_id_for_position;
+
       bool has_moving = false;
       for (const ConveyorItem &conveyor_item :
            afterhours::EntityQuery()
                .whereHasComponent<ConveyorItem>()
                .whereNotMarkedForCleanup()
                .gen_as<ConveyorItem>()) {
-        if (conveyor_item.order_id == selected_order.order_id.value() &&
+        if (conveyor_item.order_id == order_id_for_position &&
             std::abs(conveyor_item.x_position - x_position) < 0.001f) {
           if (conveyor_item.is_moving) {
             has_moving = true;
@@ -200,7 +201,10 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
 
       raylib::Color item_color =
           ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
-      if (has_moving) {
+      if (!is_selected_order) {
+        item_color = afterhours::colors::darken(item_color, 0.5f);
+      }
+      if (has_moving && is_selected_order) {
         item_color = ui_constants::get_theme_color(
             afterhours::ui::Theme::Usage::Primary);
       }

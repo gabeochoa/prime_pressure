@@ -84,6 +84,7 @@ struct ProcessOrderSelection : afterhours::System<> {
         }
 
         if (!order.is_shipped) {
+          order.has_been_selected = true;
           if (selected_order.order_id.has_value() &&
               selected_order.order_id.value() != order_id) {
             afterhours::Entity &buffer_entity =
