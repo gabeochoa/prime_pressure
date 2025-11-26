@@ -70,7 +70,7 @@ struct ProcessBoxingInput : afterhours::System<> {
 
             order.is_complete = true;
             boxing_progress.order_id = ready_order_id;
-            boxing_progress.state = BoxingState::FoldBox;
+            boxing_progress.state = BoxingState::PutItems;
             boxing_progress.items_placed = 0;
             return;
           }
@@ -78,8 +78,9 @@ struct ProcessBoxingInput : afterhours::System<> {
         return;
       }
 
+      // Skip FoldBox state - go directly to PutItems when starting boxing
       if (boxing_progress.state == BoxingState::None) {
-        boxing_progress.state = BoxingState::FoldBox;
+        boxing_progress.state = BoxingState::PutItems;
         return;
       }
 
