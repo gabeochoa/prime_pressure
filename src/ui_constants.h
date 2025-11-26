@@ -19,14 +19,14 @@ constexpr float INSTRUCTION_FONT_SIZE_PCT = 16.0f / 720.0f;
 
 constexpr float ORDER_ITEM_SPACING_PCT = 30.0f / 720.0f;
 constexpr float HEADER_PADDING_PCT = 10.0f / 720.0f;
-constexpr float HEADER_TO_CONTENT_SPACING_PCT = 40.0f / 720.0f;
+constexpr float HEADER_TO_CONTENT_SPACING_PCT = 20.0f / 720.0f;
 constexpr float CONTENT_PADDING_PCT = 20.0f / 720.0f;
 constexpr float INSTRUCTION_PADDING_PCT = 60.0f / 720.0f;
 
 constexpr float TYPING_BUFFER_TIMEOUT = 5.0f;
 constexpr float ORDER_GENERATION_INTERVAL = 1.0f;
 
-constexpr float CONVEYOR_START_X_PCT = 0.0f;
+constexpr float CONVEYOR_START_X_PCT = 0.005f;
 constexpr float CONVEYOR_END_X_PCT = 1.0f;
 constexpr float CONVEYOR_Y_PCT = 0.5f;
 constexpr float CONVEYOR_SPEED = 0.3f;

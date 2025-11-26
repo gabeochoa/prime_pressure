@@ -39,6 +39,22 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
     const SelectedOrder &selected_order =
         selected_order_entity.get<SelectedOrder>();
 
+    int header_font_size = ui_constants::pct_to_font_size(
+        ui_constants::HEADER_FONT_SIZE_PCT, screen_height);
+    float header_y_pixels =
+        ui_constants::pct_to_pixels_y(header_y, screen_height);
+
+    raylib::Vector2 header_text_size =
+        raylib::MeasureTextEx(uiFont, "> [WAREHOUSE SCREEN]",
+                              static_cast<float>(header_font_size), 1.0f);
+    float header_bottom_pixels = header_y_pixels + header_text_size.y;
+
+    float spacing_pixels = ui_constants::pct_to_pixels_y(
+        ui_constants::HEADER_TO_CONTENT_SPACING_PCT, screen_height);
+    float content_start_y_pixels = header_bottom_pixels + spacing_pixels;
+    float content_start_y_pct =
+        content_start_y_pixels / static_cast<float>(screen_height);
+
     float belt_y_pct = box_y + box_height * ui_constants::CONVEYOR_Y_PCT;
     float belt_y = ui_constants::pct_to_pixels_y(belt_y_pct, screen_height);
     float belt_height = ui_constants::pct_to_pixels_y(
@@ -75,7 +91,7 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
               raylib::Vector2{
                   ui_constants::pct_to_pixels_x(
                       box_x + ui_constants::CONTENT_PADDING_PCT, screen_width),
-                  ui_constants::pct_to_pixels_y(header_y, screen_height)},
+                  content_start_y_pixels},
               static_cast<float>(body_font_size), 1.0f,
               ui_constants::get_theme_color(
                   afterhours::ui::Theme::Usage::Font));
@@ -98,7 +114,7 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
                         box_x + box_width -
                             ui_constants::CONTENT_PADDING_PCT * 5.0f,
                         screen_width),
-                    ui_constants::pct_to_pixels_y(header_y, screen_height)},
+                    content_start_y_pixels},
                 static_cast<float>(instruction_font_size), 1.0f,
                 ui_constants::get_theme_color(
                     afterhours::ui::Theme::Usage::Font));

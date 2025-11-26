@@ -43,8 +43,20 @@ struct RenderComputerView : ComputerViewRenderSystem {
     const SelectedOrder &selected_order =
         selected_order_entity.get<SelectedOrder>();
 
-    float y = header_y + ui_constants::HEADER_FONT_SIZE_PCT +
-              ui_constants::HEADER_TO_CONTENT_SPACING_PCT;
+    int header_font_size = ui_constants::pct_to_font_size(
+        ui_constants::HEADER_FONT_SIZE_PCT, screen_height);
+    float header_y_pixels =
+        ui_constants::pct_to_pixels_y(header_y, screen_height);
+
+    raylib::Vector2 header_text_size =
+        raylib::MeasureTextEx(raylib::GetFontDefault(), "> [COMPUTER SCREEN]",
+                              static_cast<float>(header_font_size), 1.0f);
+    float header_bottom_pixels = header_y_pixels + header_text_size.y;
+
+    float spacing_pixels = ui_constants::pct_to_pixels_y(
+        ui_constants::HEADER_TO_CONTENT_SPACING_PCT, screen_height);
+    float y_pixels = header_bottom_pixels + spacing_pixels;
+    float y = y_pixels / static_cast<float>(screen_height);
     int order_number = 1;
     int body_font_size = ui_constants::pct_to_font_size(
         ui_constants::BODY_FONT_SIZE_PCT, screen_height);
