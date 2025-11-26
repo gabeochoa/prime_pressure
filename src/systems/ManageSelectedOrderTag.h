@@ -14,13 +14,7 @@ struct ManageSelectedOrderTag : afterhours::System<Order> {
     afterhours::EntityID order_id = order_entity.id;
     bool should_have_tag = selected_order.order_id.has_value() &&
                            selected_order.order_id.value() == order_id;
-    bool has_tag = order_entity.hasTag(GameTag::IsSelectedOrder);
 
-    // TODO add tag toggler
-    if (should_have_tag && !has_tag) {
-      order_entity.enableTag(GameTag::IsSelectedOrder);
-    } else if (!should_have_tag && has_tag) {
-      order_entity.disableTag(GameTag::IsSelectedOrder);
-    }
+    order_entity.setTag(GameTag::IsSelectedOrder, should_have_tag);
   }
 };

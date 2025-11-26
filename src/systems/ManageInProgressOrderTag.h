@@ -20,12 +20,6 @@ struct ManageInProgressOrderTag : afterhours::System<Order> {
       }
     }
 
-    bool has_tag = order_entity.hasTag(GameTag::IsInProgressOrder);
-
-    if (is_in_progress_orders && !has_tag) {
-      order_entity.enableTag(GameTag::IsInProgressOrder);
-    } else if (!is_in_progress_orders && has_tag) {
-      order_entity.disableTag(GameTag::IsInProgressOrder);
-    }
+    order_entity.setTag(GameTag::IsInProgressOrder, is_in_progress_orders);
   }
 };
