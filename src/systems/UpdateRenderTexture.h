@@ -10,10 +10,6 @@ struct UpdateRenderTexture : afterhours::System<> {
 
   virtual ~UpdateRenderTexture() {}
 
-  virtual bool should_run(float) override {
-    return !render_backend::is_headless_mode;
-  }
-
   void once(float) override {
     const afterhours::window_manager::ProvidesCurrentResolution *pcr =
         afterhours::EntityHelper::get_singleton_cmp<

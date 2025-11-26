@@ -16,6 +16,5 @@ struct Preload {
   void operator=(const Preload &) = delete;
 
   Preload &init(const char *title);
-  Preload &init(const char *title, bool headless);
   Preload &make_singleton();
 };

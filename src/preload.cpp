@@ -29,38 +29,30 @@ static void load_gamepad_mappings() {
 
 Preload::Preload() {}
 
-Preload &Preload::init(const char *title) { return init(title, false); }
-
-Preload &Preload::init(const char *title, bool headless) {
+Preload &Preload::init(const char *title) {
   files::init("Prime Pressure", "resources");
 
   int width = Settings::get().get_screen_width();
   int height = Settings::get().get_screen_height();
 
-  if (!headless) {
-    raylib::InitWindow(width, height, title);
-    raylib::SetWindowSize(width, height);
-    raylib::SetWindowState(raylib::FLAG_WINDOW_RESIZABLE);
+  raylib::InitWindow(width, height, title);
+  raylib::SetWindowSize(width, height);
+  raylib::SetWindowState(raylib::FLAG_WINDOW_RESIZABLE);
+
+  raylib::TraceLogLevel logLevel = raylib::LOG_ERROR;
+  raylib::SetTraceLogLevel(logLevel);
+  raylib::SetTargetFPS(200);
+
+  raylib::SetAudioStreamBufferSizeDefault(4096);
+  raylib::InitAudioDevice();
+  if (!raylib::IsAudioDeviceReady()) {
+    log_warn("audio device not ready; continuing without audio");
   }
+  raylib::SetMasterVolume(1.f);
 
-  if (!headless) {
-    raylib::TraceLogLevel logLevel = raylib::LOG_ERROR;
-    raylib::SetTraceLogLevel(logLevel);
-    raylib::SetTargetFPS(200);
+  raylib::SetExitKey(0);
 
-    raylib::SetAudioStreamBufferSizeDefault(4096);
-    raylib::InitAudioDevice();
-    if (!raylib::IsAudioDeviceReady()) {
-      log_warn("audio device not ready; continuing without audio");
-    }
-    raylib::SetMasterVolume(1.f);
-
-    raylib::SetExitKey(0);
-  }
-
-  if (!headless) {
-    load_gamepad_mappings();
-  }
+  load_gamepad_mappings();
 
   return *this;
 }

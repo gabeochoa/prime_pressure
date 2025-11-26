@@ -5,6 +5,7 @@
 #include "log.h"
 #include "preload.h"
 #include "render_backend.h"
+#include "render_views.h"
 #include "settings.h"
 #include "systems/BoxItem.h"
 #include "systems/GenerateOrders.h"
@@ -17,18 +18,10 @@
 #include "systems/ProcessOrderSelection.h"
 #include "systems/ProcessTypingInput.h"
 #include "systems/ProcessViewSwitch.h"
-#include "systems/RenderBox.h"
-#include "systems/RenderBoxingView.h"
-#include "systems/RenderComputerView.h"
 #include "systems/RenderOrders.h"
 #include "systems/RenderRenderTexture.h"
 #include "systems/RenderSystemHelpers.h"
 #include "systems/RenderTypingBuffer.h"
-#include "systems/RenderWarehouseViewBelt.h"
-#include "systems/RenderWarehouseViewBox.h"
-#include "systems/RenderWarehouseViewInstructions.h"
-#include "systems/RenderWarehouseViewItems.h"
-#include "systems/RenderWarehouseViewOrderInfo.h"
 #include "systems/SpawnConveyorItems.h"
 #include "systems/SpawnItems.h"
 #include "systems/TestSystem.h"
@@ -132,16 +125,9 @@ void game() {
 
   {
     systems.register_render_system(std::make_unique<BeginWorldRender>());
-    systems.register_render_system(std::make_unique<RenderComputerView>());
-    systems.register_render_system(std::make_unique<RenderWarehouseViewBox>());
-    systems.register_render_system(std::make_unique<RenderWarehouseViewBelt>());
-    systems.register_render_system(
-        std::make_unique<RenderWarehouseViewOrderInfo>());
-    systems.register_render_system(
-        std::make_unique<RenderWarehouseViewItems>());
-    systems.register_render_system(
-        std::make_unique<RenderWarehouseViewInstructions>());
-    systems.register_render_system(std::make_unique<RenderBoxingView>());
+    register_render_computer_systems(systems);
+    register_render_warehouse_systems(systems);
+    register_render_boxing_systems(systems);
     systems.register_render_system(std::make_unique<RenderTypingBuffer>());
     systems.register_render_system(std::make_unique<EndWorldRender>());
     systems.register_render_system(
@@ -266,16 +252,9 @@ void run_test(const std::string &test_name, bool slow_mode) {
 
   {
     systems.register_render_system(std::make_unique<BeginWorldRender>());
-    systems.register_render_system(std::make_unique<RenderComputerView>());
-    systems.register_render_system(std::make_unique<RenderWarehouseViewBox>());
-    systems.register_render_system(std::make_unique<RenderWarehouseViewBelt>());
-    systems.register_render_system(
-        std::make_unique<RenderWarehouseViewOrderInfo>());
-    systems.register_render_system(
-        std::make_unique<RenderWarehouseViewItems>());
-    systems.register_render_system(
-        std::make_unique<RenderWarehouseViewInstructions>());
-    systems.register_render_system(std::make_unique<RenderBoxingView>());
+    register_render_computer_systems(systems);
+    register_render_warehouse_systems(systems);
+    register_render_boxing_systems(systems);
     systems.register_render_system(std::make_unique<RenderTypingBuffer>());
     systems.register_render_system(std::make_unique<EndWorldRender>());
     systems.register_render_system(
