@@ -24,7 +24,11 @@
 #include "systems/RenderRenderTexture.h"
 #include "systems/RenderSystemHelpers.h"
 #include "systems/RenderTypingBuffer.h"
-#include "systems/RenderWarehouseView.h"
+#include "systems/RenderWarehouseViewBelt.h"
+#include "systems/RenderWarehouseViewBox.h"
+#include "systems/RenderWarehouseViewInstructions.h"
+#include "systems/RenderWarehouseViewItems.h"
+#include "systems/RenderWarehouseViewOrderInfo.h"
 #include "systems/SpawnConveyorItems.h"
 #include "systems/SpawnItems.h"
 #include "systems/TestSystem.h"
@@ -129,7 +133,14 @@ void game() {
   {
     systems.register_render_system(std::make_unique<BeginWorldRender>());
     systems.register_render_system(std::make_unique<RenderComputerView>());
-    systems.register_render_system(std::make_unique<RenderWarehouseView>());
+    systems.register_render_system(std::make_unique<RenderWarehouseViewBox>());
+    systems.register_render_system(std::make_unique<RenderWarehouseViewBelt>());
+    systems.register_render_system(
+        std::make_unique<RenderWarehouseViewOrderInfo>());
+    systems.register_render_system(
+        std::make_unique<RenderWarehouseViewItems>());
+    systems.register_render_system(
+        std::make_unique<RenderWarehouseViewInstructions>());
     systems.register_render_system(std::make_unique<RenderBoxingView>());
     systems.register_render_system(std::make_unique<RenderTypingBuffer>());
     systems.register_render_system(std::make_unique<EndWorldRender>());
@@ -256,7 +267,14 @@ void run_test(const std::string &test_name, bool slow_mode) {
   {
     systems.register_render_system(std::make_unique<BeginWorldRender>());
     systems.register_render_system(std::make_unique<RenderComputerView>());
-    systems.register_render_system(std::make_unique<RenderWarehouseView>());
+    systems.register_render_system(std::make_unique<RenderWarehouseViewBox>());
+    systems.register_render_system(std::make_unique<RenderWarehouseViewBelt>());
+    systems.register_render_system(
+        std::make_unique<RenderWarehouseViewOrderInfo>());
+    systems.register_render_system(
+        std::make_unique<RenderWarehouseViewItems>());
+    systems.register_render_system(
+        std::make_unique<RenderWarehouseViewInstructions>());
     systems.register_render_system(std::make_unique<RenderBoxingView>());
     systems.register_render_system(std::make_unique<RenderTypingBuffer>());
     systems.register_render_system(std::make_unique<EndWorldRender>());
