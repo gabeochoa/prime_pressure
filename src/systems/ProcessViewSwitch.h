@@ -1,11 +1,12 @@
 #pragma once
 
 #include "../components.h"
+#include "../testing/test_input.h"
 #include <afterhours/ah.h>
 
 struct ProcessViewSwitch : afterhours::System<> {
   void once(float) override {
-    bool tab_pressed = raylib::IsKeyPressed(raylib::KEY_TAB);
+    bool tab_pressed = test_input::is_key_pressed(raylib::KEY_TAB);
     bool shift_held = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
                       raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../components.h"
+#include "../testing/test_input.h"
 #include <afterhours/ah.h>
 
 struct ProcessBoxingOrderSelection : afterhours::System<> {
@@ -21,7 +22,7 @@ struct ProcessBoxingOrderSelection : afterhours::System<> {
 
   void once(float) override {
     for (int key = raylib::KEY_ONE; key <= raylib::KEY_NINE; ++key) {
-      if (!raylib::IsKeyPressed(key)) {
+      if (!test_input::is_key_pressed(key)) {
         continue;
       }
 

@@ -12,7 +12,7 @@ struct RenderComputerView : ComputerViewRenderSystem {
     const afterhours::Entity &view_entity =
         afterhours::EntityHelper::get_singleton<ActiveView>();
     const ActiveView &active_view = view_entity.get<ActiveView>();
-    
+
     if (active_view.current_view != ViewState::Computer) {
       return;
     }
@@ -31,8 +31,8 @@ struct RenderComputerView : ComputerViewRenderSystem {
     float header_x = box_x + ui_constants::HEADER_PADDING_PCT;
     float header_y = box_y + ui_constants::HEADER_PADDING_PCT;
     draw_view_header("COMPUTER SCREEN", header_x, header_y,
-                     active_view.current_view, ViewState::Computer, screen_width,
-                     screen_height);
+                     active_view.current_view, ViewState::Computer,
+                     screen_width, screen_height);
 
     const afterhours::Entity &queue_entity =
         afterhours::EntityHelper::get_singleton<OrderQueue>();
@@ -54,10 +54,9 @@ struct RenderComputerView : ComputerViewRenderSystem {
     if (queue.active_orders.empty()) {
       raylib::DrawText(
           "(No orders available)",
-          static_cast<int>(
-              ui_constants::pct_to_pixels_x(box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
-          static_cast<int>(
-              ui_constants::pct_to_pixels_y(y, screen_height)),
+          static_cast<int>(ui_constants::pct_to_pixels_x(
+              box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
+          static_cast<int>(ui_constants::pct_to_pixels_y(y, screen_height)),
           instruction_font_size,
           ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
       y += ui_constants::ORDER_ITEM_SPACING_PCT;
@@ -100,16 +99,15 @@ struct RenderComputerView : ComputerViewRenderSystem {
           text_color = ui_constants::get_theme_color(
               afterhours::ui::Theme::Usage::Accent);
         } else {
-          text_color = ui_constants::get_theme_color(
-              afterhours::ui::Theme::Usage::Font);
+          text_color =
+              ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
         }
 
         raylib::DrawText(
             order_text.c_str(),
-            static_cast<int>(
-                ui_constants::pct_to_pixels_x(box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
-            static_cast<int>(
-                ui_constants::pct_to_pixels_y(y, screen_height)),
+            static_cast<int>(ui_constants::pct_to_pixels_x(
+                box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
+            static_cast<int>(ui_constants::pct_to_pixels_y(y, screen_height)),
             body_font_size, text_color);
         y += ui_constants::ORDER_ITEM_SPACING_PCT;
         order_number++;
@@ -117,13 +115,15 @@ struct RenderComputerView : ComputerViewRenderSystem {
       }
     }
 
-    float instruction_y = box_y + box_height - ui_constants::INSTRUCTION_PADDING_PCT;
-    draw_instruction_text("[COMPUTER] [WAREHOUSE] [BOXING] (Press TAB to switch)",
-                           box_x + ui_constants::HEADER_PADDING_PCT,
-                           instruction_y, screen_width, screen_height);
+    float instruction_y =
+        box_y + box_height - ui_constants::INSTRUCTION_PADDING_PCT;
+    draw_instruction_text(
+        "[COMPUTER] [WAREHOUSE] [BOXING] (Press TAB to switch)",
+        box_x + ui_constants::HEADER_PADDING_PCT, instruction_y, screen_width,
+        screen_height);
     draw_instruction_text("[Press number key to select order]",
-                           box_x + ui_constants::HEADER_PADDING_PCT,
-                           instruction_y + ui_constants::HEADER_PADDING_PCT,
-                           screen_width, screen_height);
+                          box_x + ui_constants::HEADER_PADDING_PCT,
+                          instruction_y + ui_constants::HEADER_PADDING_PCT,
+                          screen_width, screen_height);
   }
 };

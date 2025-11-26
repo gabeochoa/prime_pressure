@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../components.h"
+#include "../testing/test_input.h"
 #include "../ui_constants.h"
 #include <afterhours/ah.h>
 #include <magic_enum/magic_enum.hpp>
@@ -11,11 +12,23 @@ struct GenerateOrders : afterhours::System<> {
 
   float time_since_last_order = 0.0f;
   float order_interval = ui_constants::ORDER_GENERATION_INTERVAL;
+  bool initial_order_generated = false;
 
   void once(float dt) override {
+    if (dt <= 0.0f) {
+      return;
+    }
     afterhours::Entity &queue_entity =
         afterhours::EntityHelper::get_singleton<OrderQueue>();
     OrderQueue &queue = queue_entity.get<OrderQueue>();
+
+    if (test_input::test_mode && !initial_order_generated &&
+        queue.active_orders.empty()) {
+      generate_order(queue);
+      initial_order_generated = true;
+      return;
+    }
+
     time_since_last_order += dt;
 
     if (static_cast<int>(queue.active_orders.size()) >=
@@ -27,6 +40,12 @@ struct GenerateOrders : afterhours::System<> {
       return;
     }
 
+    generate_order(queue);
+    time_since_last_order = 0.0f;
+  }
+
+private:
+  void generate_order(OrderQueue &queue) {
     static std::random_device rd;
     static std::mt19937 gen(rd());
     std::uniform_int_distribution<> item_count_dist(1, 3);
@@ -41,12 +60,10 @@ struct GenerateOrders : afterhours::System<> {
       order_items.push_back(selected_item);
     }
 
-    // TODO add make_entity helpers
     afterhours::Entity &order_entity = afterhours::EntityHelper::createEntity();
     Order &order = order_entity.addComponent<Order>();
     order.items = order_items;
 
     queue.active_orders.push_back(order_entity.id);
-    time_since_last_order = 0.0f;
   }
 };
