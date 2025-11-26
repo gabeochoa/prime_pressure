@@ -2,7 +2,6 @@
 
 #include "../components.h"
 #include "../input_wrapper.h"
-#include "../log/log.h"
 #include <afterhours/ah.h>
 
 struct ProcessBoxingInput : afterhours::System<> {
@@ -20,18 +19,9 @@ struct ProcessBoxingInput : afterhours::System<> {
         boxing_progress_entity.get<BoxingProgress>();
 
     bool b_pressed = game_input::IsKeyPressed(raylib::KEY_B);
-    if (b_pressed) {
-      log_info("ProcessBoxingInput: B PRESSED! order_id={}, state={}",
-               boxing_progress.order_id.has_value()
-                   ? boxing_progress.order_id.value()
-                   : -1,
-               static_cast<int>(boxing_progress.state));
-    }
 
     if (b_pressed) {
       if (!boxing_progress.order_id.has_value()) {
-        log_info(
-            "ProcessBoxingInput: No order selected, looking for ready order");
         const afterhours::Entity &queue_entity =
             afterhours::EntityHelper::get_singleton<OrderQueue>();
         const OrderQueue &queue = queue_entity.get<OrderQueue>();
@@ -43,9 +33,6 @@ struct ProcessBoxingInput : afterhours::System<> {
                                         .whereHasComponent<Order>()
                                         .gen_as<Order>()) {
             bool all_selected = all_items_selected(order);
-            log_info("ProcessBoxingInput: Checking order {}, all_selected={}, "
-                     "is_shipped={}",
-                     order_id, all_selected, order.is_shipped);
             if (all_selected && !order.is_shipped) {
               ready_order_id = order_id;
               break;
@@ -58,9 +45,6 @@ struct ProcessBoxingInput : afterhours::System<> {
         }
 
         if (ready_order_id != -1) {
-          log_info("ProcessBoxingInput: Found ready order {}, selecting and "
-                   "setting state to FoldBox",
-                   ready_order_id);
           for (Order &order : afterhours::EntityQuery()
                                   .whereID(ready_order_id)
                                   .whereHasComponent<Order>()
@@ -88,30 +72,21 @@ struct ProcessBoxingInput : afterhours::System<> {
             boxing_progress.order_id = ready_order_id;
             boxing_progress.state = BoxingState::FoldBox;
             boxing_progress.items_placed = 0;
-            log_info(
-                "ProcessBoxingInput: Order selected, state set to FoldBox");
             return;
           }
         }
-        log_info("ProcessBoxingInput: No ready order found");
         return;
       }
 
       if (boxing_progress.state == BoxingState::None) {
-        log_info("ProcessBoxingInput: State is None, transitioning to FoldBox");
         boxing_progress.state = BoxingState::FoldBox;
         return;
       }
 
       if (boxing_progress.state == BoxingState::FoldBox) {
-        log_info(
-            "ProcessBoxingInput: State is FoldBox, transitioning to PutItems");
         boxing_progress.state = BoxingState::PutItems;
         return;
       }
-
-      log_info("ProcessBoxingInput: B pressed but state is {}, no action taken",
-               static_cast<int>(boxing_progress.state));
     }
 
     if (!boxing_progress.order_id.has_value()) {
@@ -125,7 +100,11 @@ struct ProcessBoxingInput : afterhours::System<> {
 
       if (boxing_progress.state == BoxingState::PutItems &&
           game_input::IsKeyPressed(raylib::KEY_P)) {
+        // Find the first unplaced item and mark it as placed
+        bool item_placed = false;
         for (afterhours::EntityID item_id : boxing_progress.boxing_items) {
+          if (item_placed)
+            break;
           for (BoxingItemStatus &boxing_item :
                afterhours::EntityQuery()
                    .whereID(item_id)
@@ -134,6 +113,7 @@ struct ProcessBoxingInput : afterhours::System<> {
             if (!boxing_item.is_placed) {
               boxing_item.is_placed = true;
               boxing_progress.items_placed++;
+              item_placed = true;
               int total_items =
                   static_cast<int>(boxing_progress.boxing_items.size());
               if (boxing_progress.items_placed >= total_items) {

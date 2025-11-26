@@ -2,7 +2,6 @@
 
 #include "../components.h"
 #include "../input_wrapper.h"
-#include "../log/log.h"
 #include <afterhours/ah.h>
 
 struct ProcessBoxingOrderSelection : afterhours::System<> {
@@ -57,8 +56,6 @@ struct ProcessBoxingOrderSelection : afterhours::System<> {
       return;
     }
 
-    log_info("ProcessBoxingOrderSelection: Found ready order {}, selecting it", ready_order_id);
-
     for (Order &order : afterhours::EntityQuery()
                             .whereID(ready_order_id)
                             .whereHasComponent<Order>()
@@ -92,8 +89,6 @@ struct ProcessBoxingOrderSelection : afterhours::System<> {
       boxing_progress.order_id = ready_order_id;
       boxing_progress.state = BoxingState::None;
       boxing_progress.items_placed = 0;
-      log_info("ProcessBoxingOrderSelection: Order {} selected, state set to None, boxing_items count={}", 
-               ready_order_id, boxing_progress.boxing_items.size());
       break;
     }
   }

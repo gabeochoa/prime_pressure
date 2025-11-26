@@ -240,8 +240,8 @@ static void render_box(float center_x_pct, float center_y_pct, int screen_width,
                           static_cast<int>(box_width),
                           static_cast<int>(box_height), box_color);
 
-    // Draw off-white tape stripe when taped
-    if (boxing_progress.state >= BoxingState::Tape) {
+    // Draw off-white tape stripe only after pressing T (Ship state)
+    if (boxing_progress.state == BoxingState::Ship) {
       raylib::Color tape_color = raylib::Color{250, 248, 240, 255}; // Off-white
       float stripe_width = box_width;
       float stripe_height = box_height * 0.08f; // 8% of box height
@@ -256,7 +256,10 @@ static void render_box(float center_x_pct, float center_y_pct, int screen_width,
                                static_cast<int>(box_height), box_color);
   }
 
-  if (!is_closed && boxing_progress.order_id.has_value() &&
+  // Only show items in box when state is PutItems or Fold (after items are
+  // placed)
+  if (!is_closed && boxing_progress.state >= BoxingState::PutItems &&
+      boxing_progress.order_id.has_value() &&
       !boxing_progress.boxing_items.empty()) {
     float item_y = box_y + 10.0f;
     int instruction_font_size = ui_constants::pct_to_font_size(
@@ -268,6 +271,7 @@ static void render_box(float center_x_pct, float center_y_pct, int screen_width,
                .whereID(item_id)
                .whereHasComponent<BoxingItemStatus>()
                .gen_as<BoxingItemStatus>()) {
+        // Only show items that have been placed
         if (boxing_item.is_placed) {
           std::string item_text = item_type_to_string(boxing_item.type);
           raylib::DrawTextEx(
