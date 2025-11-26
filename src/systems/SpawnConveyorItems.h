@@ -6,6 +6,43 @@
 #include <set>
 #include <vector>
 
+inline int get_max_vertical_index() {
+  int max_vertical_index = -1;
+  for (const ConveyorItem &existing_item :
+       afterhours::EntityQuery()
+           .whereHasComponent<ConveyorItem>()
+           .whereHasTag(GameTag::IsOnConveyor)
+           .gen_as<ConveyorItem>()) {
+    if (existing_item.vertical_index > max_vertical_index) {
+      max_vertical_index = existing_item.vertical_index;
+    }
+  }
+  return max_vertical_index;
+}
+
+inline void
+create_conveyor_items_for_order(afterhours::EntityID order_id,
+                                const std::map<ItemType, int> &item_counts,
+                                int start_vertical_index) {
+  int vertical_index = start_vertical_index;
+  for (const auto &[item_type, count] : item_counts) {
+    for (int i = 0; i < count; ++i) {
+      afterhours::Entity &conveyor_item_entity =
+          afterhours::EntityHelper::createEntity();
+      ConveyorItem &conveyor_item =
+          conveyor_item_entity.addComponent<ConveyorItem>();
+      conveyor_item.type = item_type;
+      conveyor_item.x_position = ui_constants::CONVEYOR_START_X_PCT;
+      conveyor_item.speed = ui_constants::CONVEYOR_SPEED;
+      conveyor_item.order_id = order_id;
+      conveyor_item.vertical_index = vertical_index;
+      conveyor_item.is_moving = false;
+      conveyor_item_entity.enableTag(GameTag::IsOnConveyor);
+      vertical_index++;
+    }
+  }
+}
+
 struct SpawnConveyorItems
     : afterhours::System<Order,
                          afterhours::tags::All<GameTag::IsInProgressOrder>> {
@@ -30,37 +67,9 @@ struct SpawnConveyorItems
       return;
     }
 
-    // TODO if this is for rendering it should be in the rendering system
-    int max_vertical_index = -1;
-    for (const ConveyorItem &existing_item :
-         afterhours::EntityQuery()
-             .whereHasComponent<ConveyorItem>()
-             .whereHasTag(GameTag::IsOnConveyor)
-             .gen_as<ConveyorItem>()) {
-      if (existing_item.vertical_index > max_vertical_index) {
-        max_vertical_index = existing_item.vertical_index;
-      }
-    }
-
-    int vertical_index = max_vertical_index + 1;
+    int max_vertical_index = get_max_vertical_index();
     std::map<ItemType, int> item_counts = count_items(order.items);
-
-    // TODO make a  helper to ahandle all of this
-    for (const auto &[item_type, count] : item_counts) {
-      for (int i = 0; i < count; ++i) {
-        afterhours::Entity &conveyor_item_entity =
-            afterhours::EntityHelper::createEntity();
-        ConveyorItem &conveyor_item =
-            conveyor_item_entity.addComponent<ConveyorItem>();
-        conveyor_item.type = item_type;
-        conveyor_item.x_position = ui_constants::CONVEYOR_START_X_PCT;
-        conveyor_item.speed = ui_constants::CONVEYOR_SPEED;
-        conveyor_item.order_id = order_id;
-        conveyor_item.vertical_index = vertical_index;
-        conveyor_item.is_moving = false;
-        conveyor_item_entity.enableTag(GameTag::IsOnConveyor);
-        vertical_index++;
-      }
-    }
+    create_conveyor_items_for_order(order_id, item_counts,
+                                    max_vertical_index + 1);
   }
 };

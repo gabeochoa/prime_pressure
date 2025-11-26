@@ -218,7 +218,6 @@ struct TestApp {
                .whereID(order_id)
                .whereHasComponent<Order>()
                .gen()) {
-        // TODO where order is fully omplete
         const Order &order = order_entity.get<Order>();
         if (order.is_fully_complete) {
           return true;
@@ -249,7 +248,6 @@ struct TestApp {
          afterhours::EntityQuery()
              .whereID(selected_order.order_id.value())
              .whereHasComponent<Order>()
-             // TODO genas
              .gen()) {
       const Order &order = order_entity.get<Order>();
       return order.items;
