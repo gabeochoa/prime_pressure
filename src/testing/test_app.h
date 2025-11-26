@@ -213,15 +213,16 @@ struct TestApp {
     const OrderQueue &queue = queue_entity.get<OrderQueue>();
 
     for (afterhours::EntityID order_id : queue.in_progress_orders) {
-      for (const afterhours::Entity &order_entity :
-           afterhours::EntityQuery()
-               .whereID(order_id)
-               .whereHasComponent<Order>()
-               .gen()) {
-        const Order &order = order_entity.get<Order>();
-        if (order.is_fully_complete) {
-          return true;
-        }
+      bool found = afterhours::EntityQuery()
+                       .whereID(order_id)
+                       .whereHasComponent<Order>()
+                       .whereLambda([](const afterhours::Entity &entity) {
+                         const Order &order = entity.get<Order>();
+                         return order.is_fully_complete;
+                       })
+                       .has_values();
+      if (found) {
+        return true;
       }
     }
     return false;
