@@ -30,7 +30,12 @@ struct MatchItemToOrder : afterhours::System<> {
       return;
     }
 
-    std::string lower_buffer = to_lower(buffer.buffer);
+    if (buffer.buffer.length() != 1) {
+      buffer.has_error = false;
+      return;
+    }
+
+    char typed_key = buffer.buffer[0];
 
     const afterhours::Entity &selected_order_entity =
         afterhours::EntityHelper::get_singleton<SelectedOrder>();
@@ -42,7 +47,6 @@ struct MatchItemToOrder : afterhours::System<> {
       return;
     }
 
-    bool found_match = false;
     for (Order &order : afterhours::EntityQuery()
                             .whereID(selected_order.order_id.value())
                             .whereHasComponent<Order>()
@@ -58,10 +62,13 @@ struct MatchItemToOrder : afterhours::System<> {
           continue;
         }
 
-        std::string item_name = item_type_to_string(item_type);
-        std::string lower_item = to_lower(item_name);
+        auto key_it = ITEM_KEY_MAP.find(item_type);
+        if (key_it == ITEM_KEY_MAP.end()) {
+          continue;
+        }
 
-        if (lower_buffer == lower_item) {
+        char item_key = key_it->second;
+        if (typed_key == item_key) {
           order.selected_items.push_back(item_type);
 
           auto conveyor_opt =
@@ -85,14 +92,10 @@ struct MatchItemToOrder : afterhours::System<> {
           buffer.has_error = false;
           return;
         }
-
-        if (lower_item.find(lower_buffer) == 0) {
-          found_match = true;
-        }
       }
       break;
     }
 
-    buffer.has_error = !found_match;
+    buffer.has_error = true;
   }
 };

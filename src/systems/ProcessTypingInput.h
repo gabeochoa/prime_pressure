@@ -33,7 +33,6 @@ struct ProcessTypingInput : afterhours::System<TypingBuffer> {
         return;
       }
 
-      // Don't add boxing action keys to buffer when on Boxing screen
       if (active_view.current_view == ViewState::Boxing) {
         if (c == 'B' || c == 'P' || c == 'F' || c == 'T' || c == 'S' ||
             c == 'b' || c == 'p' || c == 'f' || c == 't' || c == 's') {
@@ -41,29 +40,19 @@ struct ProcessTypingInput : afterhours::System<TypingBuffer> {
         }
       }
 
-      if (c == ' ') {
-        if (buffer.buffer.empty() || buffer.buffer.back() == ' ') {
-          return;
-        }
+      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+        buffer.buffer =
+            static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        buffer.last_input_time = 0.0f;
+        buffer.has_error = false;
       }
-
-      buffer.buffer += c;
-      buffer.last_input_time = 0.0f;
-    }
-
-    if (game_input::IsKeyPressed(raylib::KEY_BACKSPACE) &&
-        !buffer.buffer.empty()) {
-      buffer.buffer.pop_back();
-    }
-
-    if (game_input::IsKeyPressed(raylib::KEY_ENTER)) {
-      buffer.buffer.clear();
     }
 
     buffer.last_input_time += dt;
 
-    if (buffer.last_input_time > 5.0f) {
+    if (buffer.last_input_time > 2.0f) {
       buffer.buffer.clear();
+      buffer.has_error = false;
     }
   }
 };

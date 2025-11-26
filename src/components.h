@@ -1,7 +1,9 @@
 #pragma once
 
+#include "log.h"
 #include "std_include.h"
 #include <afterhours/ah.h>
+#include <magic_enum/magic_enum.hpp>
 
 enum struct ItemType { Book, Pen, Mug, Cup, Bag, Box, Toy, Hat, Key, Map };
 
@@ -28,6 +30,26 @@ struct BoxingProgress : afterhours::BaseComponent {
   std::vector<afterhours::EntityID> boxing_items;
 };
 
+const std::map<ItemType, char> ITEM_KEY_MAP = {
+    {ItemType::Book, 'b'}, {ItemType::Pen, 'p'}, {ItemType::Mug, 'm'},
+    {ItemType::Cup, 'c'},  {ItemType::Bag, 'a'}, {ItemType::Box, 'o'},
+    {ItemType::Toy, 't'},  {ItemType::Hat, 'h'}, {ItemType::Key, 'k'},
+    {ItemType::Map, 'x'}};
+
+inline void validate_item_key_map() {
+  const auto all_items = magic_enum::enum_values<ItemType>();
+  for (ItemType item : all_items) {
+    if (ITEM_KEY_MAP.find(item) == ITEM_KEY_MAP.end()) {
+      log_error("ItemType {} is missing a key mapping in ITEM_KEY_MAP",
+                magic_enum::enum_name(item));
+    }
+  }
+}
+
+namespace {
+static const bool _validate_item_keys = (validate_item_key_map(), true);
+}
+
 inline std::string item_type_to_string(ItemType type) {
   switch (type) {
   case ItemType::Book:
@@ -52,6 +74,32 @@ inline std::string item_type_to_string(ItemType type) {
     return "map";
   }
   return "unknown";
+}
+
+inline std::string format_item_with_key(ItemType type) {
+  auto it = ITEM_KEY_MAP.find(type);
+  if (it == ITEM_KEY_MAP.end()) {
+    return item_type_to_string(type);
+  }
+  char key = it->second;
+  std::string name = item_type_to_string(type);
+  std::string result;
+  bool found_key = false;
+  for (size_t i = 0; i < name.length(); ++i) {
+    if (!found_key && std::tolower(static_cast<unsigned char>(name[i])) ==
+                          std::tolower(static_cast<unsigned char>(key))) {
+      result += "[";
+      result += name[i];
+      result += "]";
+      found_key = true;
+    } else {
+      result += name[i];
+    }
+  }
+  if (!found_key) {
+    result = "[" + std::string(1, key) + "]" + name;
+  }
+  return result;
 }
 
 struct Item : afterhours::BaseComponent {

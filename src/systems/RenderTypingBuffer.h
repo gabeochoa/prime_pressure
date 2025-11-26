@@ -28,7 +28,12 @@ struct RenderTypingBuffer : RenderSystem<> {
     int font_size = ui_constants::pct_to_font_size(
         ui_constants::HEADER_FONT_SIZE_PCT, screen_height);
 
-    std::string display_text = "TYPING: " + buffer.buffer;
+    std::string display_text = "KEY: ";
+    if (!buffer.buffer.empty()) {
+      display_text += buffer.buffer;
+    } else {
+      display_text += "_";
+    }
 
     raylib::Color text_color =
         buffer.has_error
@@ -38,9 +43,8 @@ struct RenderTypingBuffer : RenderSystem<> {
 
     raylib::DrawTextEx(
         uiFont, display_text.c_str(),
-        raylib::Vector2{
-            ui_constants::pct_to_pixels_x(text_x, screen_width),
-            ui_constants::pct_to_pixels_y(text_y, screen_height)},
+        raylib::Vector2{ui_constants::pct_to_pixels_x(text_x, screen_width),
+                        ui_constants::pct_to_pixels_y(text_y, screen_height)},
         static_cast<float>(font_size), 1.0f, text_color);
   }
 };

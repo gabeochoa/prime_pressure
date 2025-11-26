@@ -83,9 +83,33 @@ struct RenderComputerView : ComputerViewRenderSystem {
                                     .whereHasComponent<Order>()
                                     .gen_as<Order>()) {
 
+        std::map<ItemType, int> item_counts = count_items(order.items);
+        std::map<ItemType, int> selected_counts =
+            count_items(order.selected_items);
+
         std::string order_text = std::to_string(order_number) + ". ";
         for (size_t i = 0; i < order.items.size(); ++i) {
-          order_text += item_type_to_string(order.items[i]);
+          ItemType item_type = order.items[i];
+          std::map<ItemType, int> current_item_counts;
+          for (size_t j = 0; j <= i; ++j) {
+            current_item_counts[order.items[j]]++;
+          }
+
+          bool is_completed = false;
+          auto selected_it = selected_counts.find(item_type);
+          auto current_it = current_item_counts.find(item_type);
+          if (selected_it != selected_counts.end() &&
+              current_it != current_item_counts.end()) {
+            is_completed = selected_it->second >= current_it->second;
+          }
+
+          std::string item_display = format_item_with_key(item_type);
+          if (is_completed) {
+            order_text += item_display;
+          } else {
+            order_text += item_display;
+          }
+
           if (i < order.items.size() - 1) {
             order_text += ", ";
           }

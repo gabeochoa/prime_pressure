@@ -143,7 +143,7 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
                          ui_constants::pct_to_pixels_y(
                              ui_constants::CONVEYOR_ITEM_VERTICAL_SPACING_PCT,
                              screen_height));
-          std::string item_text = item_type_to_string(conveyor_item.type);
+          std::string item_text = format_item_with_key(conveyor_item.type);
 
           raylib::Color item_color =
               ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
@@ -165,7 +165,7 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
         "[COMPUTER] [WAREHOUSE] [BOXING] (Press TAB to switch)",
         box_x + ui_constants::HEADER_PADDING_PCT, instruction_y, screen_width,
         screen_height, uiFont);
-    draw_instruction_text("[Type item names from order]",
+    draw_instruction_text("[Press key letters to grab items]",
                           box_x + ui_constants::HEADER_PADDING_PCT,
                           instruction_y + ui_constants::HEADER_PADDING_PCT,
                           screen_width, screen_height, uiFont);
