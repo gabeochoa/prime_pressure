@@ -116,30 +116,33 @@ static void render_items_list(float left_x, float start_y,
                .whereID(item_id)
                .whereHasComponent<BoxingItemStatus>()
                .gen_as<BoxingItemStatus>()) {
-        std::string status_icon = boxing_item.is_placed ? "P" : " ";
-        std::string item_text =
-            "[" + status_icon + "] " + item_type_to_string(boxing_item.type);
-        raylib::Color item_color =
-            boxing_item.is_placed ? ui_constants::get_theme_color(
-                                        afterhours::ui::Theme::Usage::Secondary)
-                                  : ui_constants::get_theme_color(
-                                        afterhours::ui::Theme::Usage::Font);
-        raylib::DrawTextEx(
-            uiFont, item_text.c_str(),
-            raylib::Vector2{ui_constants::pct_to_pixels_x(left_x, screen_width),
-                            ui_constants::pct_to_pixels_y(y, screen_height)},
-            static_cast<float>(instruction_font_size), 1.0f, item_color);
-        y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
+        // Only show items that haven't been placed yet
+        if (!boxing_item.is_placed) {
+          std::string item_text =
+              "[ ] " + item_type_to_string(boxing_item.type);
+          raylib::DrawTextEx(
+              uiFont, item_text.c_str(),
+              raylib::Vector2{
+                  ui_constants::pct_to_pixels_x(left_x, screen_width),
+                  ui_constants::pct_to_pixels_y(y, screen_height)},
+              static_cast<float>(instruction_font_size), 1.0f,
+              ui_constants::get_theme_color(
+                  afterhours::ui::Theme::Usage::Font));
+          y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
+        }
         break;
       }
     }
   } else {
+    // Only show items from orders that are ready to box (not shipped)
     for (afterhours::EntityID order_id : queue.active_orders) {
       for (const Order &order : afterhours::EntityQuery()
                                     .whereID(order_id)
                                     .whereHasComponent<Order>()
                                     .gen_as<Order>()) {
-        if (!order.selected_items.empty()) {
+        // Only show items from orders that are ready to box and not shipped
+        if (all_items_selected(order) && !order.is_shipped &&
+            !order.selected_items.empty()) {
           std::map<ItemType, int> item_counts =
               count_items(order.selected_items);
           for (const auto &[item_type, count] : item_counts) {
