@@ -6,6 +6,24 @@
 #include <set>
 #include <vector>
 
+struct ConveyorItemQuery : afterhours::EntityQuery<ConveyorItemQuery> {
+  struct WhereHasOrderID : Modification {
+    afterhours::EntityID order_id;
+    explicit WhereHasOrderID(afterhours::EntityID id) : order_id(id) {}
+    bool operator()(const afterhours::Entity &entity) const override {
+      if (!entity.has<ConveyorItem>()) {
+        return false;
+      }
+      const ConveyorItem &item = entity.get<ConveyorItem>();
+      return item.order_id == order_id;
+    }
+  };
+
+  ConveyorItemQuery &whereHasOrderID(afterhours::EntityID order_id) {
+    return add_mod(new WhereHasOrderID(order_id));
+  }
+};
+
 inline int get_max_vertical_index() {
   int max_vertical_index = -1;
   for (const ConveyorItem &existing_item :
@@ -48,22 +66,19 @@ struct SpawnConveyorItems
                          afterhours::tags::All<GameTag::IsInProgressOrder>> {
   void for_each_with(afterhours::Entity &order_entity, Order &order,
                      float) override {
-    afterhours::EntityID order_id = order_entity.id;
-
-    bool has_conveyor_items = false;
-    for (const ConveyorItem &existing_item :
-         afterhours::EntityQuery()
-             .whereHasComponent<ConveyorItem>()
-             .whereHasTag(GameTag::IsOnConveyor)
-             .gen_as<ConveyorItem>()) {
-      // TODO add whereHasOrderID()
-      if (existing_item.order_id == order_id) {
-        has_conveyor_items = true;
-        break;
-      }
+    if (!order.selected_items.empty()) {
+      return;
     }
 
-    if (has_conveyor_items || !order.selected_items.empty()) {
+    afterhours::EntityID order_id = order_entity.id;
+
+    bool has_conveyor_items = ConveyorItemQuery()
+                                  .whereHasComponent<ConveyorItem>()
+                                  .whereHasTag(GameTag::IsOnConveyor)
+                                  .whereHasOrderID(order_id)
+                                  .has_values();
+
+    if (has_conveyor_items) {
       return;
     }
 
