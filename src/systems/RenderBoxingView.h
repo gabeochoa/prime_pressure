@@ -100,6 +100,43 @@ static void render_items_list(float left_x, float start_y,
 
   float y = start_y;
 
+  int items_to_display = 0;
+
+  if (boxing_progress.order_id.has_value() &&
+      !boxing_progress.boxing_items.empty()) {
+    for (afterhours::EntityID item_id : boxing_progress.boxing_items) {
+      for (const BoxingItemStatus &boxing_item :
+           afterhours::EntityQuery()
+               .whereID(item_id)
+               .whereHasComponent<BoxingItemStatus>()
+               .gen_as<BoxingItemStatus>()) {
+        if (!boxing_item.is_placed) {
+          items_to_display++;
+        }
+        break;
+      }
+    }
+  } else {
+    for (afterhours::EntityID order_id : queue.active_orders) {
+      for (const Order &order : afterhours::EntityQuery()
+                                    .whereID(order_id)
+                                    .whereHasComponent<Order>()
+                                    .gen_as<Order>()) {
+        if (all_items_selected(order) && !order.is_shipped &&
+            !order.selected_items.empty()) {
+          std::map<ItemType, int> item_counts =
+              count_items(order.selected_items);
+          items_to_display += static_cast<int>(item_counts.size());
+        }
+        break;
+      }
+    }
+  }
+
+  if (items_to_display == 0) {
+    return;
+  }
+
   raylib::DrawTextEx(
       uiFont, "Items:",
       raylib::Vector2{ui_constants::pct_to_pixels_x(left_x, screen_width),
@@ -116,7 +153,6 @@ static void render_items_list(float left_x, float start_y,
                .whereID(item_id)
                .whereHasComponent<BoxingItemStatus>()
                .gen_as<BoxingItemStatus>()) {
-        // Only show items that haven't been placed yet
         if (!boxing_item.is_placed) {
           std::string item_text =
               "[ ] " + item_type_to_string(boxing_item.type);
@@ -134,13 +170,11 @@ static void render_items_list(float left_x, float start_y,
       }
     }
   } else {
-    // Only show items from orders that are ready to box (not shipped)
     for (afterhours::EntityID order_id : queue.active_orders) {
       for (const Order &order : afterhours::EntityQuery()
                                     .whereID(order_id)
                                     .whereHasComponent<Order>()
                                     .gen_as<Order>()) {
-        // Only show items from orders that are ready to box and not shipped
         if (all_items_selected(order) && !order.is_shipped &&
             !order.selected_items.empty()) {
           std::map<ItemType, int> item_counts =
