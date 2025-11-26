@@ -21,12 +21,23 @@ struct ProcessOrderSelection : afterhours::System<> {
     OrderQueue &queue = queue_entity.get<OrderQueue>();
 
     if (selected_order.order_id.has_value()) {
-      auto it = std::find(queue.active_orders.begin(),
-                          queue.active_orders.end(),
-                          selected_order.order_id.value());
+      auto it =
+          std::find(queue.active_orders.begin(), queue.active_orders.end(),
+                    selected_order.order_id.value());
       if (it == queue.active_orders.end()) {
         selected_order.order_id.reset();
       }
+    }
+
+    if (raylib::IsKeyPressed(raylib::KEY_ESCAPE) &&
+        selected_order.order_id.has_value()) {
+      selected_order.order_id.reset();
+      afterhours::Entity &buffer_entity =
+          afterhours::EntityHelper::get_singleton<TypingBuffer>();
+      TypingBuffer &buffer = buffer_entity.get<TypingBuffer>();
+      buffer.buffer.clear();
+      buffer.has_error = false;
+      return;
     }
 
     for (int key = raylib::KEY_ONE; key <= raylib::KEY_NINE; ++key) {
@@ -62,7 +73,15 @@ struct ProcessOrderSelection : afterhours::System<> {
           break;
         }
 
-        if (!selected_order.order_id.has_value() && !order.is_shipped) {
+        if (!order.is_shipped) {
+          if (selected_order.order_id.has_value() &&
+              selected_order.order_id.value() != order_id) {
+            afterhours::Entity &buffer_entity =
+                afterhours::EntityHelper::get_singleton<TypingBuffer>();
+            TypingBuffer &buffer = buffer_entity.get<TypingBuffer>();
+            buffer.buffer.clear();
+            buffer.has_error = false;
+          }
           selected_order.order_id = order_id;
         }
         break;

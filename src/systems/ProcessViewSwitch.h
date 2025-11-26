@@ -47,5 +47,6 @@ struct ProcessViewSwitch : afterhours::System<> {
         afterhours::EntityHelper::get_singleton<TypingBuffer>();
     TypingBuffer &buffer = buffer_entity.get<TypingBuffer>();
     buffer.buffer.clear();
+    buffer.has_error = false;
   }
 };

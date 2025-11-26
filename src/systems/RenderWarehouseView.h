@@ -2,45 +2,49 @@
 
 #include "../components.h"
 #include "../game.h"
+#include "../ui_constants.h"
+#include "RenderSystemBase.h"
+#include "RenderSystemHelpers.h"
 #include <afterhours/ah.h>
 
-struct RenderWarehouseView : afterhours::System<> {
-  bool should_run(float) override {
-    const afterhours::Entity &view_entity =
-        afterhours::EntityHelper::get_singleton<ActiveView>();
-    const ActiveView &active_view = view_entity.get<ActiveView>();
-    return active_view.current_view == ViewState::Warehouse;
-  }
-  bool should_run(float) const override {
-    const afterhours::Entity &view_entity =
-        afterhours::EntityHelper::get_singleton<ActiveView>();
-    const ActiveView &active_view = view_entity.get<ActiveView>();
-    return active_view.current_view == ViewState::Warehouse;
-  }
-
+struct RenderWarehouseView : WarehouseViewRenderSystem {
   void once(float) const override {
+    const afterhours::Entity &view_entity =
+        afterhours::EntityHelper::get_singleton<ActiveView>();
+    const ActiveView &active_view = view_entity.get<ActiveView>();
+    
+    if (active_view.current_view != ViewState::Warehouse) {
+      return;
+    }
 
     int screen_width = mainRT.texture.width;
     int screen_height = mainRT.texture.height;
 
-    float box_x = 20.0f;
-    float box_y = 60.0f;
-    float box_width = static_cast<float>(screen_width) - 40.0f;
-    float box_height = static_cast<float>(screen_height) - 200.0f;
+    float box_x = ui_constants::BOX_X_PCT;
+    float box_y = ui_constants::BOX_Y_PCT;
+    float box_width = ui_constants::BOX_WIDTH_PCT;
+    float box_height = ui_constants::BOX_HEIGHT_PCT;
 
-    raylib::DrawRectangleLines(static_cast<int>(box_x), static_cast<int>(box_y),
-                               static_cast<int>(box_width),
-                               static_cast<int>(box_height), raylib::GREEN);
+    draw_view_box(box_x, box_y, box_width, box_height, screen_width,
+                  screen_height);
 
-    raylib::DrawText("> WAREHOUSE SCREEN", static_cast<int>(box_x + 10),
-                     static_cast<int>(box_y + 10), 24, raylib::GREEN);
+    float header_x = box_x + ui_constants::HEADER_PADDING_PCT;
+    float header_y = box_y + ui_constants::HEADER_PADDING_PCT;
+    draw_view_header("WAREHOUSE SCREEN", header_x, header_y,
+                     active_view.current_view, ViewState::Warehouse, screen_width,
+                     screen_height);
 
     const afterhours::Entity &selected_order_entity =
         afterhours::EntityHelper::get_singleton<SelectedOrder>();
     const SelectedOrder &selected_order =
         selected_order_entity.get<SelectedOrder>();
 
-    float y = box_y + 50.0f;
+    float y = header_y + ui_constants::HEADER_FONT_SIZE_PCT +
+              ui_constants::HEADER_TO_CONTENT_SPACING_PCT;
+    int body_font_size = ui_constants::pct_to_font_size(
+        ui_constants::BODY_FONT_SIZE_PCT, screen_height);
+    int instruction_font_size = ui_constants::pct_to_font_size(
+        ui_constants::INSTRUCTION_FONT_SIZE_PCT, screen_height);
 
     if (selected_order.order_id.has_value()) {
       const afterhours::Entity &queue_entity =
@@ -52,13 +56,15 @@ struct RenderWarehouseView : afterhours::System<> {
         if (order_id == selected_order.order_id.value()) {
           std::string order_label =
               "Selected Order: " + std::to_string(order_number);
-          raylib::DrawText(order_label.c_str(), static_cast<int>(box_x + 20),
-                           static_cast<int>(y), 20, raylib::WHITE);
-          y += 40.0f;
-
-          raylib::DrawText("Items needed:", static_cast<int>(box_x + 20),
-                           static_cast<int>(y), 18, raylib::GRAY);
-          y += 30.0f;
+          raylib::DrawText(
+              order_label.c_str(),
+              static_cast<int>(
+                  ui_constants::pct_to_pixels_x(box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
+              static_cast<int>(
+                  ui_constants::pct_to_pixels_y(y, screen_height)),
+              body_font_size,
+              ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+          y += ui_constants::ORDER_ITEM_SPACING_PCT;
 
           for (const afterhours::Entity &order_entity :
                afterhours::EntityQuery()
@@ -66,6 +72,31 @@ struct RenderWarehouseView : afterhours::System<> {
                    .whereHasComponent<Order>()
                    .gen()) {
             const Order &order = order_entity.get<Order>();
+
+            int total_items = static_cast<int>(order.items.size());
+            int selected_items_count = static_cast<int>(order.selected_items.size());
+            std::string progress_text = "Items collected: " +
+                                        std::to_string(selected_items_count) +
+                                        "/" + std::to_string(total_items);
+            raylib::DrawText(
+                progress_text.c_str(),
+                static_cast<int>(
+                    ui_constants::pct_to_pixels_x(box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
+                static_cast<int>(
+                    ui_constants::pct_to_pixels_y(y, screen_height)),
+                instruction_font_size,
+                ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+            y += ui_constants::ORDER_ITEM_SPACING_PCT;
+
+            raylib::DrawText(
+                "Items needed:",
+                static_cast<int>(
+                    ui_constants::pct_to_pixels_x(box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
+                static_cast<int>(
+                    ui_constants::pct_to_pixels_y(y, screen_height)),
+                instruction_font_size,
+                ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+            y += ui_constants::ORDER_ITEM_SPACING_PCT;
 
             std::map<ItemType, int> item_counts = count_items(order.items);
             std::map<ItemType, int> selected_counts =
@@ -76,17 +107,25 @@ struct RenderWarehouseView : afterhours::System<> {
               std::string item_name = item_type_to_string(item_type);
               std::string display_text = "  " + item_name;
 
-              raylib::Color item_color = raylib::WHITE;
+              raylib::Color item_color =
+                  ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
               if (selected_count > 0) {
                 display_text += " ✓";
-                item_color = (selected_count >= needed_count) ? raylib::GREEN
-                                                              : raylib::YELLOW;
+                item_color = (selected_count >= needed_count)
+                                 ? ui_constants::get_theme_color(
+                                       afterhours::ui::Theme::Usage::Primary)
+                                 : ui_constants::get_theme_color(
+                                       afterhours::ui::Theme::Usage::Secondary);
               }
 
-              raylib::DrawText(display_text.c_str(),
-                               static_cast<int>(box_x + 30),
-                               static_cast<int>(y), 16, item_color);
-              y += 25.0f;
+              raylib::DrawText(
+                  display_text.c_str(),
+                  static_cast<int>(
+                      ui_constants::pct_to_pixels_x(box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f, screen_width)),
+                  static_cast<int>(
+                      ui_constants::pct_to_pixels_y(y, screen_height)),
+                  instruction_font_size, item_color);
+              y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.8f;
             }
             break;
           }
@@ -95,24 +134,48 @@ struct RenderWarehouseView : afterhours::System<> {
         order_number++;
       }
     } else {
-      raylib::DrawText("Selected Order: None", static_cast<int>(box_x + 20),
-                       static_cast<int>(y), 20, raylib::WHITE);
-      y += 40.0f;
+      raylib::DrawText(
+          "Selected Order: None",
+          static_cast<int>(
+              ui_constants::pct_to_pixels_x(box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
+          static_cast<int>(
+              ui_constants::pct_to_pixels_y(y, screen_height)),
+          body_font_size,
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+      y += ui_constants::ORDER_ITEM_SPACING_PCT;
 
-      raylib::DrawText("Items needed:", static_cast<int>(box_x + 20),
-                       static_cast<int>(y), 18, raylib::GRAY);
-      y += 30.0f;
+      raylib::DrawText(
+          "Items needed:",
+          static_cast<int>(
+              ui_constants::pct_to_pixels_x(box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
+          static_cast<int>(
+              ui_constants::pct_to_pixels_y(y, screen_height)),
+          instruction_font_size,
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+      y += ui_constants::ORDER_ITEM_SPACING_PCT;
 
-      raylib::DrawText("(No order selected)", static_cast<int>(box_x + 30),
-                       static_cast<int>(y), 16, raylib::DARKGRAY);
+      raylib::Color dimmed_color =
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+      dimmed_color = raylib::Color{
+          static_cast<unsigned char>(dimmed_color.r / 2),
+          static_cast<unsigned char>(dimmed_color.g / 2),
+          static_cast<unsigned char>(dimmed_color.b / 2), dimmed_color.a};
+      raylib::DrawText(
+          "(No order selected)",
+          static_cast<int>(
+              ui_constants::pct_to_pixels_x(box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f, screen_width)),
+          static_cast<int>(
+              ui_constants::pct_to_pixels_y(y, screen_height)),
+          instruction_font_size, dimmed_color);
     }
 
-    raylib::DrawText("[COMPUTER] [WAREHOUSE] [BOXING] (Press TAB to switch)",
-                     static_cast<int>(box_x + 10),
-                     static_cast<int>(box_y + box_height - 60), 16,
-                     raylib::GRAY);
-    raylib::DrawText(
-        "[Type item names from order]", static_cast<int>(box_x + 10),
-        static_cast<int>(box_y + box_height - 40), 16, raylib::GRAY);
+    float instruction_y = box_y + box_height - ui_constants::INSTRUCTION_PADDING_PCT;
+    draw_instruction_text("[COMPUTER] [WAREHOUSE] [BOXING] (Press TAB to switch)",
+                           box_x + ui_constants::HEADER_PADDING_PCT,
+                           instruction_y, screen_width, screen_height);
+    draw_instruction_text("[Type item names from order]",
+                           box_x + ui_constants::HEADER_PADDING_PCT,
+                           instruction_y + ui_constants::HEADER_PADDING_PCT,
+                           screen_width, screen_height);
   }
 };

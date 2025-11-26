@@ -65,6 +65,7 @@ enum struct GameTag : afterhours::TagId {
 struct TypingBuffer : afterhours::BaseComponent {
   std::string buffer;
   float last_input_time = 0.0f;
+  bool has_error = false;
 };
 
 struct Box : afterhours::BaseComponent {

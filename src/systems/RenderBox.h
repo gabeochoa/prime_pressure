@@ -8,7 +8,7 @@ struct RenderBox
     : afterhours::System<Box, afterhours::tags::All<GameTag::IsBox>> {
   void for_each_with(const afterhours::Entity &entity, const Box &box,
                      float) const override {
-    // Use render texture dimensions (we're drawing to mainRT)
+    (void)entity;
     int render_width = mainRT.texture.width;
     int render_height = mainRT.texture.height;
 

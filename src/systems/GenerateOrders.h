@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../components.h"
+#include "../ui_constants.h"
 #include <afterhours/ah.h>
 #include <magic_enum/magic_enum.hpp>
 #include <random>
@@ -9,7 +10,7 @@ struct GenerateOrders : afterhours::System<> {
   static constexpr auto simple_items = magic_enum::enum_values<ItemType>();
 
   float time_since_last_order = 0.0f;
-  float order_interval = 1.0f; // Start with 1 second for testing
+  float order_interval = ui_constants::ORDER_GENERATION_INTERVAL;
 
   void once(float dt) override {
     afterhours::Entity &queue_entity =

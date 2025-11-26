@@ -6,6 +6,7 @@
 struct ProcessTypingInput : afterhours::System<TypingBuffer> {
   void for_each_with(afterhours::Entity &entity, TypingBuffer &buffer,
                      float dt) override {
+    (void)entity;
     const afterhours::Entity &view_entity =
         afterhours::EntityHelper::get_singleton<ActiveView>();
     const ActiveView &active_view = view_entity.get<ActiveView>();

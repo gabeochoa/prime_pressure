@@ -25,6 +25,7 @@ struct MatchItemToOrder : afterhours::System<> {
         afterhours::EntityHelper::get_singleton<TypingBuffer>();
     TypingBuffer &buffer = buffer_entity.get<TypingBuffer>();
     if (buffer.buffer.empty()) {
+      buffer.has_error = false;
       return;
     }
 
@@ -36,9 +37,11 @@ struct MatchItemToOrder : afterhours::System<> {
         selected_order_entity.get<SelectedOrder>();
 
     if (!selected_order.order_id.has_value()) {
+      buffer.has_error = false;
       return;
     }
 
+    bool found_match = false;
     for (afterhours::Entity &order_entity :
          afterhours::EntityQuery()
              .whereID(selected_order.order_id.value())
@@ -46,33 +49,33 @@ struct MatchItemToOrder : afterhours::System<> {
              .gen()) {
       Order &order = order_entity.get<Order>();
 
-      for (ItemType item_type : order.items) {
+      std::map<ItemType, int> item_counts = count_items(order.items);
+      std::map<ItemType, int> selected_counts =
+          count_items(order.selected_items);
+
+      for (const auto &[item_type, needed_count] : item_counts) {
+        int selected_count = selected_counts[item_type];
+        if (selected_count >= needed_count) {
+          continue;
+        }
+
         std::string item_name = item_type_to_string(item_type);
         std::string lower_item = to_lower(item_name);
 
         if (lower_buffer == lower_item) {
-          int selected_count = 0;
-          for (ItemType selected : order.selected_items) {
-            if (selected == item_type) {
-              selected_count++;
-            }
-          }
+          order.selected_items.push_back(item_type);
+          buffer.buffer.clear();
+          buffer.has_error = false;
+          return;
+        }
 
-          int needed_count = 0;
-          for (ItemType needed : order.items) {
-            if (needed == item_type) {
-              needed_count++;
-            }
-          }
-
-          if (selected_count < needed_count) {
-            order.selected_items.push_back(item_type);
-            buffer.buffer.clear();
-            return;
-          }
+        if (lower_item.find(lower_buffer) == 0) {
+          found_match = true;
         }
       }
       break;
     }
+
+    buffer.has_error = !found_match;
   }
 };
