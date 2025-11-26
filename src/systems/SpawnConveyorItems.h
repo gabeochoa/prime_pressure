@@ -1,28 +1,11 @@
 #pragma once
 
 #include "../components.h"
+#include "../eq.h"
 #include "../ui_constants.h"
 #include <afterhours/ah.h>
 #include <set>
 #include <vector>
-
-struct ConveyorItemQuery : afterhours::EntityQuery<ConveyorItemQuery> {
-  struct WhereHasOrderID : Modification {
-    afterhours::EntityID order_id;
-    explicit WhereHasOrderID(afterhours::EntityID id) : order_id(id) {}
-    bool operator()(const afterhours::Entity &entity) const override {
-      if (!entity.has<ConveyorItem>()) {
-        return false;
-      }
-      const ConveyorItem &item = entity.get<ConveyorItem>();
-      return item.order_id == order_id;
-    }
-  };
-
-  ConveyorItemQuery &whereHasOrderID(afterhours::EntityID order_id) {
-    return add_mod(new WhereHasOrderID(order_id));
-  }
-};
 
 inline int get_max_vertical_index() {
   int max_vertical_index = -1;
@@ -72,8 +55,7 @@ struct SpawnConveyorItems
 
     afterhours::EntityID order_id = order_entity.id;
 
-    bool has_conveyor_items = ConveyorItemQuery()
-                                  .whereHasComponent<ConveyorItem>()
+    bool has_conveyor_items = EQ().whereHasComponent<ConveyorItem>()
                                   .whereHasTag(GameTag::IsOnConveyor)
                                   .whereHasOrderID(order_id)
                                   .has_values();

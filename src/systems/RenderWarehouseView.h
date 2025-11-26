@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../components.h"
+#include "../eq.h"
 #include "../game.h"
 #include "../ui_constants.h"
 #include "RenderSystemBase.h"
@@ -173,12 +174,11 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
 
       bool has_moving = false;
       for (const ConveyorItem &conveyor_item :
-           afterhours::EntityQuery()
-               .whereHasComponent<ConveyorItem>()
+           EQ().whereHasComponent<ConveyorItem>()
                .whereHasTag(GameTag::IsOnConveyor)
+               .whereHasOrderID(order_id_for_position)
                .gen_as<ConveyorItem>()) {
-        if (conveyor_item.order_id == order_id_for_position &&
-            std::abs(conveyor_item.x_position - x_position) < 0.001f) {
+        if (std::abs(conveyor_item.x_position - x_position) < 0.001f) {
           if (conveyor_item.is_moving) {
             has_moving = true;
             break;
