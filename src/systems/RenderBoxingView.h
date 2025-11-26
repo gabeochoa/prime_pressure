@@ -48,12 +48,13 @@ static void render_order_selection_list(float box_x, float &y,
   int instruction_font_size = ui_constants::pct_to_font_size(
       ui_constants::INSTRUCTION_FONT_SIZE_PCT, screen_height);
 
-  raylib::DrawText(
-      "Select order to box:",
-      static_cast<int>(ui_constants::pct_to_pixels_x(
-          box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
-      static_cast<int>(ui_constants::pct_to_pixels_y(y, screen_height)),
-      body_font_size,
+  raylib::DrawTextEx(
+      uiFont, "Select order to box:",
+      raylib::Vector2{
+          ui_constants::pct_to_pixels_x(
+              box_x + ui_constants::CONTENT_PADDING_PCT, screen_width),
+          ui_constants::pct_to_pixels_y(y, screen_height)},
+      static_cast<float>(body_font_size), 1.0f,
       ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
   y += ui_constants::ORDER_ITEM_SPACING_PCT;
 
@@ -69,13 +70,14 @@ static void render_order_selection_list(float box_x, float &y,
       if (all_items_selected(order) && !order.is_shipped) {
         std::string order_text =
             std::to_string(order_number) + ". Ready to box";
-        raylib::DrawText(
-            order_text.c_str(),
-            static_cast<int>(ui_constants::pct_to_pixels_x(
-                box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
-                screen_width)),
-            static_cast<int>(ui_constants::pct_to_pixels_y(y, screen_height)),
-            instruction_font_size,
+        raylib::DrawTextEx(
+            uiFont, order_text.c_str(),
+            raylib::Vector2{
+                ui_constants::pct_to_pixels_x(
+                    box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
+                    screen_width),
+                ui_constants::pct_to_pixels_y(y, screen_height)},
+            static_cast<float>(instruction_font_size), 1.0f,
             ui_constants::get_theme_color(
                 afterhours::ui::Theme::Usage::Primary));
         y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.8f;
@@ -88,7 +90,7 @@ static void render_order_selection_list(float box_x, float &y,
   draw_instruction_text("[Press number key to select order]",
                         box_x + ui_constants::CONTENT_PADDING_PCT,
                         y + ui_constants::HEADER_PADDING_PCT, screen_width,
-                        screen_height);
+                        screen_height, uiFont);
 }
 
 static void render_boxing_progress(float box_x, float &y,
@@ -100,35 +102,38 @@ static void render_boxing_progress(float box_x, float &y,
   int instruction_font_size = ui_constants::pct_to_font_size(
       ui_constants::INSTRUCTION_FONT_SIZE_PCT, screen_height);
 
-  raylib::DrawText(
-      "Boxing Order:",
-      static_cast<int>(ui_constants::pct_to_pixels_x(
-          box_x + ui_constants::CONTENT_PADDING_PCT, screen_width)),
-      static_cast<int>(ui_constants::pct_to_pixels_y(y, screen_height)),
-      body_font_size,
+  raylib::DrawTextEx(
+      uiFont, "Boxing Order:",
+      raylib::Vector2{
+          ui_constants::pct_to_pixels_x(
+              box_x + ui_constants::CONTENT_PADDING_PCT, screen_width),
+          ui_constants::pct_to_pixels_y(y, screen_height)},
+      static_cast<float>(body_font_size), 1.0f,
       ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
   y += ui_constants::ORDER_ITEM_SPACING_PCT;
 
   auto [status_text, status_color] =
       get_boxing_status_text(boxing_progress, order);
-  raylib::DrawText(
-      status_text.c_str(),
-      static_cast<int>(ui_constants::pct_to_pixels_x(
-          box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f, screen_width)),
-      static_cast<int>(ui_constants::pct_to_pixels_y(y, screen_height)),
-      instruction_font_size, status_color);
+  raylib::DrawTextEx(
+      uiFont, status_text.c_str(),
+      raylib::Vector2{
+          ui_constants::pct_to_pixels_x(
+              box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f, screen_width),
+          ui_constants::pct_to_pixels_y(y, screen_height)},
+      static_cast<float>(instruction_font_size), 1.0f, status_color);
   y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.8f;
 
   if (boxing_progress.state != BoxingState::PutItems) {
     return;
   }
 
-  raylib::DrawText(
-      "Items to place:",
-      static_cast<int>(ui_constants::pct_to_pixels_x(
-          box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f, screen_width)),
-      static_cast<int>(ui_constants::pct_to_pixels_y(y, screen_height)),
-      instruction_font_size,
+  raylib::DrawTextEx(
+      uiFont, "Items to place:",
+      raylib::Vector2{
+          ui_constants::pct_to_pixels_x(
+              box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f, screen_width),
+          ui_constants::pct_to_pixels_y(y, screen_height)},
+      static_cast<float>(instruction_font_size), 1.0f,
       ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
   y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.8f;
 
@@ -136,12 +141,13 @@ static void render_boxing_progress(float box_x, float &y,
   for (const auto &[item_type, count] : item_counts) {
     std::string item_text =
         "  " + item_type_to_string(item_type) + " x" + std::to_string(count);
-    raylib::DrawText(
-        item_text.c_str(),
-        static_cast<int>(ui_constants::pct_to_pixels_x(
-            box_x + ui_constants::CONTENT_PADDING_PCT * 2.0f, screen_width)),
-        static_cast<int>(ui_constants::pct_to_pixels_y(y, screen_height)),
-        instruction_font_size,
+    raylib::DrawTextEx(
+        uiFont, item_text.c_str(),
+        raylib::Vector2{
+            ui_constants::pct_to_pixels_x(
+                box_x + ui_constants::CONTENT_PADDING_PCT * 2.0f, screen_width),
+            ui_constants::pct_to_pixels_y(y, screen_height)},
+        static_cast<float>(instruction_font_size), 1.0f,
         ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
     y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
   }
@@ -172,7 +178,7 @@ struct RenderBoxingView : BoxingViewRenderSystem {
     float header_y = box_y + ui_constants::HEADER_PADDING_PCT;
     draw_view_header("BOXING SCREEN", header_x, header_y,
                      active_view.current_view, ViewState::Boxing, screen_width,
-                     screen_height);
+                     screen_height, uiFont);
 
     const afterhours::Entity &boxing_progress_entity =
         afterhours::EntityHelper::get_singleton<BoxingProgress>();
@@ -205,6 +211,6 @@ struct RenderBoxingView : BoxingViewRenderSystem {
     draw_instruction_text(
         "[COMPUTER] [WAREHOUSE] [BOXING] (Press TAB to switch)",
         box_x + ui_constants::HEADER_PADDING_PCT, instruction_y, screen_width,
-        screen_height);
+        screen_height, uiFont);
   }
 };

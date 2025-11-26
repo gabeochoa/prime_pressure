@@ -36,10 +36,11 @@ struct RenderTypingBuffer : RenderSystem<> {
             : ui_constants::get_theme_color(
                   afterhours::ui::Theme::Usage::Secondary);
 
-    raylib::DrawText(
-        display_text.c_str(),
-        static_cast<int>(ui_constants::pct_to_pixels_x(text_x, screen_width)),
-        static_cast<int>(ui_constants::pct_to_pixels_y(text_y, screen_height)),
-        font_size, text_color);
+    raylib::DrawTextEx(
+        uiFont, display_text.c_str(),
+        raylib::Vector2{
+            ui_constants::pct_to_pixels_x(text_x, screen_width),
+            ui_constants::pct_to_pixels_y(text_y, screen_height)},
+        static_cast<float>(font_size), 1.0f, text_color);
   }
 };

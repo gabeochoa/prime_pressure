@@ -45,7 +45,8 @@ static void draw_view_box(float x_pct, float y_pct, float width_pct,
 
 static void draw_view_header(const char *text, float x_pct, float y_pct,
                              ViewState current_view, ViewState this_view,
-                             int screen_width, int screen_height) {
+                             int screen_width, int screen_height,
+                             raylib::Font font = raylib::GetFontDefault()) {
   float x = ui_constants::pct_to_pixels_x(x_pct, screen_width);
   float y = ui_constants::pct_to_pixels_y(y_pct, screen_height);
   int font_size = ui_constants::pct_to_font_size(
@@ -64,12 +65,13 @@ static void draw_view_header(const char *text, float x_pct, float y_pct,
     display_text += text;
   }
 
-  raylib::DrawText(display_text.c_str(), static_cast<int>(x),
-                   static_cast<int>(y), font_size, text_color);
+  raylib::DrawTextEx(font, display_text.c_str(), raylib::Vector2{x, y},
+                     static_cast<float>(font_size), 1.0f, text_color);
 }
 
 static void draw_instruction_text(const char *text, float x_pct, float y_pct,
-                                  int screen_width, int screen_height) {
+                                  int screen_width, int screen_height,
+                                  raylib::Font font = raylib::GetFontDefault()) {
   float x = ui_constants::pct_to_pixels_x(x_pct, screen_width);
   float y = ui_constants::pct_to_pixels_y(y_pct, screen_height);
   int font_size = ui_constants::pct_to_font_size(
@@ -79,6 +81,6 @@ static void draw_instruction_text(const char *text, float x_pct, float y_pct,
       ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
   text_color = raylib::Color{text_color.r, text_color.g, text_color.b, 128};
 
-  raylib::DrawText(text, static_cast<int>(x), static_cast<int>(y), font_size,
-                   text_color);
+  raylib::DrawTextEx(font, text, raylib::Vector2{x, y},
+                     static_cast<float>(font_size), 1.0f, text_color);
 }

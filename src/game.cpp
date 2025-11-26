@@ -6,6 +6,7 @@
 #include "preload.h"
 #include "render_backend.h"
 #include "settings.h"
+#include <afterhours/src/plugins/files.h>
 #include "systems/BoxItem.h"
 #include "systems/GenerateOrders.h"
 #include "systems/GrabItem.h"
@@ -37,12 +38,17 @@
 bool running = true;
 raylib::RenderTexture2D mainRT;
 raylib::RenderTexture2D screenRT;
+raylib::Font uiFont;
 
 void game() {
   mainRT = raylib::LoadRenderTexture(Settings::get().get_screen_width(),
                                      Settings::get().get_screen_height());
   screenRT = raylib::LoadRenderTexture(Settings::get().get_screen_width(),
                                        Settings::get().get_screen_height());
+  uiFont = raylib::LoadFont(
+      afterhours::files::get_resource_path("fonts", "Gaegu-Bold.ttf")
+          .string()
+          .c_str());
 
   afterhours::SystemManager systems;
 
@@ -165,6 +171,10 @@ void run_test(const std::string &test_name, bool slow_mode) {
                                      Settings::get().get_screen_height());
   screenRT = raylib::LoadRenderTexture(Settings::get().get_screen_width(),
                                        Settings::get().get_screen_height());
+  uiFont = raylib::LoadFont(
+      afterhours::files::get_resource_path("fonts", "Gaegu-Bold.ttf")
+          .string()
+          .c_str());
 
   afterhours::SystemManager systems;
 

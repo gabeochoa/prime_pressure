@@ -67,3 +67,4 @@ using raylib::Rectangle;
 extern bool running;
 extern raylib::RenderTexture2D mainRT;
 extern raylib::RenderTexture2D screenRT;
+extern raylib::Font uiFont;
