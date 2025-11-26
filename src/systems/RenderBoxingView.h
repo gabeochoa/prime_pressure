@@ -63,14 +63,68 @@ static void render_order_selection_list(float box_x, float &y,
   int order_number = 1;
   for (afterhours::EntityID order_id : queue.in_progress_orders) {
     if (order_id == -1) {
+      std::string order_text = std::to_string(order_number) + ". Order #" +
+                               std::to_string(order_number);
+      raylib::Color text_color =
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+
+      raylib::DrawTextEx(
+          uiFont, order_text.c_str(),
+          raylib::Vector2{ui_constants::pct_to_pixels_x(
+                              box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
+                              screen_width),
+                          ui_constants::pct_to_pixels_y(y, screen_height)},
+          static_cast<float>(instruction_font_size), 1.0f, text_color);
+
+      std::string status_text = " - Slot not in progress";
+
+      raylib::DrawTextEx(
+          uiFont, status_text.c_str(),
+          raylib::Vector2{ui_constants::pct_to_pixels_x(
+                              box_x + ui_constants::CONTENT_PADDING_PCT * 3.0f,
+                              screen_width),
+                          ui_constants::pct_to_pixels_y(y, screen_height)},
+          static_cast<float>(instruction_font_size), 1.0f,
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+
+      y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
       order_number++;
       continue;
     }
+    bool order_found = false;
     for (const Order &order : afterhours::EntityQuery()
                                   .whereID(order_id)
                                   .whereHasComponent<Order>()
                                   .gen_as<Order>()) {
+      order_found = true;
       if (order.is_shipped) {
+        std::string order_text = std::to_string(order_number) + ". Order #" +
+                                 std::to_string(order_number);
+        raylib::Color text_color =
+            ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+
+        raylib::DrawTextEx(
+            uiFont, order_text.c_str(),
+            raylib::Vector2{
+                ui_constants::pct_to_pixels_x(
+                    box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
+                    screen_width),
+                ui_constants::pct_to_pixels_y(y, screen_height)},
+            static_cast<float>(instruction_font_size), 1.0f, text_color);
+
+        std::string status_text = " - Shipped";
+
+        raylib::DrawTextEx(
+            uiFont, status_text.c_str(),
+            raylib::Vector2{
+                ui_constants::pct_to_pixels_x(
+                    box_x + ui_constants::CONTENT_PADDING_PCT * 3.0f,
+                    screen_width),
+                ui_constants::pct_to_pixels_y(y, screen_height)},
+            static_cast<float>(instruction_font_size), 1.0f,
+            ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+
+        y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
         break;
       }
 
@@ -120,6 +174,33 @@ static void render_order_selection_list(float box_x, float &y,
 
       y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
       break;
+    }
+    if (!order_found) {
+      std::string order_text = std::to_string(order_number) + ". Order #" +
+                               std::to_string(order_number);
+      raylib::Color text_color =
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+
+      raylib::DrawTextEx(
+          uiFont, order_text.c_str(),
+          raylib::Vector2{ui_constants::pct_to_pixels_x(
+                              box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
+                              screen_width),
+                          ui_constants::pct_to_pixels_y(y, screen_height)},
+          static_cast<float>(instruction_font_size), 1.0f, text_color);
+
+      std::string status_text = " - Slot not in progress";
+
+      raylib::DrawTextEx(
+          uiFont, status_text.c_str(),
+          raylib::Vector2{ui_constants::pct_to_pixels_x(
+                              box_x + ui_constants::CONTENT_PADDING_PCT * 3.0f,
+                              screen_width),
+                          ui_constants::pct_to_pixels_y(y, screen_height)},
+          static_cast<float>(instruction_font_size), 1.0f,
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+
+      y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
     }
     order_number++;
   }
