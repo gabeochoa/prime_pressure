@@ -41,6 +41,12 @@ struct ProcessTypingInput : afterhours::System<TypingBuffer> {
         }
       }
 
+      if (c == ' ') {
+        if (buffer.buffer.empty() || buffer.buffer.back() == ' ') {
+          return;
+        }
+      }
+
       buffer.buffer += c;
       buffer.last_input_time = 0.0f;
     }

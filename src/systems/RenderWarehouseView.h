@@ -52,8 +52,6 @@ struct RenderWarehouseView : WarehouseViewRenderSystem {
     float spacing_pixels = ui_constants::pct_to_pixels_y(
         ui_constants::HEADER_TO_CONTENT_SPACING_PCT, screen_height);
     float content_start_y_pixels = header_bottom_pixels + spacing_pixels;
-    float content_start_y_pct =
-        content_start_y_pixels / static_cast<float>(screen_height);
 
     float belt_y_pct = box_y + box_height * ui_constants::CONVEYOR_Y_PCT;
     float belt_y = ui_constants::pct_to_pixels_y(belt_y_pct, screen_height);

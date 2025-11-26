@@ -16,10 +16,16 @@ struct Order : afterhours::BaseComponent {
 
 enum struct BoxingState { None, FoldBox, PutItems, Fold, Tape, Ship };
 
+struct BoxingItemStatus : afterhours::BaseComponent {
+  ItemType type;
+  bool is_placed = false;
+};
+
 struct BoxingProgress : afterhours::BaseComponent {
   std::optional<afterhours::EntityID> order_id;
   BoxingState state = BoxingState::None;
   int items_placed = 0;
+  std::vector<afterhours::EntityID> boxing_items;
 };
 
 inline std::string item_type_to_string(ItemType type) {
