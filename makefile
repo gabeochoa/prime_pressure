@@ -96,6 +96,7 @@ MAIN_SRC += $(wildcard src/components/*.cpp)
 MAIN_SRC += $(wildcard src/systems/*.cpp)
 MAIN_SRC += $(wildcard src/ui/*.cpp)
 MAIN_SRC += $(wildcard src/testing/*.cpp)
+MAIN_SRC += $(wildcard src/mcp/*.cpp)
 
 # Object files
 MAIN_OBJS := $(MAIN_SRC:src/%.cpp=$(OBJ_DIR)/main/%.o)

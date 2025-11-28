@@ -174,3 +174,4 @@ struct RenderComputerView : ComputerViewRenderSystem {
                           screen_width, screen_height);
   }
 };
+

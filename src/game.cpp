@@ -29,11 +29,14 @@
 #include "testing/test_input.h"
 #include "testing/test_macros.h"
 #include "testing/tests/all_tests.h"
+#include "mcp/mcp_server.h"
 #include <afterhours/src/plugins/files.h>
 
 #include <afterhours/src/plugins/animation.h>
 #include <chrono>
 #include <thread>
+#include <unistd.h>
+#include <fcntl.h>
 
 bool running = true;
 raylib::RenderTexture2D mainRT;
@@ -138,7 +141,15 @@ void game() {
     systems.register_render_system(std::make_unique<EndDrawing>());
   }
 
+  MCPServer mcp_server;
+  mcp_server.start();
+  if (test_system_ptr) {
+    mcp_server.set_test_system(test_system_ptr);
+  }
+
   while (running && !raylib::WindowShouldClose()) {
+    mcp_server.process_commands();
+
     if (raylib::IsKeyPressed(raylib::KEY_ESCAPE)) {
       running = false;
     }
@@ -148,11 +159,11 @@ void game() {
     if (test_system_ptr && test_system_ptr->is_complete()) {
       std::string error = test_system_ptr->get_error();
       if (!error.empty()) {
-        std::cout << "Test '" << test_system_ptr->get_test_name()
+        std::cerr << "Test '" << test_system_ptr->get_test_name()
                   << "' failed: " << error << std::endl;
         running = false;
       } else {
-        std::cout << "Test '" << test_system_ptr->get_test_name() << "' passed!"
+        std::cerr << "Test '" << test_system_ptr->get_test_name() << "' passed!"
                   << std::endl;
         running = false;
       }
@@ -164,7 +175,7 @@ void run_test(const std::string &test_name, bool slow_mode) {
   TestRegistry &registry = TestRegistry::get();
   auto it = registry.tests.find(test_name);
   if (it == registry.tests.end()) {
-    std::cout << "Test '" << test_name << "' not found" << std::endl;
+    std::cerr << "Test '" << test_name << "' not found" << std::endl;
     return;
   }
 
@@ -282,11 +293,11 @@ void run_test(const std::string &test_name, bool slow_mode) {
     if (test_system_ptr && test_system_ptr->is_complete()) {
       std::string error = test_system_ptr->get_error();
       if (!error.empty()) {
-        std::cout << "Test '" << test_system_ptr->get_test_name()
+        std::cerr << "Test '" << test_system_ptr->get_test_name()
                   << "' failed: " << error << std::endl;
         running = false;
       } else {
-        std::cout << "Test '" << test_system_ptr->get_test_name() << "' passed!"
+        std::cerr << "Test '" << test_system_ptr->get_test_name() << "' passed!"
                   << std::endl;
         running = false;
       }

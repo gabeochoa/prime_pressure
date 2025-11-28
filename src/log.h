@@ -11,6 +11,5 @@
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
-#define AFTER_HOURS_REPLACE_LOGGING
 #define AFTER_HOURS_LOG_WITH_COLOR
 #include "log/log.h"

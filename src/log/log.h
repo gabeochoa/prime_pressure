@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstdarg>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -16,7 +17,7 @@
 #include "log_level.h"
 
 #ifndef AFTER_HOURS_LOG_LEVEL
-#define AFTER_HOURS_LOG_LEVEL LogLevel::LOG_INFO
+#define AFTER_HOURS_LOG_LEVEL LogLevel::LOG_ERROR
 #endif
 
 // TODO allow people to specify their own colors
@@ -53,8 +54,8 @@ inline void vlog(LogLevel level, const char *file, int line,
 
   const auto message = fmt::vformat(format, args);
   const auto full_output = fmt::format("{}{}", file_info, message);
-  fmt::print("{}{}{}", color_start, full_output, color_reset);
-  fmt::print("\n");
+  fmt::print(stderr, "{}{}{}", color_start, full_output, color_reset);
+  fmt::print(stderr, "\n");
 }
 
 template <typename... Args>

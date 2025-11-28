@@ -35,12 +35,11 @@ Preload &Preload::init(const char *title) {
   int width = Settings::get().get_screen_width();
   int height = Settings::get().get_screen_height();
 
+  raylib::SetTraceLogLevel(raylib::LOG_NONE);
   raylib::InitWindow(width, height, title);
   raylib::SetWindowSize(width, height);
   raylib::SetWindowState(raylib::FLAG_WINDOW_RESIZABLE);
-
-  raylib::TraceLogLevel logLevel = raylib::LOG_ERROR;
-  raylib::SetTraceLogLevel(logLevel);
+  raylib::SetTraceLogLevel(raylib::LOG_NONE);
   raylib::SetTargetFPS(200);
 
   raylib::SetAudioStreamBufferSizeDefault(4096);

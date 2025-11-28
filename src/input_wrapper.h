@@ -5,7 +5,7 @@
 
 namespace game_input {
 inline bool IsKeyPressed(int key) {
-  if (test_input::test_mode && !test_input::input_queue.empty() &&
+  if (!test_input::input_queue.empty() &&
       !test_input::key_consumed_this_frame) {
     if (!test_input::input_queue.front().is_char &&
         test_input::input_queue.front().key == key) {
@@ -20,7 +20,7 @@ inline bool IsKeyPressed(int key) {
 inline bool IsKeyDown(int key) { return raylib::IsKeyDown(key); }
 
 inline int GetCharPressed() {
-  if (test_input::test_mode && !test_input::input_queue.empty() &&
+  if (!test_input::input_queue.empty() &&
       !test_input::char_consumed_this_frame) {
     if (test_input::input_queue.front().is_char) {
       char c = test_input::input_queue.front().char_value;
@@ -31,4 +31,13 @@ inline int GetCharPressed() {
   }
   return raylib::GetCharPressed();
 }
+
+inline void InjectKey(int key) {
+  test_input::input_queue.push({key, false, ' '});
+}
+
+inline void InjectChar(int char_code) {
+  test_input::input_queue.push({0, true, static_cast<char>(char_code)});
+}
+
 } // namespace game_input

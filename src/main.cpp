@@ -19,26 +19,26 @@ int main(int argc, char *argv[]) {
   argh::parser cmdl(argc, argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
   if (cmdl["--help"]) {
-    std::cout << "Prime Pressure\n\n";
-    std::cout << "Usage: warehouse_game [OPTIONS]\n\n";
-    std::cout << "Options:\n";
-    std::cout << "  --help                        Show this help message\n";
-    std::cout
+    std::cerr << "Prime Pressure\n\n";
+    std::cerr << "Usage: warehouse_game [OPTIONS]\n\n";
+    std::cerr << "Options:\n";
+    std::cerr << "  --help                        Show this help message\n";
+    std::cerr
         << "  -w, --width <pixels>          Screen width (default: 1280)\n";
-    std::cout
+    std::cerr
         << "  -h, --height <pixels>         Screen height (default: 720)\n";
-    std::cout << "  --list-tests                 List all available tests\n";
-    std::cout << "  --run-test <name>            Run a specific test\n";
-    std::cout
+    std::cerr << "  --list-tests                 List all available tests\n";
+    std::cerr << "  --run-test <name>            Run a specific test\n";
+    std::cerr
         << "  --slow-test                  Run test in slow mode (visible)\n";
     return 0;
   }
 
   if (cmdl["--list-tests"]) {
     TestRegistry &registry = TestRegistry::get();
-    std::cout << "Available tests:\n";
+    std::cerr << "Available tests:\n";
     for (const auto &[name, func] : registry.tests) {
-      std::cout << "  - " << name << "\n";
+      std::cerr << "  - " << name << "\n";
     }
     return 0;
   }
