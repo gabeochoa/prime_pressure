@@ -31,20 +31,23 @@ struct RenderTypingBuffer : RenderSystem<> {
     std::string display_text = "KEY: ";
     if (!buffer.buffer.empty()) {
       display_text += buffer.buffer;
-    } else {
-      display_text += "_";
-    }
+    } 
 
     raylib::Color text_color =
         buffer.has_error
-            ? ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Error)
-            : ui_constants::get_theme_color(
-                  afterhours::ui::Theme::Usage::Secondary);
+            ? ui_colors::TERMINAL_RED
+            : ui_colors::TERMINAL_AMBER;
 
+    raylib::Vector2 text_pos = {ui_constants::pct_to_pixels_x(text_x, screen_width),
+                                ui_constants::pct_to_pixels_y(text_y, screen_height)};
+                                
     raylib::DrawTextEx(
         uiFont, display_text.c_str(),
-        raylib::Vector2{ui_constants::pct_to_pixels_x(text_x, screen_width),
-                        ui_constants::pct_to_pixels_y(text_y, screen_height)},
+        text_pos,
         static_cast<float>(font_size), 1.0f, text_color);
+        
+    // Blinking cursor
+    float text_width = raylib::MeasureTextEx(uiFont, display_text.c_str(), static_cast<float>(font_size), 1.0f).x;
+    draw_blinking_cursor(text_pos.x + text_width + 2, text_pos.y, font_size, text_color);
   }
 };

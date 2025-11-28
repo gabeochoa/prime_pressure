@@ -30,7 +30,7 @@ struct RenderWarehouseViewInstructions : WarehouseViewRenderSystem {
         "[COMPUTER] [WAREHOUSE] [BOXING] (Press TAB to switch)",
         box_x + ui_constants::HEADER_PADDING_PCT, instruction_y, screen_width,
         screen_height, uiFont);
-    draw_instruction_text("[Press key letters to grab items]",
+    draw_instruction_text("[Type item names to grab items]",
                           box_x + ui_constants::HEADER_PADDING_PCT,
                           instruction_y + ui_constants::HEADER_PADDING_PCT,
                           screen_width, screen_height, uiFont);

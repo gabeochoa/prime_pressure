@@ -36,11 +36,11 @@ static void draw_view_box(float x_pct, float y_pct, float width_pct,
   float width = ui_constants::pct_to_pixels_x(width_pct, screen_width);
   float height = ui_constants::pct_to_pixels_y(height_pct, screen_height);
 
-  raylib::Color border_color =
-      ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Primary);
-  raylib::DrawRectangleLines(static_cast<int>(x), static_cast<int>(y),
-                             static_cast<int>(width), static_cast<int>(height),
-                             border_color);
+  raylib::Color border_color = ui_colors::TERMINAL_GREEN;
+  
+  // Double border effect
+  raylib::DrawRectangleLinesEx(raylib::Rectangle{x, y, width, height}, 2.0f, border_color);
+  raylib::DrawRectangleLinesEx(raylib::Rectangle{x - 4, y - 4, width + 8, height + 8}, 1.0f, ui_colors::TERMINAL_DARK_GREEN);
 }
 
 static void draw_view_header(const char *text, float x_pct, float y_pct,
@@ -52,15 +52,18 @@ static void draw_view_header(const char *text, float x_pct, float y_pct,
   int font_size = ui_constants::pct_to_font_size(
       ui_constants::HEADER_FONT_SIZE_PCT, screen_height);
 
-  raylib::Color text_color = ui_constants::get_theme_color(
-      current_view == this_view ? afterhours::ui::Theme::Usage::Accent
-                                : afterhours::ui::Theme::Usage::Primary);
+  raylib::Color text_color = (current_view == this_view) ? ui_colors::TERMINAL_GREEN : ui_colors::TERMINAL_GRAY;
 
   std::string display_text = "> ";
   if (current_view == this_view) {
-    display_text += "[";
+    display_text += "[ ";
     display_text += text;
-    display_text += "]";
+    display_text += " ]";
+    
+    // Blinking cursor effect for active header
+    if (static_cast<int>(raylib::GetTime() * 2) % 2 == 0) {
+        display_text += "_";
+    }
   } else {
     display_text += text;
   }
@@ -78,10 +81,15 @@ draw_instruction_text(const char *text, float x_pct, float y_pct,
   int font_size = ui_constants::pct_to_font_size(
       ui_constants::INSTRUCTION_FONT_SIZE_PCT, screen_height);
 
-  raylib::Color text_color =
-      ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
-  text_color = raylib::Color{text_color.r, text_color.g, text_color.b, 128};
+  raylib::Color text_color = ui_colors::TERMINAL_GREEN;
+  text_color.a = 180; // Slight transparency
 
   raylib::DrawTextEx(font, text, raylib::Vector2{x, y},
                      static_cast<float>(font_size), 1.0f, text_color);
+}
+
+static void draw_blinking_cursor(float x, float y, int font_size, raylib::Color color) {
+    if (static_cast<int>(raylib::GetTime() * 2) % 2 == 0) {
+        raylib::DrawRectangle(static_cast<int>(x), static_cast<int>(y), 10, font_size, color);
+    }
 }

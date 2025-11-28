@@ -52,3 +52,13 @@ inline afterhours::Color get_theme_color(afterhours::ui::Theme::Usage usage) {
 }
 
 } // namespace ui_constants
+
+namespace ui_colors {
+    // Retro Terminal Palette
+    const raylib::Color TERMINAL_GREEN = raylib::Color{0, 255, 0, 255};
+    const raylib::Color TERMINAL_DARK_GREEN = raylib::Color{0, 100, 0, 255};
+    const raylib::Color TERMINAL_BLACK = raylib::Color{10, 10, 10, 255}; // Slightly lighter than pure black
+    const raylib::Color TERMINAL_AMBER = raylib::Color{255, 176, 0, 255};
+    const raylib::Color TERMINAL_RED = raylib::Color{255, 50, 50, 255};
+    const raylib::Color TERMINAL_GRAY = raylib::Color{80, 80, 80, 255};
+}

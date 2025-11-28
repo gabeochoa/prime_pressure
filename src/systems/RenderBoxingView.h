@@ -21,31 +21,26 @@ get_boxing_status_text(const BoxingProgress &boxing_progress,
   case BoxingState::FoldBox:
     return {
         "Press 'B' to fold the box",
-        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Secondary)};
+        ui_colors::TERMINAL_AMBER};
   case BoxingState::PutItems: {
     int total_items = static_cast<int>(order.ready_items.size());
     std::string text = "Press 'P' to put items in box (" +
                        std::to_string(boxing_progress.items_placed) + "/" +
                        std::to_string(total_items) + ")";
-    return {text, ui_constants::get_theme_color(
-                      afterhours::ui::Theme::Usage::Secondary)};
+    return {text, ui_colors::TERMINAL_AMBER};
   }
   case BoxingState::Fold:
-    return {"Press 'F' to fold", ui_constants::get_theme_color(
-                                     afterhours::ui::Theme::Usage::Secondary)};
+    return {"Press 'F' to fold", ui_colors::TERMINAL_AMBER};
   case BoxingState::Tape:
-    return {"Press 'T' to tape", ui_constants::get_theme_color(
-                                     afterhours::ui::Theme::Usage::Secondary)};
+    return {"Press 'T' to tape", ui_colors::TERMINAL_AMBER};
   case BoxingState::Ship:
-    return {"Press 'S' to ship", ui_constants::get_theme_color(
-                                     afterhours::ui::Theme::Usage::Primary)};
+    return {"Press 'S' to ship", ui_colors::TERMINAL_GREEN};
   case BoxingState::None:
     return {
         "Press 'B' to start boxing",
-        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Secondary)};
+        ui_colors::TERMINAL_GRAY};
   }
-  return {"",
-          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font)};
+  return {"", ui_colors::TERMINAL_GRAY};
 }
 
 static OrderDisplayInfo
@@ -77,11 +72,9 @@ create_order_display_info(int order_number, const Order *order_ptr,
                      boxing_progress.order_id.value() == order_id;
 
   if (is_selected || is_ready) {
-    info.text_color =
-        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Primary);
+    info.text_color = ui_colors::TERMINAL_GREEN;
   } else {
-    info.text_color =
-        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+    info.text_color = ui_colors::TERMINAL_GRAY;
   }
 
   if (is_ready) {

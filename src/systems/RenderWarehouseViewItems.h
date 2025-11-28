@@ -109,14 +109,12 @@ struct RenderWarehouseViewItems : WarehouseViewRenderSystem {
         }
       }
 
-      raylib::Color item_color =
-          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+      raylib::Color item_color = ui_colors::TERMINAL_GRAY;
       if (!is_selected) {
         item_color = afterhours::colors::darken(item_color, 0.5f);
       }
       if (has_moving_items && is_selected) {
-        item_color = ui_constants::get_theme_color(
-            afterhours::ui::Theme::Usage::Primary);
+        item_color = ui_colors::TERMINAL_GREEN;
       }
 
       raylib::DrawTextEx(uiFont, item_text.c_str(),

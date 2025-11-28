@@ -31,7 +31,17 @@ struct RenderWarehouseViewOrderInfo : WarehouseViewRenderSystem {
 
     float box_x = ui_constants::BOX_X_PCT;
     float box_width = ui_constants::BOX_WIDTH_PCT;
-    float header_y = ui_constants::BOX_Y_PCT + ui_constants::HEADER_PADDING_PCT;
+    float box_y = ui_constants::BOX_Y_PCT;
+    float box_height = ui_constants::BOX_HEIGHT_PCT;
+
+    draw_view_box(box_x, box_y, box_width, box_height, screen_width, screen_height);
+
+    float header_x = box_x + ui_constants::HEADER_PADDING_PCT;
+    float header_y = box_y + ui_constants::HEADER_PADDING_PCT;
+    
+    draw_view_header("WAREHOUSE SCREEN", header_x, header_y,
+                     active_view.current_view, ViewState::Warehouse,
+                     screen_width, screen_height, uiFont);
 
     int header_font_size = ui_constants::pct_to_font_size(
         ui_constants::HEADER_FONT_SIZE_PCT, screen_height);
@@ -71,7 +81,7 @@ struct RenderWarehouseViewOrderInfo : WarehouseViewRenderSystem {
                     box_x + ui_constants::CONTENT_PADDING_PCT, screen_width),
                 content_start_y_pixels},
             static_cast<float>(body_font_size), 1.0f,
-            ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+            ui_colors::TERMINAL_GREEN);
 
         for (const Order &order : afterhours::EntityQuery()
                                       .whereID(selected_order.order_id.value())
@@ -91,8 +101,7 @@ struct RenderWarehouseViewOrderInfo : WarehouseViewRenderSystem {
                                   screen_width),
                               content_start_y_pixels},
               static_cast<float>(instruction_font_size), 1.0f,
-              ui_constants::get_theme_color(
-                  afterhours::ui::Theme::Usage::Font));
+              ui_colors::TERMINAL_AMBER);
           break;
         }
         break;
