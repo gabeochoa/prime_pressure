@@ -7,6 +7,13 @@
 #include "RenderSystemHelpers.h"
 #include <afterhours/ah.h>
 
+struct OrderDisplayInfo {
+  int order_number;
+  std::string order_text;
+  std::string status_text;
+  raylib::Color text_color;
+};
+
 static std::pair<std::string, raylib::Color>
 get_boxing_status_text(const BoxingProgress &boxing_progress,
                        const Order &order) {
@@ -41,6 +48,85 @@ get_boxing_status_text(const BoxingProgress &boxing_progress,
           ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font)};
 }
 
+static OrderDisplayInfo
+create_order_display_info(int order_number, const Order *order_ptr,
+                          afterhours::EntityID order_id,
+                          const BoxingProgress &boxing_progress) {
+  OrderDisplayInfo info;
+  info.order_number = order_number;
+  info.order_text = std::to_string(order_number) + "";
+
+  if (!order_ptr) {
+    info.status_text = " - Slot not in progress";
+    info.text_color =
+        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+    return info;
+  }
+
+  const Order &order = *order_ptr;
+
+  if (order.is_shipped) {
+    info.status_text = " - Shipped";
+    info.text_color =
+        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+    return info;
+  }
+
+  bool is_ready = all_items_ready(order);
+  bool is_selected = boxing_progress.order_id.has_value() &&
+                     boxing_progress.order_id.value() == order_id;
+
+  if (is_selected || is_ready) {
+    info.text_color =
+        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Primary);
+  } else {
+    info.text_color =
+        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+  }
+
+  if (is_ready) {
+    info.status_text = " - Ready";
+  } else {
+    int ready_count = static_cast<int>(order.ready_items.size());
+    int total_count = static_cast<int>(order.items.size());
+    info.status_text = " - Waiting for items (" + std::to_string(ready_count) +
+                       "/" + std::to_string(total_count) + ")";
+  }
+
+  return info;
+}
+
+static void draw_order_text(const OrderDisplayInfo &info, float box_x, float y,
+                            int screen_width, int screen_height,
+                            int font_size) {
+  float order_x = ui_constants::pct_to_pixels_x(
+      box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f, screen_width);
+  float order_y = ui_constants::pct_to_pixels_y(y, screen_height);
+  raylib::Color status_color =
+      ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
+  raylib::DrawTextEx(uiFont, info.status_text.c_str(),
+                     raylib::Vector2{order_x, order_y},
+                     static_cast<float>(font_size), 1.0f, status_color);
+}
+
+static bool are_all_orders_shipped_or_empty(const OrderQueue &queue) {
+  for (afterhours::EntityID order_id : queue.in_progress_orders) {
+    if (order_id == -1) {
+      continue;
+    }
+    for (const Order &order : afterhours::EntityQuery()
+                                  .whereID(order_id)
+                                  .whereHasComponent<Order>()
+                                  .gen_as<Order>()) {
+      if (!order.is_shipped) {
+        return false;
+      }
+      break;
+    }
+  }
+  return true;
+}
+
 static void render_order_selection_list(float box_x, float &y,
                                         const OrderQueue &queue,
                                         const BoxingProgress &boxing_progress,
@@ -60,172 +146,8 @@ static void render_order_selection_list(float box_x, float &y,
       ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
   y += ui_constants::ORDER_ITEM_SPACING_PCT;
 
-  int order_number = 1;
-  for (afterhours::EntityID order_id : queue.in_progress_orders) {
-    if (order_id == -1) {
-      std::string order_text = std::to_string(order_number) + ". Order #" +
-                               std::to_string(order_number);
-      raylib::Color text_color =
-          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
-
-      raylib::DrawTextEx(
-          uiFont, order_text.c_str(),
-          raylib::Vector2{ui_constants::pct_to_pixels_x(
-                              box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
-                              screen_width),
-                          ui_constants::pct_to_pixels_y(y, screen_height)},
-          static_cast<float>(instruction_font_size), 1.0f, text_color);
-
-      std::string status_text = " - Slot not in progress";
-
-      raylib::DrawTextEx(
-          uiFont, status_text.c_str(),
-          raylib::Vector2{ui_constants::pct_to_pixels_x(
-                              box_x + ui_constants::CONTENT_PADDING_PCT * 3.0f,
-                              screen_width),
-                          ui_constants::pct_to_pixels_y(y, screen_height)},
-          static_cast<float>(instruction_font_size), 1.0f,
-          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
-
-      y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
-      order_number++;
-      continue;
-    }
-    bool order_found = false;
-    for (const Order &order : afterhours::EntityQuery()
-                                  .whereID(order_id)
-                                  .whereHasComponent<Order>()
-                                  .gen_as<Order>()) {
-      order_found = true;
-      if (order.is_shipped) {
-        std::string order_text = std::to_string(order_number) + ". Order #" +
-                                 std::to_string(order_number);
-        raylib::Color text_color =
-            ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
-
-        raylib::DrawTextEx(
-            uiFont, order_text.c_str(),
-            raylib::Vector2{
-                ui_constants::pct_to_pixels_x(
-                    box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
-                    screen_width),
-                ui_constants::pct_to_pixels_y(y, screen_height)},
-            static_cast<float>(instruction_font_size), 1.0f, text_color);
-
-        std::string status_text = " - Shipped";
-
-        raylib::DrawTextEx(
-            uiFont, status_text.c_str(),
-            raylib::Vector2{
-                ui_constants::pct_to_pixels_x(
-                    box_x + ui_constants::CONTENT_PADDING_PCT * 3.0f,
-                    screen_width),
-                ui_constants::pct_to_pixels_y(y, screen_height)},
-            static_cast<float>(instruction_font_size), 1.0f,
-            ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
-
-        y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
-        break;
-      }
-
-      bool is_ready = all_items_ready(order);
-      bool is_selected = boxing_progress.order_id.has_value() &&
-                         boxing_progress.order_id.value() == order_id;
-
-      std::string order_text = std::to_string(order_number) + ". Order #" +
-                               std::to_string(order_number);
-
-      raylib::Color text_color =
-          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
-      if (is_selected) {
-        text_color = ui_constants::get_theme_color(
-            afterhours::ui::Theme::Usage::Primary);
-      } else if (is_ready) {
-        text_color = ui_constants::get_theme_color(
-            afterhours::ui::Theme::Usage::Primary);
-      }
-
-      raylib::DrawTextEx(
-          uiFont, order_text.c_str(),
-          raylib::Vector2{ui_constants::pct_to_pixels_x(
-                              box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
-                              screen_width),
-                          ui_constants::pct_to_pixels_y(y, screen_height)},
-          static_cast<float>(instruction_font_size), 1.0f, text_color);
-
-      std::string status_text;
-      if (is_ready) {
-        status_text = " - Ready";
-      } else {
-        int ready_count = static_cast<int>(order.ready_items.size());
-        int total_count = static_cast<int>(order.items.size());
-        status_text = " - Waiting for items (" + std::to_string(ready_count) +
-                      "/" + std::to_string(total_count) + ")";
-      }
-
-      raylib::DrawTextEx(
-          uiFont, status_text.c_str(),
-          raylib::Vector2{ui_constants::pct_to_pixels_x(
-                              box_x + ui_constants::CONTENT_PADDING_PCT * 3.0f,
-                              screen_width),
-                          ui_constants::pct_to_pixels_y(y, screen_height)},
-          static_cast<float>(instruction_font_size), 1.0f,
-          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
-
-      y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
-      break;
-    }
-    if (!order_found) {
-      std::string order_text = std::to_string(order_number) + ". Order #" +
-                               std::to_string(order_number);
-      raylib::Color text_color =
-          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font);
-
-      raylib::DrawTextEx(
-          uiFont, order_text.c_str(),
-          raylib::Vector2{ui_constants::pct_to_pixels_x(
-                              box_x + ui_constants::CONTENT_PADDING_PCT * 1.5f,
-                              screen_width),
-                          ui_constants::pct_to_pixels_y(y, screen_height)},
-          static_cast<float>(instruction_font_size), 1.0f, text_color);
-
-      std::string status_text = " - Slot not in progress";
-
-      raylib::DrawTextEx(
-          uiFont, status_text.c_str(),
-          raylib::Vector2{ui_constants::pct_to_pixels_x(
-                              box_x + ui_constants::CONTENT_PADDING_PCT * 3.0f,
-                              screen_width),
-                          ui_constants::pct_to_pixels_y(y, screen_height)},
-          static_cast<float>(instruction_font_size), 1.0f,
-          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
-
-      y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
-    }
-    order_number++;
-  }
-
-  bool all_shipped_or_empty = true;
-  for (afterhours::EntityID order_id : queue.in_progress_orders) {
-    if (order_id == -1) {
-      continue;
-    }
-    for (const Order &order : afterhours::EntityQuery()
-                                  .whereID(order_id)
-                                  .whereHasComponent<Order>()
-                                  .gen_as<Order>()) {
-      if (!order.is_shipped) {
-        all_shipped_or_empty = false;
-        break;
-      }
-      break;
-    }
-    if (!all_shipped_or_empty) {
-      break;
-    }
-  }
-
-  if (queue.in_progress_orders.empty() || all_shipped_or_empty) {
+  if (queue.in_progress_orders.empty() ||
+      are_all_orders_shipped_or_empty(queue)) {
     raylib::DrawTextEx(
         uiFont, "No orders available",
         raylib::Vector2{
@@ -234,6 +156,131 @@ static void render_order_selection_list(float box_x, float &y,
             ui_constants::pct_to_pixels_y(y, screen_height)},
         static_cast<float>(instruction_font_size), 1.0f,
         ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+    return;
+  }
+
+  int order_number = 1;
+  for (afterhours::EntityID order_id : queue.in_progress_orders) {
+    const Order *order_ptr = nullptr;
+    if (order_id != -1) {
+      for (const Order &order : afterhours::EntityQuery()
+                                    .whereID(order_id)
+                                    .whereHasComponent<Order>()
+                                    .gen_as<Order>()) {
+        order_ptr = &order;
+        break;
+      }
+    }
+
+    OrderDisplayInfo info = create_order_display_info(
+        order_number, order_ptr, order_id, boxing_progress);
+    draw_order_text(info, box_x, y, screen_width, screen_height,
+                    instruction_font_size);
+    y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
+    order_number++;
+  }
+}
+
+static int
+count_unplaced_items(const std::vector<afterhours::EntityID> &boxing_items) {
+  int count = 0;
+  for (afterhours::EntityID item_id : boxing_items) {
+    for (const BoxingItemStatus &boxing_item :
+         afterhours::EntityQuery()
+             .whereID(item_id)
+             .whereHasComponent<BoxingItemStatus>()
+             .gen_as<BoxingItemStatus>()) {
+      if (!boxing_item.is_placed) {
+        count++;
+      }
+      break;
+    }
+  }
+  return count;
+}
+
+static int count_ready_items_in_queue(const OrderQueue &queue) {
+  int total = 0;
+  for (afterhours::EntityID order_id : queue.in_progress_orders) {
+    if (order_id == -1) {
+      continue;
+    }
+    for (const Order &order : afterhours::EntityQuery()
+                                  .whereID(order_id)
+                                  .whereHasComponent<Order>()
+                                  .gen_as<Order>()) {
+      if (!order.is_shipped && !order.ready_items.empty()) {
+        std::map<ItemType, int> item_counts = count_items(order.ready_items);
+        total += static_cast<int>(item_counts.size());
+      }
+      break;
+    }
+  }
+  return total;
+}
+
+static void render_boxing_items_list(float left_x, float &y,
+                                     const BoxingProgress &boxing_progress,
+                                     int screen_width, int screen_height,
+                                     int font_size) {
+  std::map<ItemType, int> unplaced_counts;
+  for (afterhours::EntityID item_id : boxing_progress.boxing_items) {
+    for (const BoxingItemStatus &boxing_item :
+         afterhours::EntityQuery()
+             .whereID(item_id)
+             .whereHasComponent<BoxingItemStatus>()
+             .gen_as<BoxingItemStatus>()) {
+      if (!boxing_item.is_placed) {
+        unplaced_counts[boxing_item.type]++;
+      }
+      break;
+    }
+  }
+
+  for (const auto &[item_type, count] : unplaced_counts) {
+    std::string item_text = "[ ] " + item_type_to_string(item_type);
+    if (count > 1) {
+      item_text += " x" + std::to_string(count);
+    }
+    raylib::DrawTextEx(
+        uiFont, item_text.c_str(),
+        raylib::Vector2{ui_constants::pct_to_pixels_x(left_x, screen_width),
+                        ui_constants::pct_to_pixels_y(y, screen_height)},
+        static_cast<float>(font_size), 1.0f,
+        ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+    y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
+  }
+}
+
+static void render_queue_items_list(float left_x, float &y,
+                                    const OrderQueue &queue, int screen_width,
+                                    int screen_height, int font_size) {
+  for (afterhours::EntityID order_id : queue.in_progress_orders) {
+    if (order_id == -1) {
+      continue;
+    }
+    for (const Order &order : afterhours::EntityQuery()
+                                  .whereID(order_id)
+                                  .whereHasComponent<Order>()
+                                  .gen_as<Order>()) {
+      if (order.is_shipped || order.ready_items.empty()) {
+        break;
+      }
+
+      std::map<ItemType, int> item_counts = count_items(order.ready_items);
+      for (const auto &[item_type, count] : item_counts) {
+        std::string item_text =
+            item_type_to_string(item_type) + " x" + std::to_string(count);
+        raylib::DrawTextEx(
+            uiFont, item_text.c_str(),
+            raylib::Vector2{ui_constants::pct_to_pixels_x(left_x, screen_width),
+                            ui_constants::pct_to_pixels_y(y, screen_height)},
+            static_cast<float>(font_size), 1.0f,
+            ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+        y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
+      }
+      break;
+    }
   }
 }
 
@@ -245,39 +292,13 @@ static void render_items_list(float left_x, float start_y,
       ui_constants::INSTRUCTION_FONT_SIZE_PCT, screen_height);
 
   float y = start_y;
-
   int items_to_display = 0;
 
   if (boxing_progress.order_id.has_value() &&
       !boxing_progress.boxing_items.empty()) {
-    for (afterhours::EntityID item_id : boxing_progress.boxing_items) {
-      for (const BoxingItemStatus &boxing_item :
-           afterhours::EntityQuery()
-               .whereID(item_id)
-               .whereHasComponent<BoxingItemStatus>()
-               .gen_as<BoxingItemStatus>()) {
-        if (!boxing_item.is_placed) {
-          items_to_display++;
-        }
-        break;
-      }
-    }
+    items_to_display = count_unplaced_items(boxing_progress.boxing_items);
   } else {
-    for (afterhours::EntityID order_id : queue.in_progress_orders) {
-      if (order_id == -1) {
-        continue;
-      }
-      for (const Order &order : afterhours::EntityQuery()
-                                    .whereID(order_id)
-                                    .whereHasComponent<Order>()
-                                    .gen_as<Order>()) {
-        if (!order.is_shipped && !order.ready_items.empty()) {
-          std::map<ItemType, int> item_counts = count_items(order.ready_items);
-          items_to_display += static_cast<int>(item_counts.size());
-        }
-        break;
-      }
-    }
+    items_to_display = count_ready_items_in_queue(queue);
   }
 
   if (items_to_display == 0) {
@@ -294,120 +315,53 @@ static void render_items_list(float left_x, float start_y,
 
   if (boxing_progress.order_id.has_value() &&
       !boxing_progress.boxing_items.empty()) {
-    std::map<ItemType, int> unplaced_counts;
-    for (afterhours::EntityID item_id : boxing_progress.boxing_items) {
-      for (const BoxingItemStatus &boxing_item :
-           afterhours::EntityQuery()
-               .whereID(item_id)
-               .whereHasComponent<BoxingItemStatus>()
-               .gen_as<BoxingItemStatus>()) {
-        if (!boxing_item.is_placed) {
-          unplaced_counts[boxing_item.type]++;
-        }
-        break;
-      }
-    }
-
-    for (const auto &[item_type, count] : unplaced_counts) {
-      std::string item_text = "[ ] " + item_type_to_string(item_type);
-      if (count > 1) {
-        item_text += " x" + std::to_string(count);
-      }
-      raylib::DrawTextEx(
-          uiFont, item_text.c_str(),
-          raylib::Vector2{ui_constants::pct_to_pixels_x(left_x, screen_width),
-                          ui_constants::pct_to_pixels_y(y, screen_height)},
-          static_cast<float>(instruction_font_size), 1.0f,
-          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
-      y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
-    }
+    render_boxing_items_list(left_x, y, boxing_progress, screen_width,
+                             screen_height, instruction_font_size);
   } else {
-    bool has_items = false;
-    for (afterhours::EntityID order_id : queue.in_progress_orders) {
-      if (order_id == -1) {
-        continue;
-      }
-      for (const Order &order : afterhours::EntityQuery()
-                                    .whereID(order_id)
-                                    .whereHasComponent<Order>()
-                                    .gen_as<Order>()) {
-        if (!order.is_shipped && !order.ready_items.empty()) {
-          has_items = true;
-          std::map<ItemType, int> item_counts = count_items(order.ready_items);
-          for (const auto &[item_type, count] : item_counts) {
-            std::string item_text =
-                item_type_to_string(item_type) + " x" + std::to_string(count);
-            raylib::DrawTextEx(
-                uiFont, item_text.c_str(),
-                raylib::Vector2{
-                    ui_constants::pct_to_pixels_x(left_x, screen_width),
-                    ui_constants::pct_to_pixels_y(y, screen_height)},
-                static_cast<float>(instruction_font_size), 1.0f,
-                ui_constants::get_theme_color(
-                    afterhours::ui::Theme::Usage::Font));
-            y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
-          }
-        }
-        break;
-      }
-    }
-    if (!has_items) {
-      return;
-    }
+    render_queue_items_list(left_x, y, queue, screen_width, screen_height,
+                            instruction_font_size);
   }
 }
 
-static void draw_dotted_rectangle(float x, float y, float width, float height,
-                                  raylib::Color color, float dash_length = 5.0f,
-                                  float gap_length = 5.0f) {
+static void draw_dotted_line_horizontal(float x, float y, float length,
+                                        raylib::Color color, float dash_length,
+                                        float gap_length) {
   float total_length = 0.0f;
   float current_x = x;
-  float current_y = y;
-
-  while (total_length < width) {
-    float segment_length = std::min(dash_length, width - total_length);
+  while (total_length < length) {
+    float segment_length = std::min(dash_length, length - total_length);
     raylib::DrawLine(static_cast<int>(current_x), static_cast<int>(y),
                      static_cast<int>(current_x + segment_length),
                      static_cast<int>(y), color);
     current_x += segment_length + gap_length;
     total_length += segment_length + gap_length;
   }
+}
 
-  total_length = 0.0f;
-  current_x = x;
-  current_y = y + height;
-  while (total_length < width) {
-    float segment_length = std::min(dash_length, width - total_length);
-    raylib::DrawLine(static_cast<int>(current_x), static_cast<int>(current_y),
-                     static_cast<int>(current_x + segment_length),
-                     static_cast<int>(current_y), color);
-    current_x += segment_length + gap_length;
-    total_length += segment_length + gap_length;
-  }
-
-  total_length = 0.0f;
-  current_x = x;
-  current_y = y;
-  while (total_length < height) {
-    float segment_length = std::min(dash_length, height - total_length);
+static void draw_dotted_line_vertical(float x, float y, float length,
+                                      raylib::Color color, float dash_length,
+                                      float gap_length) {
+  float total_length = 0.0f;
+  float current_y = y;
+  while (total_length < length) {
+    float segment_length = std::min(dash_length, length - total_length);
     raylib::DrawLine(static_cast<int>(x), static_cast<int>(current_y),
                      static_cast<int>(x),
                      static_cast<int>(current_y + segment_length), color);
     current_y += segment_length + gap_length;
     total_length += segment_length + gap_length;
   }
+}
 
-  total_length = 0.0f;
-  current_x = x + width;
-  current_y = y;
-  while (total_length < height) {
-    float segment_length = std::min(dash_length, height - total_length);
-    raylib::DrawLine(static_cast<int>(current_x), static_cast<int>(current_y),
-                     static_cast<int>(current_x),
-                     static_cast<int>(current_y + segment_length), color);
-    current_y += segment_length + gap_length;
-    total_length += segment_length + gap_length;
-  }
+static void draw_dotted_rectangle(float x, float y, float width, float height,
+                                  raylib::Color color, float dash_length = 5.0f,
+                                  float gap_length = 5.0f) {
+  draw_dotted_line_horizontal(x, y, width, color, dash_length, gap_length);
+  draw_dotted_line_horizontal(x, y + height, width, color, dash_length,
+                              gap_length);
+  draw_dotted_line_vertical(x, y, height, color, dash_length, gap_length);
+  draw_dotted_line_vertical(x + width, y, height, color, dash_length,
+                            gap_length);
 }
 
 static void render_box(float center_x_pct, float center_y_pct, int screen_width,
@@ -420,7 +374,6 @@ static void render_box(float center_x_pct, float center_y_pct, int screen_width,
   float box_x = center_x - box_width / 2.0f;
   float box_y = center_y - box_height / 2.0f;
 
-  // Tan cardboard color (RGB: 210, 180, 140)
   raylib::Color box_color = raylib::Color{210, 180, 140, 255};
 
   if (boxing_progress.state == BoxingState::None) {
@@ -435,11 +388,10 @@ static void render_box(float center_x_pct, float center_y_pct, int screen_width,
                           static_cast<int>(box_width),
                           static_cast<int>(box_height), box_color);
 
-    // Draw off-white tape stripe only after pressing T (Ship state)
     if (boxing_progress.state == BoxingState::Ship) {
-      raylib::Color tape_color = raylib::Color{250, 248, 240, 255}; // Off-white
+      raylib::Color tape_color = raylib::Color{250, 248, 240, 255};
       float stripe_width = box_width;
-      float stripe_height = box_height * 0.08f; // 8% of box height
+      float stripe_height = box_height * 0.08f;
       float stripe_y = box_y + box_height / 2.0f - stripe_height / 2.0f;
       raylib::DrawRectangle(static_cast<int>(box_x), static_cast<int>(stripe_y),
                             static_cast<int>(stripe_width),
@@ -451,8 +403,6 @@ static void render_box(float center_x_pct, float center_y_pct, int screen_width,
                                static_cast<int>(box_height), box_color);
   }
 
-  // Only show items in box when state is PutItems or Fold (after items are
-  // placed)
   if (!is_closed && boxing_progress.state >= BoxingState::PutItems &&
       boxing_progress.order_id.has_value() &&
       !boxing_progress.boxing_items.empty()) {
@@ -466,7 +416,6 @@ static void render_box(float center_x_pct, float center_y_pct, int screen_width,
                .whereID(item_id)
                .whereHasComponent<BoxingItemStatus>()
                .gen_as<BoxingItemStatus>()) {
-        // Only show items that have been placed
         if (boxing_item.is_placed) {
           std::string item_text = item_type_to_string(boxing_item.type);
           raylib::DrawTextEx(

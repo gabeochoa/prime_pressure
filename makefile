@@ -125,6 +125,9 @@ $(MAIN_EXE): $(MAIN_OBJS) | $(OUTPUT_DIR)/.stamp
 	$(CXX) $(CXXFLAGS) $(MAIN_OBJS) $(LDFLAGS) -o $@
 	@echo "Built $(MAIN_EXE)"
 
+# Include dependency files early to ensure header changes trigger rebuilds
+-include $(MAIN_DEPS)
+
 # Compile main object files
 $(OBJ_DIR)/main/%.o: src/%.cpp | $(OBJ_DIR)/main
 	@echo "Compiling $<..."
@@ -137,8 +140,11 @@ $(OBJ_DIR)/main/vendor_afterhours_files.o: vendor/afterhours/src/plugins/files.c
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@ -MMD -MP -MF $(@:.o=.d) -MT $@
 
-# Include dependency files
--include $(MAIN_DEPS)
+# Force dependency regeneration by removing dependency files
+deps:
+	@echo "Regenerating dependency files..."
+	rm -f $(MAIN_DEPS)
+	@echo "Dependency files removed - next build will regenerate them"
 
 # Clean build artifacts
 clean:
@@ -176,7 +182,7 @@ run: output
 	./$(MAIN_EXE)
 
 # Utility targets
-.PHONY: all clean clean-all output sign run
+.PHONY: all clean clean-all deps output sign run
 
 # Code counting
 count:
