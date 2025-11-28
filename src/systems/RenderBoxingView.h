@@ -109,19 +109,15 @@ static void draw_order_text(const OrderDisplayInfo &info, float box_x, float y,
                      static_cast<float>(font_size), 1.0f, status_color);
 }
 
-static bool are_all_orders_shipped_or_empty(const OrderQueue &queue) {
-  for (afterhours::EntityID order_id : queue.in_progress_orders) {
-    if (order_id == -1) {
-      continue;
-    }
-    for (const Order &order : afterhours::EntityQuery()
-                                  .whereID(order_id)
-                                  .whereHasComponent<Order>()
-                                  .gen_as<Order>()) {
-      if (!order.is_shipped) {
-        return false;
-      }
-      break;
+static bool are_all_orders_shipped_or_empty(const OrderQueue &) {
+  for (const afterhours::Entity &order_entity :
+       afterhours::EntityQuery()
+           .whereHasTag(GameTag::IsInProgressOrder)
+           .whereHasComponent<Order>()
+           .gen()) {
+    const Order &order = order_entity.get<Order>();
+    if (!order.is_shipped) {
+      return false;
     }
   }
   return true;
@@ -163,11 +159,13 @@ static void render_order_selection_list(float box_x, float &y,
   for (afterhours::EntityID order_id : queue.in_progress_orders) {
     const Order *order_ptr = nullptr;
     if (order_id != -1) {
-      for (const Order &order : afterhours::EntityQuery()
-                                    .whereID(order_id)
-                                    .whereHasComponent<Order>()
-                                    .gen_as<Order>()) {
-        order_ptr = &order;
+      for (const afterhours::Entity &order_entity :
+           afterhours::EntityQuery()
+               .whereID(order_id)
+               .whereHasTag(GameTag::IsInProgressOrder)
+               .whereHasComponent<Order>()
+               .gen()) {
+        order_ptr = &order_entity.get<Order>();
         break;
       }
     }
@@ -199,21 +197,17 @@ count_unplaced_items(const std::vector<afterhours::EntityID> &boxing_items) {
   return count;
 }
 
-static int count_ready_items_in_queue(const OrderQueue &queue) {
+static int count_ready_items_in_queue(const OrderQueue &) {
   int total = 0;
-  for (afterhours::EntityID order_id : queue.in_progress_orders) {
-    if (order_id == -1) {
-      continue;
-    }
-    for (const Order &order : afterhours::EntityQuery()
-                                  .whereID(order_id)
-                                  .whereHasComponent<Order>()
-                                  .gen_as<Order>()) {
-      if (!order.is_shipped && !order.ready_items.empty()) {
-        std::map<ItemType, int> item_counts = count_items(order.ready_items);
-        total += static_cast<int>(item_counts.size());
-      }
-      break;
+  for (const afterhours::Entity &order_entity :
+       afterhours::EntityQuery()
+           .whereHasTag(GameTag::IsInProgressOrder)
+           .whereHasComponent<Order>()
+           .gen()) {
+    const Order &order = order_entity.get<Order>();
+    if (!order.is_shipped && !order.ready_items.empty()) {
+      std::map<ItemType, int> item_counts = count_items(order.ready_items);
+      total += static_cast<int>(item_counts.size());
     }
   }
   return total;
@@ -252,34 +246,30 @@ static void render_boxing_items_list(float left_x, float &y,
   }
 }
 
-static void render_queue_items_list(float left_x, float &y,
-                                    const OrderQueue &queue, int screen_width,
-                                    int screen_height, int font_size) {
-  for (afterhours::EntityID order_id : queue.in_progress_orders) {
-    if (order_id == -1) {
+static void render_queue_items_list(float left_x, float &y, const OrderQueue &,
+                                    int screen_width, int screen_height,
+                                    int font_size) {
+  for (const afterhours::Entity &order_entity :
+       afterhours::EntityQuery()
+           .whereHasTag(GameTag::IsInProgressOrder)
+           .whereHasComponent<Order>()
+           .gen()) {
+    const Order &order = order_entity.get<Order>();
+    if (order.is_shipped || order.ready_items.empty()) {
       continue;
     }
-    for (const Order &order : afterhours::EntityQuery()
-                                  .whereID(order_id)
-                                  .whereHasComponent<Order>()
-                                  .gen_as<Order>()) {
-      if (order.is_shipped || order.ready_items.empty()) {
-        break;
-      }
 
-      std::map<ItemType, int> item_counts = count_items(order.ready_items);
-      for (const auto &[item_type, count] : item_counts) {
-        std::string item_text =
-            item_type_to_string(item_type) + " x" + std::to_string(count);
-        raylib::DrawTextEx(
-            uiFont, item_text.c_str(),
-            raylib::Vector2{ui_constants::pct_to_pixels_x(left_x, screen_width),
-                            ui_constants::pct_to_pixels_y(y, screen_height)},
-            static_cast<float>(font_size), 1.0f,
-            ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
-        y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
-      }
-      break;
+    std::map<ItemType, int> item_counts = count_items(order.ready_items);
+    for (const auto &[item_type, count] : item_counts) {
+      std::string item_text =
+          item_type_to_string(item_type) + " x" + std::to_string(count);
+      raylib::DrawTextEx(
+          uiFont, item_text.c_str(),
+          raylib::Vector2{ui_constants::pct_to_pixels_x(left_x, screen_width),
+                          ui_constants::pct_to_pixels_y(y, screen_height)},
+          static_cast<float>(font_size), 1.0f,
+          ui_constants::get_theme_color(afterhours::ui::Theme::Usage::Font));
+      y += ui_constants::ORDER_ITEM_SPACING_PCT * 0.7f;
     }
   }
 }
