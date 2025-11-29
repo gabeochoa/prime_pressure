@@ -77,20 +77,16 @@ struct RenderComputerView : ComputerViewRenderSystem {
         afterhours::EntityHelper::get_singleton<ActiveView>();
     const ActiveView &active_view = view_entity.get<ActiveView>();
 
-    if (active_view.current_view != ViewState::Computer) {
-      return;
-    }
-
     int screen_width = mainRT.texture.width;
     int screen_height = mainRT.texture.height;
 
-    float box_x = ui_constants::BOX_X_PCT;
-    float box_y = ui_constants::BOX_Y_PCT;
-    float box_width = ui_constants::BOX_WIDTH_PCT;
-    float box_height = ui_constants::BOX_HEIGHT_PCT;
+    float box_x = ui_constants::COMPUTER_X_PCT;
+    float box_y = ui_constants::COMPUTER_Y_PCT;
+    float box_width = ui_constants::COMPUTER_WIDTH_PCT;
+    float box_height = ui_constants::COMPUTER_HEIGHT_PCT;
 
     draw_view_box(box_x, box_y, box_width, box_height, screen_width,
-                  screen_height);
+                  screen_height, active_view.current_view, ViewState::Computer);
 
     float header_x = box_x + ui_constants::HEADER_PADDING_PCT;
     float header_y = box_y + ui_constants::HEADER_PADDING_PCT;
@@ -165,7 +161,7 @@ struct RenderComputerView : ComputerViewRenderSystem {
     float instruction_y =
         box_y + box_height - ui_constants::INSTRUCTION_PADDING_PCT;
     draw_instruction_text(
-        "[COMPUTER] [WAREHOUSE] [BOXING] (Press TAB to switch)",
+        "[↑ Computer] [← Warehouse] [→ Boxing] (TAB to cycle)",
         box_x + ui_constants::HEADER_PADDING_PCT, instruction_y, screen_width,
         screen_height);
     draw_instruction_text("[Press number key to select order]",

@@ -13,20 +13,16 @@ struct RenderWarehouseViewBox : WarehouseViewRenderSystem {
         afterhours::EntityHelper::get_singleton<ActiveView>();
     const ActiveView &active_view = view_entity.get<ActiveView>();
 
-    if (active_view.current_view != ViewState::Warehouse) {
-      return;
-    }
-
     int screen_width = mainRT.texture.width;
     int screen_height = mainRT.texture.height;
 
-    float box_x = ui_constants::BOX_X_PCT;
-    float box_y = ui_constants::BOX_Y_PCT;
-    float box_width = ui_constants::BOX_WIDTH_PCT;
-    float box_height = ui_constants::BOX_HEIGHT_PCT;
+    float box_x = ui_constants::WAREHOUSE_X_PCT;
+    float box_y = ui_constants::WAREHOUSE_Y_PCT;
+    float box_width = ui_constants::WAREHOUSE_WIDTH_PCT;
+    float box_height = ui_constants::WAREHOUSE_HEIGHT_PCT;
 
     draw_view_box(box_x, box_y, box_width, box_height, screen_width,
-                  screen_height);
+                  screen_height, active_view.current_view, ViewState::Warehouse);
 
     float header_x = box_x + ui_constants::HEADER_PADDING_PCT;
     float header_y = box_y + ui_constants::HEADER_PADDING_PCT;

@@ -10,14 +10,6 @@
 
 struct RenderWarehouseViewItems : WarehouseViewRenderSystem {
   void once(float) const override {
-    const afterhours::Entity &view_entity =
-        afterhours::EntityHelper::get_singleton<ActiveView>();
-    const ActiveView &active_view = view_entity.get<ActiveView>();
-
-    if (active_view.current_view != ViewState::Warehouse) {
-      return;
-    }
-
     const afterhours::Entity &selected_order_entity =
         afterhours::EntityHelper::get_singleton<SelectedOrder>();
     const SelectedOrder &selected_order =
@@ -26,10 +18,10 @@ struct RenderWarehouseViewItems : WarehouseViewRenderSystem {
     int screen_width = mainRT.texture.width;
     int screen_height = mainRT.texture.height;
 
-    float box_x = ui_constants::BOX_X_PCT;
-    float box_y = ui_constants::BOX_Y_PCT;
-    float box_width = ui_constants::BOX_WIDTH_PCT;
-    float box_height = ui_constants::BOX_HEIGHT_PCT;
+    float box_x = ui_constants::WAREHOUSE_X_PCT;
+    float box_y = ui_constants::WAREHOUSE_Y_PCT;
+    float box_width = ui_constants::WAREHOUSE_WIDTH_PCT;
+    float box_height = ui_constants::WAREHOUSE_HEIGHT_PCT;
 
     float belt_y_pct = box_y + box_height * ui_constants::CONVEYOR_Y_PCT;
     float belt_y = ui_constants::pct_to_pixels_y(belt_y_pct, screen_height);

@@ -10,6 +10,21 @@ constexpr float BOX_Y_PCT = 60.0f / 720.0f;
 constexpr float BOX_WIDTH_PCT = 1240.0f / 1280.0f;
 constexpr float BOX_HEIGHT_PCT = 520.0f / 720.0f;
 
+constexpr float COMPUTER_X_PCT = 200.0f / 1280.0f;
+constexpr float COMPUTER_Y_PCT = 20.0f / 720.0f;
+constexpr float COMPUTER_WIDTH_PCT = 880.0f / 1280.0f;
+constexpr float COMPUTER_HEIGHT_PCT = 200.0f / 720.0f;
+
+constexpr float WAREHOUSE_X_PCT = 20.0f / 1280.0f;
+constexpr float WAREHOUSE_Y_PCT = 240.0f / 720.0f;
+constexpr float WAREHOUSE_WIDTH_PCT = 620.0f / 1280.0f;
+constexpr float WAREHOUSE_HEIGHT_PCT = 440.0f / 720.0f;
+
+constexpr float BOXING_X_PCT = 640.0f / 1280.0f;
+constexpr float BOXING_Y_PCT = 240.0f / 720.0f;
+constexpr float BOXING_WIDTH_PCT = 620.0f / 1280.0f;
+constexpr float BOXING_HEIGHT_PCT = 440.0f / 720.0f;
+
 constexpr float TYPING_BUFFER_Y_PCT = 640.0f / 720.0f;
 constexpr float TYPING_BUFFER_HEIGHT_PCT = 60.0f / 720.0f;
 

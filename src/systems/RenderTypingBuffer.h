@@ -21,7 +21,7 @@ struct RenderTypingBuffer : RenderSystem<> {
     float box_height = ui_constants::TYPING_BUFFER_HEIGHT_PCT;
 
     draw_view_box(box_x, box_y, box_width, box_height, screen_width,
-                  screen_height);
+                  screen_height, ViewState::Computer, ViewState::Computer);
 
     float text_x = box_x + ui_constants::HEADER_PADDING_PCT;
     float text_y = box_y + ui_constants::HEADER_PADDING_PCT;

@@ -30,17 +30,23 @@ struct EndDrawing : afterhours::System<> {
 
 static void draw_view_box(float x_pct, float y_pct, float width_pct,
                           float height_pct, int screen_width,
-                          int screen_height) {
+                          int screen_height, ViewState current_view,
+                          ViewState this_view) {
   float x = ui_constants::pct_to_pixels_x(x_pct, screen_width);
   float y = ui_constants::pct_to_pixels_y(y_pct, screen_height);
   float width = ui_constants::pct_to_pixels_x(width_pct, screen_width);
   float height = ui_constants::pct_to_pixels_y(height_pct, screen_height);
 
-  raylib::Color border_color = ui_colors::TERMINAL_GREEN;
+  raylib::Color border_color = (current_view == this_view)
+                                   ? ui_colors::TERMINAL_GREEN
+                                   : ui_colors::TERMINAL_GRAY;
+  raylib::Color outer_border_color = (current_view == this_view)
+                                        ? ui_colors::TERMINAL_DARK_GREEN
+                                        : ui_colors::TERMINAL_GRAY;
   
   // Double border effect
   raylib::DrawRectangleLinesEx(raylib::Rectangle{x, y, width, height}, 2.0f, border_color);
-  raylib::DrawRectangleLinesEx(raylib::Rectangle{x - 4, y - 4, width + 8, height + 8}, 1.0f, ui_colors::TERMINAL_DARK_GREEN);
+  raylib::DrawRectangleLinesEx(raylib::Rectangle{x - 4, y - 4, width + 8, height + 8}, 1.0f, outer_border_color);
 }
 
 static void draw_view_header(const char *text, float x_pct, float y_pct,
