@@ -10,6 +10,7 @@ struct RenderSystem : afterhours::System<Components...> {
 
 template <ViewState View> struct ViewRenderSystem : afterhours::System<> {
   bool should_run(float) const override {
+    // All views now render simultaneously
     return true;
   }
 };

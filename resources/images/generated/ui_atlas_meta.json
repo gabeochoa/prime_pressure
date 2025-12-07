@@ -1,0 +1,92 @@
+{
+  "grid": 32,
+  "sheet": "ui_atlas.png",
+  "base_canvas": {
+    "width": 1280,
+    "height": 720
+  },
+  "nine_slice": {
+    "corner_px": [
+      16,
+      24
+    ],
+    "edge_px": [
+      8,
+      12
+    ]
+  },
+  "textures": {
+    "crt_overlay": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 720,
+      "pad_w": 1280,
+      "pad_h": 736
+    },
+    "bezel": {
+      "x": 0,
+      "y": 736,
+      "w": 1280,
+      "h": 720,
+      "pad_w": 1280,
+      "pad_h": 736
+    },
+    "desk_texture": {
+      "x": 1280,
+      "y": 736,
+      "w": 512,
+      "h": 512,
+      "pad_w": 512,
+      "pad_h": 512
+    },
+    "conveyor_stripes": {
+      "x": 0,
+      "y": 1472,
+      "w": 512,
+      "h": 192,
+      "pad_w": 512,
+      "pad_h": 192
+    },
+    "window_chrome": {
+      "x": 512,
+      "y": 1472,
+      "w": 128,
+      "h": 128,
+      "pad_w": 128,
+      "pad_h": 128
+    },
+    "timeline_conveyor": {
+      "x": 640,
+      "y": 1472,
+      "w": 48,
+      "h": 48,
+      "pad_w": 64,
+      "pad_h": 64
+    },
+    "timeline_box": {
+      "x": 704,
+      "y": 1472,
+      "w": 48,
+      "h": 48,
+      "pad_w": 64,
+      "pad_h": 64
+    },
+    "timeline_ready": {
+      "x": 768,
+      "y": 1472,
+      "w": 48,
+      "h": 48,
+      "pad_w": 64,
+      "pad_h": 64
+    },
+    "timeline_ship": {
+      "x": 832,
+      "y": 1472,
+      "w": 48,
+      "h": 48,
+      "pad_w": 64,
+      "pad_h": 64
+    }
+  }
+}

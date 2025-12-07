@@ -5,10 +5,10 @@
 #include <afterhours/ah.h>
 #include <afterhours/src/plugins/window_manager.h>
 
-struct UpdateRenderTexture : afterhours::System<> {
+struct UpdateRenderTextureSystem : afterhours::System<> {
   afterhours::window_manager::Resolution resolution;
 
-  virtual ~UpdateRenderTexture() {}
+  virtual ~UpdateRenderTextureSystem() {}
 
   void once(float) override {
     const afterhours::window_manager::ProvidesCurrentResolution *pcr =

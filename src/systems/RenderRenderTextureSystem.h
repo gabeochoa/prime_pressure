@@ -1,8 +1,8 @@
 #include "../game.h"
 #include "LetterboxLayout.h"
 
-struct RenderRenderTexture : afterhours::System<> {
-  virtual ~RenderRenderTexture() {}
+struct RenderRenderTextureSystem : afterhours::System<> {
+  virtual ~RenderRenderTextureSystem() {}
   virtual void once(float) const override {
     const int window_w = raylib::GetScreenWidth();
     const int window_h = raylib::GetScreenHeight();

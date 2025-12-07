@@ -7,25 +7,27 @@
 #include "render_backend.h"
 #include "render_views.h"
 #include "settings.h"
-#include "systems/BoxItem.h"
-#include "systems/GenerateOrders.h"
-#include "systems/GrabItem.h"
-#include "systems/ManageConveyorItems.h"
-#include "systems/ManageInProgressOrderTag.h"
-#include "systems/ManageSelectedOrderTag.h"
-#include "systems/MatchItemToOrder.h"
-#include "systems/ProcessBoxingInput.h"
-#include "systems/ProcessOrderSelection.h"
-#include "systems/ProcessTypingInput.h"
-#include "systems/ProcessViewSwitch.h"
+#include "systems/BoxItemSystem.h"
+#include "systems/GenerateOrdersSystem.h"
+#include "systems/GrabItemSystem.h"
+#include "systems/ManageConveyorItemsSystem.h"
+#include "systems/ManageInProgressOrderTagSystem.h"
+#include "systems/ManageSelectedOrderTagSystem.h"
+#include "systems/MatchItemToOrderSystem.h"
+#include "systems/ProcessBoxingInputSystem.h"
+#include "systems/ProcessOrderSelectionSystem.h"
+#include "systems/ProcessOrderTabbingSystem.h"
+#include "systems/ProcessReadyStampSystem.h"
+#include "systems/ProcessTypingInputSystem.h"
 #include "systems/RenderOrders.h"
-#include "systems/RenderRenderTexture.h"
+#include "systems/RenderRenderTextureSystem.h"
 #include "systems/RenderSystemHelpers.h"
-#include "systems/RenderTypingBuffer.h"
-#include "systems/SpawnConveyorItems.h"
-#include "systems/SpawnItems.h"
+#include "systems/RenderTypingBufferSystem.h"
+#include "systems/SpawnConveyorItemsSystem.h"
+#include "systems/SpawnItemsSystem.h"
 #include "systems/TestSystem.h"
-#include "systems/UpdateRenderTexture.h"
+#include "systems/UpdateRenderTextureSystem.h"
+#include "systems/UpdateTimelineStateSystem.h"
 #include "testing/test_input.h"
 #include "testing/test_macros.h"
 #include "testing/tests/all_tests.h"
@@ -59,19 +61,16 @@ void game() {
   }
 
   {
-    // Create singleton entities for TypingBuffer, OrderQueue, ActiveView, and
-    // SelectedOrder
+    // Create singleton entities for TypingBuffer, OrderQueue, ActiveView,
+    // SelectedOrder, and ActiveOrder
     afterhours::Entity &typing_buffer_entity =
         afterhours::EntityHelper::createEntity();
     typing_buffer_entity.addComponent<TypingBuffer>();
     afterhours::EntityHelper::registerSingleton<TypingBuffer>(
         typing_buffer_entity);
 
-    afterhours::Entity &order_queue_entity =
-        afterhours::EntityHelper::createEntity();
-    OrderQueue &order_queue = order_queue_entity.addComponent<OrderQueue>();
-    order_queue.max_in_progress_orders = 3;
-    afterhours::EntityHelper::registerSingleton<OrderQueue>(order_queue_entity);
+    // OrderQueue singleton no longer needed - using OrderSlot components
+    // instead
 
     afterhours::Entity &active_view_entity =
         afterhours::EntityHelper::createEntity();
@@ -83,6 +82,12 @@ void game() {
     selected_order_entity.addComponent<SelectedOrder>();
     afterhours::EntityHelper::registerSingleton<SelectedOrder>(
         selected_order_entity);
+
+    afterhours::Entity &active_order_entity =
+        afterhours::EntityHelper::createEntity();
+    active_order_entity.addComponent<ActiveOrder>();
+    afterhours::EntityHelper::registerSingleton<ActiveOrder>(
+        active_order_entity);
 
     afterhours::Entity &boxing_progress_entity =
         afterhours::EntityHelper::createEntity();
@@ -102,21 +107,32 @@ void game() {
     afterhours::input::register_update_systems(systems);
     afterhours::window_manager::register_update_systems(systems);
 
-    systems.register_update_system(std::make_unique<SpawnItems>());
+    systems.register_update_system(std::make_unique<SpawnItemsSystem>());
     systems.register_update_system(
-        std::make_unique<ManageInProgressOrderTag>());
-    systems.register_update_system(std::make_unique<ManageSelectedOrderTag>());
-    systems.register_update_system(std::make_unique<GenerateOrders>());
-    systems.register_update_system(std::make_unique<ProcessViewSwitch>());
-    systems.register_update_system(std::make_unique<ProcessOrderSelection>());
-    systems.register_update_system(std::make_unique<SpawnConveyorItems>());
-    systems.register_update_system(std::make_unique<ProcessTypingInput>());
-    systems.register_update_system(std::make_unique<ProcessBoxingInput>());
-    systems.register_update_system(std::make_unique<MatchItemToOrder>());
-    systems.register_update_system(std::make_unique<ManageConveyorItems>());
-    systems.register_update_system(std::make_unique<GrabItem>());
-    systems.register_update_system(std::make_unique<BoxItem>());
-    systems.register_update_system(std::make_unique<UpdateRenderTexture>());
+        std::make_unique<ManageInProgressOrderTagSystem>());
+    systems.register_update_system(
+        std::make_unique<ManageSelectedOrderTagSystem>());
+    systems.register_update_system(std::make_unique<GenerateOrdersSystem>());
+    systems.register_update_system(
+        std::make_unique<ProcessOrderSelectionSystem>());
+    systems.register_update_system(
+        std::make_unique<ProcessOrderTabbingSystem>());
+    systems.register_update_system(std::make_unique<ProcessReadyStampSystem>());
+    systems.register_update_system(
+        std::make_unique<SpawnConveyorItemsSystem>());
+    systems.register_update_system(
+        std::make_unique<ProcessTypingInputSystem>());
+    systems.register_update_system(
+        std::make_unique<ProcessBoxingInputSystem>());
+    systems.register_update_system(std::make_unique<MatchItemToOrderSystem>());
+    systems.register_update_system(
+        std::make_unique<ManageConveyorItemsSystem>());
+    systems.register_update_system(std::make_unique<GrabItemSystem>());
+    systems.register_update_system(std::make_unique<BoxItemSystem>());
+    systems.register_update_system(
+        std::make_unique<UpdateTimelineStateSystem>());
+    systems.register_update_system(
+        std::make_unique<UpdateRenderTextureSystem>());
 
     auto test_system = std::make_unique<TestSystem>();
     test_system_ptr = test_system.get();
@@ -124,18 +140,21 @@ void game() {
   }
 
   {
-    systems.register_render_system(std::make_unique<BeginWorldRender>());
+    systems.register_render_system(std::make_unique<BeginWorldRenderSystem>());
+    register_render_cutscene_systems(systems);
     register_render_computer_systems(systems);
     register_render_warehouse_systems(systems);
     register_render_boxing_systems(systems);
-    systems.register_render_system(std::make_unique<RenderTypingBuffer>());
-    systems.register_render_system(std::make_unique<EndWorldRender>());
     systems.register_render_system(
-        std::make_unique<BeginPostProcessingRender>());
-    systems.register_render_system(std::make_unique<RenderRenderTexture>());
+        std::make_unique<RenderTypingBufferSystem>());
+    systems.register_render_system(std::make_unique<EndWorldRenderSystem>());
+    systems.register_render_system(
+        std::make_unique<BeginPostProcessingRenderSystem>());
+    systems.register_render_system(
+        std::make_unique<RenderRenderTextureSystem>());
     afterhours::ui::register_render_systems<InputAction>(
         systems, InputAction::ToggleUILayoutDebug);
-    systems.register_render_system(std::make_unique<EndDrawing>());
+    systems.register_render_system(std::make_unique<EndDrawingSystem>());
   }
 
   while (running && !raylib::WindowShouldClose()) {
@@ -194,12 +213,6 @@ void run_test(const std::string &test_name, bool slow_mode) {
     afterhours::EntityHelper::registerSingleton<TypingBuffer>(
         typing_buffer_entity);
 
-    afterhours::Entity &order_queue_entity =
-        afterhours::EntityHelper::createEntity();
-    OrderQueue &order_queue = order_queue_entity.addComponent<OrderQueue>();
-    order_queue.max_in_progress_orders = 3;
-    afterhours::EntityHelper::registerSingleton<OrderQueue>(order_queue_entity);
-
     afterhours::Entity &active_view_entity =
         afterhours::EntityHelper::createEntity();
     active_view_entity.addComponent<ActiveView>();
@@ -210,6 +223,12 @@ void run_test(const std::string &test_name, bool slow_mode) {
     selected_order_entity.addComponent<SelectedOrder>();
     afterhours::EntityHelper::registerSingleton<SelectedOrder>(
         selected_order_entity);
+
+    afterhours::Entity &active_order_entity =
+        afterhours::EntityHelper::createEntity();
+    active_order_entity.addComponent<ActiveOrder>();
+    afterhours::EntityHelper::registerSingleton<ActiveOrder>(
+        active_order_entity);
 
     afterhours::Entity &boxing_progress_entity =
         afterhours::EntityHelper::createEntity();
@@ -229,21 +248,30 @@ void run_test(const std::string &test_name, bool slow_mode) {
     afterhours::input::register_update_systems(systems);
     afterhours::window_manager::register_update_systems(systems);
 
-    systems.register_update_system(std::make_unique<SpawnItems>());
+    systems.register_update_system(std::make_unique<SpawnItemsSystem>());
     systems.register_update_system(
-        std::make_unique<ManageInProgressOrderTag>());
-    systems.register_update_system(std::make_unique<ManageSelectedOrderTag>());
-    systems.register_update_system(std::make_unique<GenerateOrders>());
-    systems.register_update_system(std::make_unique<ProcessViewSwitch>());
-    systems.register_update_system(std::make_unique<ProcessOrderSelection>());
-    systems.register_update_system(std::make_unique<SpawnConveyorItems>());
-    systems.register_update_system(std::make_unique<ProcessTypingInput>());
-    systems.register_update_system(std::make_unique<ProcessBoxingInput>());
-    systems.register_update_system(std::make_unique<MatchItemToOrder>());
-    systems.register_update_system(std::make_unique<ManageConveyorItems>());
-    systems.register_update_system(std::make_unique<GrabItem>());
-    systems.register_update_system(std::make_unique<BoxItem>());
-    systems.register_update_system(std::make_unique<UpdateRenderTexture>());
+        std::make_unique<ManageInProgressOrderTagSystem>());
+    systems.register_update_system(
+        std::make_unique<ManageSelectedOrderTagSystem>());
+    systems.register_update_system(std::make_unique<GenerateOrdersSystem>());
+    systems.register_update_system(
+        std::make_unique<ProcessOrderSelectionSystem>());
+    systems.register_update_system(
+        std::make_unique<ProcessOrderTabbingSystem>());
+    systems.register_update_system(std::make_unique<ProcessReadyStampSystem>());
+    systems.register_update_system(
+        std::make_unique<SpawnConveyorItemsSystem>());
+    systems.register_update_system(
+        std::make_unique<ProcessTypingInputSystem>());
+    systems.register_update_system(
+        std::make_unique<ProcessBoxingInputSystem>());
+    systems.register_update_system(std::make_unique<MatchItemToOrderSystem>());
+    systems.register_update_system(
+        std::make_unique<ManageConveyorItemsSystem>());
+    systems.register_update_system(std::make_unique<GrabItemSystem>());
+    systems.register_update_system(std::make_unique<BoxItemSystem>());
+    systems.register_update_system(
+        std::make_unique<UpdateRenderTextureSystem>());
 
     auto test_system = std::make_unique<TestSystem>();
     test_system_ptr = test_system.get();
@@ -251,18 +279,21 @@ void run_test(const std::string &test_name, bool slow_mode) {
   }
 
   {
-    systems.register_render_system(std::make_unique<BeginWorldRender>());
+    systems.register_render_system(std::make_unique<BeginWorldRenderSystem>());
+    register_render_cutscene_systems(systems);
     register_render_computer_systems(systems);
     register_render_warehouse_systems(systems);
     register_render_boxing_systems(systems);
-    systems.register_render_system(std::make_unique<RenderTypingBuffer>());
-    systems.register_render_system(std::make_unique<EndWorldRender>());
     systems.register_render_system(
-        std::make_unique<BeginPostProcessingRender>());
-    systems.register_render_system(std::make_unique<RenderRenderTexture>());
+        std::make_unique<RenderTypingBufferSystem>());
+    systems.register_render_system(std::make_unique<EndWorldRenderSystem>());
+    systems.register_render_system(
+        std::make_unique<BeginPostProcessingRenderSystem>());
+    systems.register_render_system(
+        std::make_unique<RenderRenderTextureSystem>());
     afterhours::ui::register_render_systems<InputAction>(
         systems, InputAction::ToggleUILayoutDebug);
-    systems.register_render_system(std::make_unique<EndDrawing>());
+    systems.register_render_system(std::make_unique<EndDrawingSystem>());
   }
 
   TestApp test = it->second();

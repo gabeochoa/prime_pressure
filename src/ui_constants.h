@@ -27,6 +27,30 @@ constexpr float BOXING_HEIGHT_PCT = 440.0f / 720.0f;
 
 constexpr float TYPING_BUFFER_Y_PCT = 640.0f / 720.0f;
 constexpr float TYPING_BUFFER_HEIGHT_PCT = 60.0f / 720.0f;
+constexpr float TASKBAR_HEIGHT_PCT = 44.0f / 720.0f;
+constexpr float TASKBAR_PADDING_PCT = 12.0f / 720.0f;
+constexpr float HINT_STRIP_HEIGHT_PCT = 22.0f / 720.0f;
+constexpr float HINT_STRIP_PADDING_PCT = 8.0f / 720.0f;
+
+constexpr float BASE_WIDTH_PX = 1280.0f;
+constexpr float BASE_HEIGHT_PX = 720.0f;
+
+constexpr float COMPUTER_BAND_ACTIVE_PCT = 0.60f;
+constexpr float COMPUTER_BAND_UNFOCUSED_PCT = 0.30f;
+
+constexpr float WAREHOUSE_WIDTH_PCT_TRI = 0.50f;
+constexpr float WAREHOUSE_HEIGHT_PCT_TRI = 0.50f;
+constexpr float BOXING_WIDTH_PCT_TRI = 0.50f;
+constexpr float BOXING_HEIGHT_PCT_TRI = 0.50f;
+constexpr float TRI_GAP_PCT = 0.0f;
+
+constexpr float SLIDE_ANIMATION_MS = 220.0f;
+constexpr float BADGE_ANIMATION_MS = 220.0f;
+
+constexpr int NINE_SLICE_CORNER_MIN_PX = 16;
+constexpr int NINE_SLICE_CORNER_MAX_PX = 24;
+constexpr int NINE_SLICE_EDGE_MIN_PX = 8;
+constexpr int NINE_SLICE_EDGE_MAX_PX = 12;
 
 constexpr float HEADER_FONT_SIZE_PCT = 24.0f / 720.0f;
 constexpr float BODY_FONT_SIZE_PCT = 20.0f / 720.0f;
@@ -38,7 +62,8 @@ constexpr float HEADER_TO_CONTENT_SPACING_PCT = 20.0f / 720.0f;
 constexpr float CONTENT_PADDING_PCT = 20.0f / 720.0f;
 constexpr float INSTRUCTION_PADDING_PCT = 60.0f / 720.0f;
 
-constexpr float TYPING_BUFFER_TIMEOUT = 5.0f;
+constexpr float STATUS_FLASH_TIME = 1.2f;
+constexpr float TYPING_BUFFER_TIMEOUT = 2.0f;
 constexpr float ORDER_GENERATION_INTERVAL = 1.0f;
 
 constexpr float CONVEYOR_START_X_PCT = 0.005f;
@@ -69,11 +94,17 @@ inline afterhours::Color get_theme_color(afterhours::ui::Theme::Usage usage) {
 } // namespace ui_constants
 
 namespace ui_colors {
-    // Retro Terminal Palette
-    const raylib::Color TERMINAL_GREEN = raylib::Color{0, 255, 0, 255};
-    const raylib::Color TERMINAL_DARK_GREEN = raylib::Color{0, 100, 0, 255};
-    const raylib::Color TERMINAL_BLACK = raylib::Color{10, 10, 10, 255}; // Slightly lighter than pure black
-    const raylib::Color TERMINAL_AMBER = raylib::Color{255, 176, 0, 255};
-    const raylib::Color TERMINAL_RED = raylib::Color{255, 50, 50, 255};
-    const raylib::Color TERMINAL_GRAY = raylib::Color{80, 80, 80, 255};
-}
+// Retro Terminal Palette
+const raylib::Color TERMINAL_GREEN = raylib::Color{0, 255, 0, 255};
+const raylib::Color TERMINAL_DARK_GREEN = raylib::Color{0, 100, 0, 255};
+const raylib::Color TERMINAL_BLACK =
+    raylib::Color{10, 10, 10, 255}; // Slightly lighter than pure black
+const raylib::Color TERMINAL_AMBER = raylib::Color{255, 176, 0, 255};
+const raylib::Color TERMINAL_RED = raylib::Color{255, 50, 50, 255};
+const raylib::Color TERMINAL_GRAY = raylib::Color{80, 80, 80, 255};
+const raylib::Color TASKBAR_BASE = raylib::Color{46, 74, 124, 240};
+const raylib::Color TASKBAR_ACCENT = raylib::Color{74, 120, 190, 255};
+const raylib::Color TASKBAR_GOOD = raylib::Color{58, 118, 82, 245};
+const raylib::Color TASKBAR_BAD = raylib::Color{148, 56, 56, 245};
+const raylib::Color TASKBAR_TEXT = raylib::Color{230, 238, 248, 255};
+} // namespace ui_colors

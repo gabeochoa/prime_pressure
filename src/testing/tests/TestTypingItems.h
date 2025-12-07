@@ -23,14 +23,7 @@ TEST(test_typing_items) {
   co_await TestApp::wait_for_condition(
       []() { return TestApp::is_order_selected(); }, 60);
 
-  // Switch to Warehouse view
-  TestApp::simulate_key(raylib::KEY_TAB);
-  co_await TestApp::wait_for_frames(2);
-
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::get_current_view() == ViewState::Warehouse; }, 60);
-
-  // Get order items
+  // Warehouse view is always visible, get order items
   std::vector<ItemType> order_items = TestApp::get_order_items();
 
   // Type each item with delays between characters to ensure proper matching

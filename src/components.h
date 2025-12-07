@@ -4,18 +4,184 @@
 #include "std_include.h"
 #include <afterhours/ah.h>
 #include <magic_enum/magic_enum.hpp>
+#include <sys/resource.h>
+
+template <typename Component> inline Component &get_singleton_as() {
+  afterhours::Entity &entity =
+      afterhours::EntityHelper::get_singleton<Component>();
+  return entity.get<Component>();
+}
+
+template <typename Component> inline Component &get_singleton_component() {
+  return get_singleton_as<Component>();
+}
 
 enum struct ItemType { Book, Pen, Mug, Cup, Bag, Box, Toy, Hat, Key, Map };
+
+enum struct TimelineStage { Conveyor = 0, Boxing = 1, Ready = 2, Ship = 3 };
+
+enum class TimelinePhase { Pending, Active, Done };
+
+enum struct TimelineStageState {
+  ConveyorPending = 10,
+  BoxingPending = 20,
+  ReadyPending = 30,
+  ShipPending = 40,
+  //
+  ConveyorActive = 11,
+  ConveyorActiveFlash = 12,
+  BoxingActive = 21,
+  ReadyActive = 31,
+
+  ReadyStamp0 = 32,
+  ReadyStamp1 = 33,
+  ReadyStamp2 = 34,
+  ReadyStamp3 = 35,
+  //
+  ConveyorDone = 13,
+  BoxingDone = 22,
+  ReadyDone = 36,
+  //
+  ShipDone = 41
+};
+
+inline TimelinePhase timeline_phase(TimelineStageState state) {
+  switch (state) {
+  case TimelineStageState::ConveyorActiveFlash:
+  case TimelineStageState::ConveyorActive:
+  case TimelineStageState::BoxingActive:
+  case TimelineStageState::ReadyActive:
+  case TimelineStageState::ReadyStamp0:
+  case TimelineStageState::ReadyStamp1:
+  case TimelineStageState::ReadyStamp2:
+  case TimelineStageState::ReadyStamp3:
+    return TimelinePhase::Active;
+  case TimelineStageState::ConveyorDone:
+  case TimelineStageState::BoxingDone:
+  case TimelineStageState::ReadyDone:
+  case TimelineStageState::ShipDone:
+    return TimelinePhase::Done;
+  case TimelineStageState::ConveyorPending:
+  case TimelineStageState::BoxingPending:
+  case TimelineStageState::ReadyPending:
+  case TimelineStageState::ShipPending:
+  default:
+    return TimelinePhase::Pending;
+  }
+}
+
+inline TimelineStage timeline_stage_of(TimelineStageState state) {
+  if (state >= TimelineStageState::ConveyorPending &&
+      state <= TimelineStageState::ConveyorDone) {
+    return TimelineStage::Conveyor;
+  } else if (state >= TimelineStageState::BoxingPending &&
+             state <= TimelineStageState::BoxingDone) {
+    return TimelineStage::Boxing;
+  } else if (state >= TimelineStageState::ReadyPending &&
+             state <= TimelineStageState::ReadyDone) {
+    return TimelineStage::Ready;
+  } else {
+    return TimelineStage::Ship;
+  }
+}
+
+struct TimelineState {
+  TimelineStageState state = TimelineStageState::ConveyorPending;
+};
 
 struct Order : afterhours::BaseComponent {
   std::vector<ItemType> items;
   std::vector<ItemType> selected_items;
   std::vector<ItemType> ready_items;
-  bool is_complete = false;
-  bool is_shipped = false;
-  bool is_fully_complete = false;
   bool has_been_selected = false;
   int items_completed = 0;
+  TimelineState timeline{};
+
+  static TimelineStageState ready_stamp_state_from_progress(int value) {
+    int clamped = std::max(0, std::min(3, value));
+    switch (clamped) {
+    case 0:
+      return TimelineStageState::ReadyStamp0;
+    case 1:
+      return TimelineStageState::ReadyStamp1;
+    case 2:
+      return TimelineStageState::ReadyStamp2;
+    case 3:
+    default:
+      return TimelineStageState::ReadyStamp3;
+    }
+  }
+
+  int get_ready_stamp_progress() const {
+    switch (timeline.state) {
+    case TimelineStageState::ReadyStamp0:
+      return 0;
+    case TimelineStageState::ReadyStamp1:
+      return 1;
+    case TimelineStageState::ReadyStamp2:
+      return 2;
+    case TimelineStageState::ReadyStamp3:
+      return 3;
+    case TimelineStageState::ConveyorPending:
+    case TimelineStageState::BoxingPending:
+    case TimelineStageState::ReadyPending:
+    case TimelineStageState::ShipPending:
+    case TimelineStageState::ConveyorActive:
+    case TimelineStageState::ConveyorActiveFlash:
+    case TimelineStageState::BoxingActive:
+    case TimelineStageState::ReadyActive:
+    case TimelineStageState::ConveyorDone:
+    case TimelineStageState::BoxingDone:
+    case TimelineStageState::ReadyDone:
+    case TimelineStageState::ShipDone:
+    default:
+      return 0;
+    }
+  }
+
+  void set_ready_stamp_progress(int value) {
+    int clamped = std::max(0, std::min(3, value));
+    timeline.state = ready_stamp_state_from_progress(clamped);
+  }
+
+  bool is_ready_stamp_state() const {
+    switch (timeline.state) {
+    case TimelineStageState::ReadyStamp0:
+    case TimelineStageState::ReadyStamp1:
+    case TimelineStageState::ReadyStamp2:
+    case TimelineStageState::ReadyStamp3:
+    case TimelineStageState::ShipDone:
+      return true;
+    case TimelineStageState::ConveyorPending:
+    case TimelineStageState::BoxingPending:
+    case TimelineStageState::ReadyPending:
+    case TimelineStageState::ShipPending:
+    case TimelineStageState::ConveyorActive:
+    case TimelineStageState::ConveyorActiveFlash:
+    case TimelineStageState::BoxingActive:
+    case TimelineStageState::ReadyActive:
+    case TimelineStageState::ConveyorDone:
+    case TimelineStageState::BoxingDone:
+    case TimelineStageState::ReadyDone:
+    default:
+      return false;
+    }
+  }
+
+  bool is_shipped() const { return is_ready_stamp_state(); }
+
+  bool is_fully_complete() const {
+    return timeline.state == TimelineStageState::ReadyStamp3 ||
+           timeline.state == TimelineStageState::ShipDone;
+  }
+
+  bool is_ready_to_pack() const {
+    return timeline.state == TimelineStageState::BoxingActive;
+  }
+
+  bool should_flash_conveyor() const {
+    return timeline.state == TimelineStageState::ConveyorActiveFlash;
+  }
 };
 
 enum struct BoxingState { None, FoldBox, PutItems, Fold, Tape, Ship };
@@ -34,9 +200,9 @@ struct BoxingProgress : afterhours::BaseComponent {
 
 const std::map<ItemType, char> ITEM_KEY_MAP = {
     {ItemType::Book, 'b'}, {ItemType::Pen, 'p'}, {ItemType::Mug, 'm'},
-    {ItemType::Cup, 'c'},  {ItemType::Bag, 'a'}, {ItemType::Box, 'o'},
+    {ItemType::Cup, 'c'},  {ItemType::Bag, 'g'}, {ItemType::Box, 'x'},
     {ItemType::Toy, 't'},  {ItemType::Hat, 'h'}, {ItemType::Key, 'k'},
-    {ItemType::Map, 'x'}};
+    {ItemType::Map, 'a'}};
 
 inline void validate_item_key_map() {
   const auto all_items = magic_enum::enum_values<ItemType>();
@@ -120,10 +286,13 @@ enum struct GameTag : afterhours::TagId {
   IsSelectedOrder = 6
 };
 
+enum struct TypingStatus { Idle, Typing, Match, Error };
+
 struct TypingBuffer : afterhours::BaseComponent {
   std::string buffer;
   float last_input_time = 0.0f;
-  bool has_error = false;
+  float status_time = 0.0f;
+  TypingStatus status = TypingStatus::Idle;
 };
 
 struct Box : afterhours::BaseComponent {
@@ -131,20 +300,43 @@ struct Box : afterhours::BaseComponent {
   int capacity = 10;
 };
 
-struct OrderQueue : afterhours::BaseComponent {
-  std::vector<afterhours::EntityID> pending_orders;
-  std::vector<afterhours::EntityID> in_progress_orders;
-  int max_in_progress_orders = 3;
+struct OrderSlot : afterhours::BaseComponent {
+  int index = -1; // -1 means no slot assigned
 };
 
-enum struct ViewState { Computer, Warehouse, Boxing };
+enum struct ViewState { Computer, Warehouse, Boxing, Cutscene };
 
 struct ActiveView : afterhours::BaseComponent {
   ViewState current_view = ViewState::Computer;
+  ViewState return_view = ViewState::Computer;
+};
+
+struct OptionalOrderID {
+  std::optional<afterhours::EntityID> order_id;
+
+  void reset_if_matching_order(afterhours::EntityID target_order_id) {
+    if (this->order_id.has_value() &&
+        this->order_id.value() == target_order_id) {
+      this->order_id.reset();
+    }
+  }
+
+  void set_order_id(afterhours::EntityID target_order_id) {
+    this->order_id = target_order_id;
+  }
+
+  bool is_matching_order(afterhours::EntityID target_order_id) const {
+    return this->order_id.has_value() &&
+           this->order_id.value() == target_order_id;
+  }
 };
 
 struct SelectedOrder : afterhours::BaseComponent {
-  std::optional<afterhours::EntityID> order_id;
+  OptionalOrderID order_id;
+};
+
+struct ActiveOrder : afterhours::BaseComponent {
+  OptionalOrderID order_id;
 };
 
 struct ConveyorItem : afterhours::BaseComponent {

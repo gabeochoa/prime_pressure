@@ -21,12 +21,33 @@
 ## 5) Typing Buffer & Status Bar
 - Place typing/status bar primarily in the Computer band (XP-style taskbar) with color states (normal, match, error) and inline hints for controls (TAB cycle, numbers select, ENTER clear). Keep a slim status hint elsewhere if needed, but main typing lives in Computer view.
 
-## To-dos
-- [ ] Add CRT/bezel/window chrome assets and UI constants
-- [ ] Restyle renderers to triangle layout and XP/desk themes
-- [ ] Add computer slide-in focus animation and cues
-- [ ] Implement full-screen cutscene XP popup renderer
-- [ ] Unify typing/status bar with states and hints
+## Phased delivery
+- Phase 0 — Assets and constants: import CRT/bezel/window chrome/desk textures; define layout/animation/nine-slice caps and shared colors in `ui_constants.h` (or `render_views.h` if we keep that choice) targeting 1280x720.
+- Phase 1 — Layout scaffold: enforce triangle split (computer band 50% active, ~30% unfocused; bottom 40/20/40), keep slim band visible when unfocused, wire base sizing helpers into renderers without full styling.
+- Phase 2 — Computer view restyle and focus motion: restyle `RenderComputerView` to the XP/CRT grid with simultaneous cards, focused card highlight (scale + frame), mini progress per order, and slide-in/out tied to ActiveView using shared 200–250ms ease timings.
+- Phase 3 — Warehouse/Boxing diegetic styling: apply desk/conveyor textures, dashed drop zones, and inline progress badges across `RenderWarehouseViewBelt`, `RenderWarehouseViewItems`, `RenderWarehouseViewOrderInfo`, and `RenderWarehouseViewBox`; keep slim computer band header readable.
+- Phase 4 — Typing and status bar unification: make the computer band the primary typing/status surface (states: normal/match/error; hints for numbers/arrow, TAB/Shift+TAB, ENTER clear) and mirror a slim hint strip in active warehouse/boxing views via `RenderTypingBuffer`.
+- Phase 5 — Cutscene mode: add a dedicated ActiveView/state in `ProcessViewSwitch` and a renderer for full-screen XP popups/emails; Enter exits to gameplay with an optional bottom hint.
+
+## Phase checklists
+- Phase 0
+  - [x] Add CRT/bezel/window chrome and desk/conveyor textures with 16–24px corner, 8–12px edge nine-slice guidance
+  - [x] Define layout, color, and animation constants at 1280x720 (heights, 40/20/40 splits, 200–250ms slide timing)
+- Phase 1
+  - [x] Apply triangle layout sizing across renderers and keep slim unfocused computer band visible
+  - [x] Centralize helpers for band heights and splits so views share the same math
+- Phase 2
+  - [x] Restyle `RenderComputerView` to simultaneous cards with focus highlight and mini progress
+  - [x] Hook slide-in/out animation to ActiveView using shared timing/ease and keep TAB/Shift+TAB/number cues visible
+- Phase 3
+  - [x] Style warehouse/boxing backgrounds with textures, dashed drop zones, and inline progress badges across the listed renderers
+  - [x] Verify 40/20/40 split coexists with the always-visible slim computer header
+- Phase 4
+  - [ ] Make typing/status live primarily in the computer band with state colors and control hints
+  - [ ] Mirror a slim hint strip in active warehouse/boxing views without duplicating the full bar
+- Phase 5
+  - [ ] Add cutscene/Story ActiveView and renderer for full-screen XP popups/emails
+  - [ ] Ensure Enter cleanly returns to gameplay and optionally shows a minimal hint
 
 ## Multiple-Choice Clarifications
 1) Asset packaging (filenames/slices/scaling)

@@ -4,7 +4,7 @@
 #include <afterhours/ah.h>
 #include <magic_enum/magic_enum.hpp>
 
-struct SpawnItems : afterhours::System<> {
+struct SpawnItemsSystem : afterhours::System<> {
   virtual void once(float) override {
     static bool initialized = false;
     if (initialized) {

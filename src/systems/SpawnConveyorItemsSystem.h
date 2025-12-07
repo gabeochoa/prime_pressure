@@ -44,7 +44,7 @@ create_conveyor_items_for_order(afterhours::EntityID order_id,
   }
 }
 
-struct SpawnConveyorItems
+struct SpawnConveyorItemsSystem
     : afterhours::System<Order,
                          afterhours::tags::All<GameTag::IsInProgressOrder>> {
   void for_each_with(afterhours::Entity &order_entity, Order &order,

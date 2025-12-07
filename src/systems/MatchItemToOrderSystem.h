@@ -33,14 +33,14 @@ inline bool mark_conveyor_item_as_moving(afterhours::EntityID order_id,
   return false;
 }
 
-struct MatchItemToOrder
+struct MatchItemToOrderSystem
     : afterhours::System<Order,
                          afterhours::tags::All<GameTag::IsSelectedOrder>> {
   bool should_run(float) const override {
     const afterhours::Entity &view_entity =
         afterhours::EntityHelper::get_singleton<ActiveView>();
     const ActiveView &active_view = view_entity.get<ActiveView>();
-    return active_view.current_view == ViewState::Warehouse;
+    return active_view.current_view != ViewState::Cutscene;
   }
 
   void for_each_with(afterhours::Entity &order_entity, Order &order,
@@ -51,12 +51,12 @@ struct MatchItemToOrder
     TypingBuffer &buffer = buffer_entity.get<TypingBuffer>();
 
     if (buffer.buffer.empty()) {
-      buffer.has_error = false;
+      buffer.status = TypingStatus::Idle;
       return;
     }
 
     if (buffer.buffer.length() != 1) {
-      buffer.has_error = false;
+      buffer.status = TypingStatus::Typing;
       return;
     }
 
@@ -82,11 +82,15 @@ struct MatchItemToOrder
         mark_conveyor_item_as_moving(order_entity.id, item_type);
 
         buffer.buffer.clear();
-        buffer.has_error = false;
+        buffer.status = TypingStatus::Match;
+        buffer.status_time = 0.0f;
+        buffer.last_input_time = 0.0f;
         return;
       }
     }
 
-    buffer.has_error = true;
+    buffer.status = TypingStatus::Error;
+    buffer.status_time = 0.0f;
+    buffer.last_input_time = 0.0f;
   }
 };

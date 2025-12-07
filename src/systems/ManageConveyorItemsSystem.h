@@ -4,7 +4,7 @@
 #include "../ui_constants.h"
 #include <afterhours/ah.h>
 
-struct ManageConveyorItems
+struct ManageConveyorItemsSystem
     : afterhours::System<ConveyorItem,
                          afterhours::tags::All<GameTag::IsOnConveyor>> {
   void for_each_with(afterhours::Entity &entity, ConveyorItem &item,
@@ -15,7 +15,8 @@ struct ManageConveyorItems
 
     item.x_position += item.speed * dt;
 
-    if (item.x_position >= ui_constants::CONVEYOR_END_X_PCT) {
+    constexpr float READY_THRESHOLD_PCT = 0.5f; // middle of the screen
+    if (item.x_position >= READY_THRESHOLD_PCT) {
       bool added_to_ready = false;
       for (Order &order : afterhours::EntityQuery()
                               .whereID(item.order_id)
