@@ -134,6 +134,55 @@ Each line shows **State → Next state**.
 #### Complete
 - **Complete_ClosedOut** *(Terminal)*
 
+### Timeline rendering idea: major blocks with minor “dash” steps between
+You suggested a timeline that looks like:
+
+`[ MAJOR ] - - - [ MAJOR ] - - [ MAJOR ] ...`
+
+where each `-` is a **minor processing microstate** between two **major story blocks**.
+
+Here’s a clean rule set that matches the “Input vs Processing” model above and keeps “what’s next?” obvious:
+
+#### Definitions
+- **Major block**: a story milestone that typically **starts with user input** (“do the thing”) and then hands off to processing.
+  - Example: “Request items”, “Start boxing”, “Ship”, “Stamp/Confirm”, “Close out”.
+- **Minor dash**: a **processing microstate** that advances via `advance_if_complete(state, dt)`.
+  - Example: “on conveyor waiting/moving/received”, “error flash cooldown”, “shipping animation”, etc.
+
+#### Practical mapping (recommended)
+- Treat **Input states** as **major blocks** (they are the “decision/action points”).
+- Treat **Processing states** as **minor dash segments** (they are the “in-flight” progress between majors).
+- Terminal is a major endpoint.
+
+This yields a timeline where:
+- **Major nodes** = “what the player must do next” (also where flashing applies when selected)
+- **Dashes** = “the system is working; wait a moment”
+
+#### How to make this easy to render (state metadata)
+For every `OrderState`, define:
+- **major_index**: which major node this belongs to on the story timeline (0..N-1)
+- **minor_index** and **minor_count**: if it’s a Processing state, which dash segment (0..minor_count-1) between `major_index` and `major_index+1`
+- **kind**: Input / Processing / Terminal (already described above)
+
+Then timeline UI can do:
+- draw all major nodes (labels/icons)
+- for the *current major segment*, fill in `minor_index` of `minor_count` dashes
+
+#### Example (illustrative, using existing microstates)
+Between the major “Requesting” action and the major “ReadyToBox” action, the dashes could be:
+- `Receiving_OnConveyorWaiting` (dash 1)
+- `Receiving_OnConveyorMoving` (dash 2)
+- `Receiving_ReceivedToReady` (dash 3)
+- (repeat until `Receiving_AllReceived`, then land on the next major)
+- `Receiving_OnConveyorWaiting` (dash 1)
+- `Receiving_OnConveyorMoving` (dash 2)
+- `Receiving_ReceivedToReady` (dash 3)
+- (repeat until `Receiving_AllReceived`, then land on the next major)
+
+If you later add more transport nuance, you add/remove dash states **inside that one segment** without changing the high-level story nodes.
+
+> This structure also makes adding states easy: add a new Processing microstate as another dash in a segment, or add a new Input state as a new major node.
+
 ### Interrupt microstates (explicit overlays)
 These are still states (no booleans), but they temporarily override input and then return to the underlying main state:
 - **Overlay_ReroutePrompt** → (return to previous)
