@@ -56,8 +56,9 @@ Each line shows **State → Next state**.
 - **Requesting_AllRequested** → **Receiving_OnConveyorWaiting**
 
 **Flashing (UI behavior, not a state):**
-- Example policy: when the order is selected and state is `Requesting_NeedsInput`, render with a pulsing accent.
-- This is derived from `(is_selected, state)` and doesn’t require storing “flash” as an order state.
+- Policy: **flash whenever the current state needs user input**.
+- Concretely: a state “needs user input” if progress can only happen via an explicit player action (typing a key, pressing a button, making a modal decision), i.e. the next transition is gated by input rather than time/transport.
+- This is derived from `(state, is_selected)` and a simple table of “input-driven states” (or metadata on each state), and does not require storing “flash” as an order state.
 
 #### ReceivingItems (transport microstates)
 - **Receiving_OnConveyorWaiting** → **Receiving_OnConveyorMoving**
