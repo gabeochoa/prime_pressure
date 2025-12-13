@@ -188,6 +188,28 @@ These are still states (no booleans), but they temporarily override input and th
 - **Overlay_ReroutePrompt** → (return to previous)
 - **Overlay_TutorialPrompt** *(optional)* → (return to previous)
 
+### ECS-friendly rendering: “filter by tag” (recommended)
+If you want renderers to be able to **query orders by state via tags**, treat “state” as a first-class concept in ECS:
+
+- **Keep one authoritative state value** (e.g., `OrderState` enum stored in a component).
+- **Mirror it into tags** for cheap queries and renderer filtering.
+
+Practical tagging rules:
+- **Exactly one microstate tag** is enabled per order at a time (e.g., `Tag::Order_Requesting_NeedsInput`).
+- Optionally also enable **one macro tag** (e.g., `Tag::OrderMacro_RequestingItems`) so renderers can group orders without knowing every microstate.
+- When the state changes, a single “state tagging system” disables the previous tags and enables the new ones.
+
+This lets any renderer do things like:
+- “show a conveyor animation for orders in any `Receiving_*` microstate”
+- “flash/pulse highlight for orders in any `*_NeedsInput` (Input-kind) microstate”
+- “render major timeline blocks from the macro tag and minor dashes from the micro tag”
+
+### Background progression (processing while you work other orders)
+Design-wise, this means:
+- **Processing microstates must advance even when the order is not selected/active.**
+- The tick helper (`advance_if_complete(state, dt)`) should run for *all orders*, not only the active one.
+- Input microstates remain “stuck” until the player acts (possibly on a different view/order later).
+
 ### Future pressure outcomes (explicit terminal states)
 If/when timers/quota are added, keep them explicit (no flags) by branching to terminal outcome states:
 - **Outcome_Late** (non-terminal; can be an explicit state if you want it to affect gameplay)
@@ -196,6 +218,11 @@ If/when timers/quota are added, keep them explicit (no flags) by branching to te
 - **Outcome_ReturnedRefunded** *(optional terminal)*
 
 > Practical rule: the main chain is forward-only; overlays are temporary; outcome states are terminal branches.
+
+### “Accept reroute?” — what that refers to
+This phrase appears in the **cutscene email text** (the XP mail briefing) as a foreshadowed gameplay mechanic: a popup might ask “Accept reroute?” and the player would press a key to respond.
+
+Important: **it is not implemented as gameplay logic yet** (it currently exists only as narrative text). In this design, it would naturally become an **overlay state** (e.g., `Overlay_ReroutePrompt`) that temporarily blocks input until resolved, then returns the order to its underlying microstate.
 
 ### Making it easy to add new states (recommended pattern)
 To make extension safe and obvious, define states and transitions **declaratively** in one place:
