@@ -102,10 +102,9 @@ enum class OrderState {
   Receiving_OnConveyorWaiting,
   Receiving_OnConveyorMoving,
   Receiving_ReceivedToReady,
-  Receiving_AllReceived,
 
   // ReadyToBox
-  ReadyToBox_Waiting,
+  ReadyToBox_Staged,
   ReadyToBox_Queued, // optional/future
 
   // Boxing
@@ -161,16 +160,15 @@ If a Processing state needs to choose between two “next” states (common for 
 #### ReceivingItems (these are the “dash” steps between request and ready-to-box)
 - `Receiving_OnConveyorWaiting` (**Processing**) → `Receiving_OnConveyorMoving`
 - `Receiving_OnConveyorMoving` (**Processing**) → `Receiving_ReceivedToReady`
-- `Receiving_ReceivedToReady` (**Processing**) → `Receiving_OnConveyorWaiting` *(if more items remain)* **or** → `Receiving_AllReceived` *(if last item received)*
-- `Receiving_AllReceived` (**Processing**, short handoff) → `ReadyToBox_Waiting`
+- `Receiving_ReceivedToReady` (**Processing**) → `Receiving_OnConveyorWaiting` *(if more items remain)* **or** → `ReadyToBox_Staged` *(if last item received)*
 
-Rule: enter `Receiving_AllReceived` **exactly once**, when the last required item is received.
+Rule: enter `ReadyToBox_Staged` **exactly once**, when the last required item is received.
 
 #### ReadyToBox
-- `ReadyToBox_Waiting` (**Input**) → `Boxing_FoldBox` *(or `Boxing_PutItems` if you skip fold-box)*
+- `ReadyToBox_Staged` (**Processing**, 0s handoff) → `Boxing_FoldBox`
 
 *(Optional future:)*
-- `ReadyToBox_Queued` (**Processing**) → `ReadyToBox_Waiting`
+- `ReadyToBox_Queued` (**Processing**) → `Boxing_FoldBox` *(when the boxing station is available)*
 
 #### Boxing (explicit step FSM)
 - `Boxing_FoldBox` (**Input**) → `Boxing_PutItems`
@@ -325,6 +323,8 @@ OrderState advance_if_complete(OrderState current,
 Notes:
 - `time_in_state` is required for time-based Processing states (like the 1s closeout delay).
 - Processing completion can also be condition-based (e.g., “conveyor item reached ready area”).
+  - **Preferred for robustness**: express “done” via **order-local counts** (e.g., `received_counts == required_counts`) rather than scanning world entities inside the state machine.
+  - Conveyor/world systems update the counts; the workflow just reads them.
 
 ### 2) Input-driven transitions
 Separately from ticking, input handlers move an order forward when the player acts.
@@ -384,8 +384,8 @@ If you want to keep lists for convenience, they must be derived from these count
 Make completion rules explicit for the initial set:
 - `Requesting_InputError`: timed (~0.25s–0.5s) feedback, then advance.
 - `Requesting_AllRequested`: timed (0s) or immediate handoff.
-- `Receiving_*`: condition-based (conveyor entities reaching threshold / counts updated).
-- `Receiving_AllReceived`: timed (0s) handoff.
+- `Receiving_*`: condition-based (items crossing belt threshold) but expressed by updating `received_counts` and transitioning based on those counts.
+- `ReadyToBox_Staged`: timed (0s) handoff to boxing.
 - `Complete_CloseoutDelay`: timed (1.0s).
 
 ### Step 4 — Input transition wiring
