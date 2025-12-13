@@ -24,87 +24,55 @@ A key simplification principle: **every “story beat” should map to exactly o
 
 ---
 
-## Addendum: track microstates explicitly (nested under the story)
-You asked to include microstates so we can track them. The clean way to do this is a **two-level model**:
+## Addendum: track microstates explicitly (nested under the story) — simplified
+You asked to include microstates so we can track them, but the earlier list was too verbose. Here is a simpler structure that **keeps every story beat** while minimizing bookkeeping.
 
-- **Macro-state (story)**: one of a small set that matches the narrative.
-- **Micro-state (interaction/transport/UI)**: the fine-grained step(s) within that macro-state.
+### Rule: only “track” microstates that change player actions
+To keep this simple, we only make something a *tracked microstate* if it:\n+- changes what the player is supposed to do next, or\n+- is a modal interruption, or\n+- is a true step-FSM (boxing / shipping confirmation).\n+\n+Everything else is a **derived indicator** from counts (requested/received/boxed) and does not need to be a discrete state.
 
-This keeps the lifecycle story-readable *and* makes it possible to track/telemetry every small beat without exploding the primary state list.
+### Macro-states (story)
+1) **Incoming**\n+2) **Opened**\n+3) **RequestingItems**\n+4) **ReceivingItems**\n+5) **ReadyToBox**\n+6) **Boxing**\n+7) **Shipped**\n+8) **Complete**
 
-### Proposed macro-states (story)
-1) **Incoming**
-2) **Opened**
-3) **RequestingItems**
-4) **ReceivingItems**
-5) **ReadyToBox**
-6) **Boxing**
-7) **Shipped**
-8) **Complete**
-
-### Proposed microstates (what actually happens moment-to-moment)
-Below is a concrete microstate list that matches current gameplay code + the narrative in `idea.md`.
+### Tracked microstates (minimal set)
 
 #### Incoming
-- **JustArrived**: spawned / visible in the list, not yet accepted
-- **Backlogged** *(optional/future)*: present but not actionable due to capacity, quotas, etc.
+- **Arrived**: visible in slot/list, not yet opened
+- **Backlogged** *(future/optional)*: can’t be opened due to capacity/pressure rules
 
 #### Opened
-- **SelectedActive**: player has this order “open” (active/selected)
-- **SelectedInactive**: order exists but player is working another order
+- **Active**: this is the currently opened/active order\n+- **Inactive**: opened but not the one currently in focus
 
-#### RequestingItems (warehouse request phase)
-(In current gameplay, “request” is effectively the act of typing/matching items; in the story it’s a request to the warehouse.)
-- **AwaitingFirstRequest**: opened but no items requested yet
-- **AwaitingMoreRequests**: some items requested, not all requested yet
-- **InputNeeded** *(UI microstate)*: order is selected and expects player input now
-- **InputInvalid** *(UI microstate)*: player typed something that doesn’t advance the order (error feedback)
+#### RequestingItems
+Track only the player-facing input loop:
+- **NeedsRequestInput**: order is asking for more item requests (typing)\n+- **RequestInputError**: most recent input didn’t advance progress (feedback)\n+- **AllRequested** *(optional)*: if you want an explicit moment when request phase ends (otherwise derived)
 
-#### ReceivingItems (items in transit / arriving)
-This is where today’s implementation has implicit transport microstates (conveyor + ready threshold).
-- **QueuedNotOnConveyorYet** *(optional)*: requested but not spawned/moving
-- **OnConveyorWaiting**: spawned on conveyor but not moving (not “released”)
-- **OnConveyorMoving**: moving toward ready threshold
-- **ReceivedToReadyArea**: crossed the threshold and counted as received/ready
-- **PartialReceived**: some received, some still in transit (derived from counts)
+#### ReceivingItems
+Don’t enumerate conveyor minutiae; keep one transport microstate + counts:
+- **InTransit**: requested items are still arriving\n+- **AllReceived**: all required items have been received (this is the ReadyToBox transition trigger)
 
 #### ReadyToBox
-- **AwaitingBoxingStart**: everything received, nothing packed yet
-- **BoxingQueued** *(optional)*: multiple orders ready; this one is waiting its turn
+- **WaitingToStartBoxing**: all received, boxing not started\n+- **QueuedForBoxing** *(optional/future)*: if only one boxing station/order can be processed at a time
 
-#### Boxing
-Boxing is already modeled as its own micro-FSM in the code (`BoxingState`), so list those explicitly:
-- **FoldBox** *(present in enum, may or may not be used in current flow)*
-- **PutItems**: place items into box (repeat until all placed)
-- **Fold**: close box
-- **Tape**: tape box
-- **ShipActionReady**: waiting on the “ship” action
+#### Boxing (tracked step-FSM)
+Reuse the actual step-FSM conceptually (this matches current gameplay well):
+- **PutItems** → **Fold** → **Tape** → **Ship**\n+- *(If you later use it)* **FoldBox** can be a first step
 
-#### Shipped
-There is an additional confirmation/closeout loop today (stamp progress) and `idea.md` also describes “press again to complete.” Track them as microstates:
-- **ShipmentTriggered**: shipping action performed (box left the station)
-- **AwaitingShipmentConfirmation**: needs confirmation/acceptance step(s)
-- **StampProgress0**
-- **StampProgress1**
-- **StampProgress2**
-- **StampProgress3**: confirmation complete
+#### Shipped (tracked confirmation micro-FSM)
+Instead of 4 distinct states, track one substate + a progress counter:
+- **ConfirmingShipment** with `confirm_progress = 0..3` (READY/TO/SHIP)\n+- **ShipmentConfirmed** when `confirm_progress == 3`
 
 #### Complete
-- **ClosedOut**: order removed from the active list / slot freed
+- **ClosedOut**: removed from active list / slot freed
 
-### Interrupt microstates (overlay, not part of forward progression)
-The cutscene text mentions a popup: “Accept reroute?” which implies a *modal interruption*. These should be tracked as **overlays** so they don’t break the forward-only main path:
-- **ModalReroutePrompt**: order/system requires a decision (Y/N) before continuing
-- **ModalTutorialPrompt** *(optional)*: “Press Enter to continue” gating
+### Overlays (interrupts; can occur during any macro-state)
+These are not part of the forward-only chain; they block input until resolved:
+- **ModalReroutePrompt** (“Accept reroute?” Y/N)\n+- **ModalTutorialPrompt** (“Press Enter to continue”) *(optional)*
 
-### Terminal outcome microstates (future pressure systems)
-`idea.md` Phase 3 introduces timers/timeouts/quota pressure. Those will likely add terminal outcomes that should be tracked without complicating the happy path:
-- **Late**: exceeded allowed time but still finishable (non-terminal)
-- **FailedTimeout**: timed out; cannot be completed (terminal)
-- **Cancelled** *(optional)*: customer cancelled
-- **Returned/Refunded** *(optional, commentary phase)*
+### Outcomes (pressure-system layer; orthogonal to story)
+These are tags/flags that can modify urgency or end the order, without rewriting the story states:
+- **Late** *(non-terminal)*\n+- **FailedTimeout** *(terminal)*\n+- **Cancelled** *(optional)*\n+- **Returned/Refunded** *(optional)*
 
-> Practical rule: the macro-state stays forward-only; overlays can appear/disappear; outcomes are terminal once reached.
+> Practical rule: macro-state stays forward-only; overlays appear/disappear; outcomes are orthogonal and can become terminal.
 
 ---
 
