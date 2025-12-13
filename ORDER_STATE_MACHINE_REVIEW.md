@@ -1,424 +1,309 @@
-## Order system state machine review (simplification ideas)
+## Order system state machine review + implementation plan (intern-ready)
 
 ### Scope / constraints
-- **No code changes** in this pass. This document describes *what to change* and *why*.
-- Goal: **it should be obvious what state every order is in** and **what items belong to the order / what’s left**.
-- Goal: **easy forward-only progression** (orders only move forward).
+- **No code changes in this review**. This file is a spec/plan for a future implementation.
+- **Orders move forward only**.
+- It must be obvious:
+  - **What state** an order is in.
+  - **What items** are in the order / what’s left.
+- **Rendering should be easy**: renderers must be able to query/filter orders by ECS tags derived from the current order state.
+- **Background processing**: orders should continue to process/advance while the player works other orders.
 
 ---
 
-## Reframing: the state machine should match the story
-You described the core story arc as:
+## Story beats (macro timeline)
+These are the **major blocks** shown on the timeline:
 
-1) customer places order
-2) order comes in
-3) you open an order
-4) start requesting the items from the warehouse
-5) items are received from the warehouse
-6) items are ready to be boxed up
-7) items are boxed up
-8) items are shipped
-9) order complete
+1) Customer places order *(pre-game; becomes “arrived”)*
+2) Order comes in
+3) You open an order
+4) Start requesting items from the warehouse
+5) Items are received from the warehouse
+6) Items are ready to be boxed
+7) Items are boxed
+8) Items are shipped (READY/TO/SHIP confirmation)
+9) Order completes
 
-A key simplification principle: **every “story beat” should map to exactly one macro-state**. If you want “next step is obvious” without hidden progress, model **progress steps** (like stamp 0/1/2/3) as explicit microstates, but keep **UI effects (like flashing)** as derived rendering behavior from `(state, selection)`.
+We’ll keep these as **macro milestones** and represent “in-between” progress with **microstates**.
 
 ---
 
-## Addendum: track microstates explicitly (nested under the story) — **explicit next-step, easy to extend**
-Goal alignment update:
-- **Flashing does not need to be a state** (treat it as UI behavior derived from state + selection).
-- Some progress steps (like **stamp 0/1/2/3**) *can* remain explicit states if you want “next step is obvious” with no hidden counters.
-- It should be **easy to add new states** without breaking existing transitions.
+## Core design: microstates + macro milestones + tags
 
-### Design rule
-- **One active order-state at a time** (an enum value).
-- States are **ordered forward-only**.
-- Every state has an obvious **next state** (prefer a small transition table; avoid relying on `+1` enum math).
-- UI behaviors like flashing are **state metadata** (how to render), not a stored per-order flag and not a distinct lifecycle state.
+### State kinds
+Every microstate is one of:
+- **Input**: requires explicit player action to advance.
+  - UI: **flash** (when selected) because it’s waiting on the player.
+  - Tick: does *not* auto-advance.
+- **Processing**: does not require input; advances automatically via time and/or world conditions.
+  - UI: no flash; show “in progress”.
+  - Tick: can auto-advance.
+- **Terminal**: completed; never advances.
 
-### Key requirement: “doesn’t need user input but is not complete”
-Support this by splitting states into three kinds:
- - **Input states**: progress can only occur via an explicit player action (typing/pressing a key/choosing a modal prompt).
-   - **UI**: flash (when selected) because the order is waiting on the player.
-   - **Tick behavior**: `advance_if_complete(state, dt)` returns the **same state**.
- - **Processing states**: no user input needed; the game is “working” (items moving, delays, animations).
-   - **UI**: no flash; show “in progress” / “moving”.
-   - **Tick behavior**: once complete, `advance_if_complete` returns the **next state**.
- - **Terminal states**: finished; no transitions.
+### Flashing policy
+**Flashing is not a state.**
+- Flash whenever the order is **selected** and the current microstate is **Input**.
 
-This matches your observation: **many states start with needed user input, then take time to process before moving on**.
+### Why microstates help
+- “Next step” is always obvious: each state has an explicit `next`.
+- Renderers can query ECS tags like `OrderState::Receiving_OnConveyorMoving`.
+- Debugging is easier: you can print one state name per order.
 
-### Proposed helper: auto-advance only when complete
-Your desired shape (“given current state and `dt`, return the new state if it’s complete”) fits naturally as:
+---
 
-`advance_if_complete(current_state, dt) -> state`
+## The state model (spec)
 
-- For **Input** and **Terminal** states, it returns `current_state`.
-- For **Processing** states, it returns `next_state` once the completion condition is met.
+### Macro milestones (what the timeline shows)
+The macro timeline nodes are:
 
-Conceptually:
+- `Incoming`
+- `Opened`
+- `RequestingItems`
+- `ReceivingItems`
+- `ReadyToBox`
+- `Boxing`
+- `Shipped`
+- `Complete`
 
-```cpp
-// Pseudocode: designed to be easy to read and extend.
-OrderState advance_if_complete(const OrderState current,
-                               float dt,
-                               float &time_in_state /* per-order */) {
-  const StateSpec &spec = STATE_TABLE[current];
-  if (spec.kind == StateKind::Input || spec.kind == StateKind::Terminal) {
-    return current;
-  }
+### Microstate list (ordered, forward-only)
+Each line is **State (kind) → next**.
 
-  // Processing state: accumulate time and auto-advance when done.
-  time_in_state += dt;
-  if (time_in_state >= spec.min_duration_seconds /* or other condition */) {
-    time_in_state = 0.0f;
-    return spec.next;
-  }
-  return current;
-}
-```
-
-Notes:
-- You still need an **input event handler** to move from an Input state to its next state at the moment the player acts.
-- `time_in_state` is not a “flag”; it’s the per-order timer needed to make Processing states advance with `dt`.
-- If a Processing state completes based on a non-time condition (e.g., “all conveyor items reached ready”), the `spec` can hold a predicate instead of a duration.
-### Macro-states (story beats)
-Incoming → Opened → RequestingItems → ReceivingItems → ReadyToBox → Boxing → Shipped → Complete
-
-### Microstates (explicit, ordered, forward-only)
-Each line shows **State → Next state**.
+If a Processing state needs to choose between two “next” states (common for loop/terminal detection), that choice must be made **inside the Processing completion handler** (see state table schema below). The state name still stays explicit and debuggable.
 
 #### Incoming
-- **Incoming_Arrived** *(Input)* → **Opened_Active**
-- **Incoming_Backlogged** *(optional/future)* → **Incoming_Arrived**
+- `Incoming_Arrived` (**Input**) → `Opened_Active`
+
+*(Optional future:)*
+- `Incoming_Backlogged` (**Processing**) → `Incoming_Arrived`
 
 #### Opened
-- **Opened_Active** *(Input)* → **Requesting_NeedsInput**
-- **Opened_Inactive** *(optional)* → **Opened_Active**
+- `Opened_Active` (**Input**) → `Requesting_NeedsInput`
 
-#### RequestingItems (typing/request loop + attention)
-- **Requesting_NeedsInput** *(Input)* → **Requesting_InputError** *(on invalid input)* or → **Requesting_AllRequested**
-- **Requesting_InputError** *(Processing)* → **Requesting_NeedsInput**
-- **Requesting_AllRequested** *(Processing)* → **Receiving_OnConveyorWaiting**
+*(Optional future if you want it explicit; not required for correctness:)*
+- `Opened_Inactive` (**Processing**) → `Opened_Active`
 
-**Flashing (UI behavior, not a state):**
-- Policy: **flash whenever the current state needs user input**.
-- Concretely: a state “needs user input” if progress can only happen via an explicit player action (typing a key, pressing a button, making a modal decision), i.e. the next transition is gated by input rather than time/transport.
-- This is derived from `(state, is_selected)` and a simple table of “input-driven states” (or metadata on each state), and does not require storing “flash” as an order state.
+#### RequestingItems
+- `Requesting_NeedsInput` (**Input**) → `Requesting_InputError` *(on invalid input)* **or** → `Requesting_AllRequested`
+- `Requesting_InputError` (**Processing**, short cooldown/feedback) → `Requesting_NeedsInput`
+- `Requesting_AllRequested` (**Processing**, short handoff) → `Receiving_OnConveyorWaiting`
 
-#### ReceivingItems (transport microstates)
-- **Receiving_OnConveyorWaiting** *(Processing)* → **Receiving_OnConveyorMoving**
-- **Receiving_OnConveyorMoving** *(Processing)* → **Receiving_ReceivedToReady**
-- **Receiving_ReceivedToReady** *(Processing)* → **Receiving_OnConveyorWaiting**
-- **Receiving_AllReceived** *(Processing)* → **ReadyToBox_Waiting**
+#### ReceivingItems (these are the “dash” steps between request and ready-to-box)
+- `Receiving_OnConveyorWaiting` (**Processing**) → `Receiving_OnConveyorMoving`
+- `Receiving_OnConveyorMoving` (**Processing**) → `Receiving_ReceivedToReady`
+- `Receiving_ReceivedToReady` (**Processing**) → `Receiving_OnConveyorWaiting` *(if more items remain)* **or** → `Receiving_AllReceived` *(if last item received)*
+- `Receiving_AllReceived` (**Processing**, short handoff) → `ReadyToBox_Waiting`
 
-*(Important: “AllReceived” is a **state** you enter exactly once when the last required item is received.)*
+Rule: enter `Receiving_AllReceived` **exactly once**, when the last required item is received.
 
 #### ReadyToBox
-- **ReadyToBox_Waiting** *(Input)* → **Boxing_FoldBox** *(or → Boxing_PutItems if you skip FoldBox)*
-- **ReadyToBox_Queued** *(optional/future)* → **ReadyToBox_Waiting**
+- `ReadyToBox_Waiting` (**Input**) → `Boxing_FoldBox` *(or `Boxing_PutItems` if you skip fold-box)*
 
-#### Boxing (explicit step-FSM)
-- **Boxing_FoldBox** *(Input)* → **Boxing_PutItems**
-- **Boxing_PutItems** *(Input)* → **Boxing_Fold**
-- **Boxing_Fold** *(Input)* → **Boxing_Tape**
-- **Boxing_Tape** *(Input)* → **Boxing_Ship**
-- **Boxing_Ship** *(Input)* → **Shipped_Stamp0**
+*(Optional future:)*
+- `ReadyToBox_Queued` (**Processing**) → `ReadyToBox_Waiting`
 
-#### Shipped (explicit stamp/confirmation steps)
-- **Shipped_Stamp0** *(Input)* → **Shipped_Stamp1**
-- **Shipped_Stamp1** *(Input)* → **Shipped_Stamp2**
-- **Shipped_Stamp2** *(Input)* → **Shipped_Stamp3**
-- **Shipped_Stamp3** *(Input)* → **Complete_CloseoutDelay**
+#### Boxing (explicit step FSM)
+- `Boxing_FoldBox` (**Input**) → `Boxing_PutItems`
+- `Boxing_PutItems` (**Input**) → `Boxing_Fold`
+- `Boxing_Fold` (**Input**) → `Boxing_Tape`
+- `Boxing_Tape` (**Input**) → `Boxing_Ship`
+- `Boxing_Ship` (**Input**) → `Shipped_Stamp0`
+
+#### Shipped (READY/TO/SHIP confirmation microsteps)
+- `Shipped_Stamp0` (**Input**) → `Shipped_Stamp1`
+- `Shipped_Stamp1` (**Input**) → `Shipped_Stamp2`
+- `Shipped_Stamp2` (**Input**) → `Shipped_Stamp3`
+- `Shipped_Stamp3` (**Input**) → `Complete_CloseoutDelay`
 
 #### Complete
-- **Complete_CloseoutDelay** *(Processing, ~1s)* → **Complete_ClosedOut**
-- **Complete_ClosedOut** *(Terminal)*
+- `Complete_CloseoutDelay` (**Processing**, **1.0s**) → `Complete_ClosedOut`
+- `Complete_ClosedOut` (**Terminal**) → *(none)*
 
-### Timeline rendering idea: major blocks with minor “dash” steps between
-You suggested a timeline that looks like:
+---
+
+## Timeline rendering: major blocks + minor dashes
+You want a timeline like:
 
 `[ MAJOR ] - - - [ MAJOR ] - - [ MAJOR ] ...`
 
-where each `-` is a **minor processing microstate** between two **major story blocks**.
+### Mapping rules
+- **Major blocks** = the macro milestones above.
+- **Dashes** = Processing microstates that sit *between* two macro milestones.
+- Dash count is **variable** by design: if you add/remove Processing microsteps, the segment’s dash count changes automatically.
 
-Here’s a clean rule set that matches the “Input vs Processing” model above and keeps “what’s next?” obvious:
+### Required state metadata (for UI + debugging)
+For each microstate, define these metadata values in a single table:
+- **macro**: which macro milestone it belongs to.
+- **kind**: Input / Processing / Terminal.
+- **next**: the next microstate (fixed) **or** a `next_fn(...)` that selects the next microstate when the state completes.
+  - Required for loop-style Processing states like `Receiving_ReceivedToReady`.
+- **segment**: `(from_macro, to_macro)` if this microstate is a dash between two macro blocks.
+- **dash_index / dash_count**: position within the segment (for drawing partially filled dashes).
+- **min_duration_seconds** *(only for Processing states that are time-based; e.g., closeout delay)*.
 
-#### Definitions
-- **Major block**: a story milestone that typically **starts with user input** (“do the thing”) and then hands off to processing.
-  - Example: “Request items”, “Start boxing”, “Ship”, “Stamp/Confirm”, “Close out”.
-- **Minor dash**: a **processing microstate** that advances via `advance_if_complete(state, dt)`.
-  - Example: “on conveyor waiting/moving/received”, “error flash cooldown”, “shipping animation”, etc.
+This table is also the single source of truth for:
+- which states should flash (`kind == Input`)
+- which tags to apply
+- how the timeline should render
 
-#### Practical mapping (recommended)
-- Treat **Input states** as **major blocks** (they are the “decision/action points”).
-- Treat **Processing states** as **minor dash segments** (they are the “in-flight” progress between majors).
-- Terminal is a major endpoint.
+---
 
-This yields a timeline where:
-- **Major nodes** = “what the player must do next” (also where flashing applies when selected)
-- **Dashes** = “the system is working; wait a moment”
+## ECS integration: tags for renderers
 
-#### How to make this easy to render (state metadata)
-For every `OrderState`, define:
-- **major_index**: which major node this belongs to on the story timeline (0..N-1)
-- **minor_index** and **minor_count**: if it’s a Processing state, which dash segment (0..minor_count-1) between `major_index` and `major_index+1`
-- **kind**: Input / Processing / Terminal (already described above)
+### Required behavior
+- Every order stores **one authoritative microstate value** (e.g., `OrderState` in a component).
+- A dedicated system mirrors that value into tags:
+  - **Exactly one microstate tag** is enabled at a time (e.g., `Tag::OrderState_Requesting_NeedsInput`).
+  - **Exactly one macro tag** is enabled at a time (e.g., `Tag::OrderMacro_RequestingItems`).
+
+### Why both tags
+- Micro tags: precise filtering (“show conveyor animation for `Receiving_*`”).
+- Macro tags: simple grouping (“show orders that are in Boxing at all”).
+
+---
+
+## State update API (what to implement)
+
+### 1) Tick-based auto-advance (Processing only)
+Implement a helper with this behavior:
+
+- **Input/Terminal**: return current state.
+- **Processing**: if the state is complete, return the next state; otherwise return current.
+
+Recommended signature:
+
+```cpp
+OrderState advance_if_complete(OrderState current,
+                               float dt,
+                               float &time_in_state,
+                               const Order &order /* or pointer */,
+                               /* world queries as needed */);
+```
 
 Notes:
-- **Dash count is naturally variable**: `minor_count` is “how many Processing microstates exist in this segment right now.” If you add/remove processing steps, the timeline automatically gains/loses dashes for that segment.
-- **Make debugging easy**: keep a small debug renderer/log that prints `(order_id, state_name, time_in_state)` so you can see which dash you’re in and why it hasn’t advanced yet.
+- `time_in_state` is required for time-based Processing states (like the 1s closeout delay).
+- Processing completion can also be condition-based (e.g., “conveyor item reached ready area”).
 
-Then timeline UI can do:
-- draw all major nodes (labels/icons)
-- for the *current major segment*, fill in `minor_index` of `minor_count` dashes
+### 2) Input-driven transitions
+Separately from ticking, input handlers move an order forward when the player acts.
+- Example: in `Requesting_NeedsInput`, a correct typed key transitions to `Requesting_AllRequested` when the last item is requested.
+- Example: in `Shipped_Stamp2`, correct key transitions to `Shipped_Stamp3`.
 
-#### Example (illustrative, using existing microstates)
-Between the major “Requesting” action and the major “ReadyToBox” action, the dashes could be:
-- `Receiving_OnConveyorWaiting` (dash 1)
-- `Receiving_OnConveyorMoving` (dash 2)
-- `Receiving_ReceivedToReady` (dash 3)
-- (repeat until `Receiving_AllReceived`, then land on the next major)
-- `Receiving_OnConveyorWaiting` (dash 1)
-- `Receiving_OnConveyorMoving` (dash 2)
-- `Receiving_ReceivedToReady` (dash 3)
-- (repeat until `Receiving_AllReceived`, then land on the next major)
-
-If you later add more transport nuance, you add/remove dash states **inside that one segment** without changing the high-level story nodes.
-
-> This structure also makes adding states easy: add a new Processing microstate as another dash in a segment, or add a new Input state as a new major node.
-
-### Interrupt microstates (explicit overlays) *(future / optional)*
-If you later add modal prompts, you can model them as explicit overlay states (no booleans) that temporarily override input and then return to the underlying main state.
-
-### ECS-friendly rendering: “filter by tag” (recommended)
-If you want renderers to be able to **query orders by state via tags**, treat “state” as a first-class concept in ECS:
-
-- **Keep one authoritative state value** (e.g., `OrderState` enum stored in a component).
-- **Mirror it into tags** for cheap queries and renderer filtering.
-
-Practical tagging rules:
-- **Exactly one microstate tag** is enabled per order at a time (e.g., `Tag::Order_Requesting_NeedsInput`).
-- Optionally also enable **one macro tag** (e.g., `Tag::OrderMacro_RequestingItems`) so renderers can group orders without knowing every microstate.
-- When the state changes, a single “state tagging system” disables the previous tags and enables the new ones.
-
-This lets any renderer do things like:
-- “show a conveyor animation for orders in any `Receiving_*` microstate”
-- “flash/pulse highlight for orders in any `*_NeedsInput` (Input-kind) microstate”
-- “render major timeline blocks from the macro tag and minor dashes from the micro tag”
-
-### Background progression (processing while you work other orders)
-Design-wise, this means:
-- **Processing microstates must advance even when the order is not selected/active.**
-- The tick helper (`advance_if_complete(state, dt)`) should run for *all orders*, not only the active one.
-- Input microstates remain “stuck” until the player acts (possibly on a different view/order later).
-
-### Future pressure outcomes (explicit terminal states)
-If/when timers/quota are added, keep them explicit (no flags) by branching to terminal outcome states:
-- **Outcome_Late** (non-terminal; can be an explicit state if you want it to affect gameplay)
-- **Outcome_FailedTimeout** (terminal)
-- **Outcome_Cancelled** *(optional terminal)*
-- **Outcome_ReturnedRefunded** *(optional terminal)*
-
-> Practical rule: the main chain is forward-only; overlays are temporary; outcome states are terminal branches.
-
-### Cutscenes / narrative prompts
-Out of scope for now. The state model above doesn’t depend on cutscenes; you can layer narrative later using optional overlay states if/when you need them.
-
-### Making it easy to add new states (recommended pattern)
-To make extension safe and obvious, define states and transitions **declaratively** in one place:
-- **Enum**: add the new state name.
-- **Transition table**: add one row describing:
-  - **next** (the intended forward step)
-  - **guard** (when it is allowed)
-  - **action** (what data updates happen on transition, if any)
-  - **UI metadata** (e.g., “flash when selected”, “show ‘boxing needed’ banner”)
-
-This avoids fragile “`+1` means next” coupling while keeping “what’s next?” readable in a single list.
+**Important**: input transitions should never skip over Processing states; they should land on the next microstate listed in the table.
 
 ---
 
-## What exists today (as observed)
+## Items: make “what’s left” obvious (explicit requirement)
+Current code tracks items in multiple places (`items`, `selected_items`, `ready_items`) and sometimes mutates `items`, which makes it ambiguous.
 
-### Current “workflow state” representation
-The order workflow is represented by `Order::timeline.state` (type `TimelineStageState`). That enum currently mixes:
-- **High-level stages**: Conveyor / Boxing / Ready / Ship
-- **Phase**: Pending / Active / Done (derived by `timeline_phase()`)
-- **UI-only concerns**: `ConveyorActiveFlash`
-- **“Stamp progress”**: `ReadyStamp0..ReadyStamp3`
+**Implementation requirement** (pick this representation and stick to it):
+- Add/maintain an immutable `required_counts` (e.g., `std::map<ItemType,int>`) that never changes after order creation.
+- Maintain progress counts as additional maps:
+  - `requested_counts`
+  - `received_counts`
+  - `boxed_counts`
 
-The update logic advances states by **numeric increment** (`get_next_state()` returns `static_cast<TimelineStageState>(int(current) + 1)`). This implicitly relies on the enum values being laid out in a very specific numeric order.
+UI and logic must use these counts so it is always trivial to compute:
+- missing = required - received
+- ready_to_box = received == required
+- complete_items = boxed == required
 
-### Current “items in the order” representation
-`Order` currently keeps multiple item vectors / counters:
-- `items` (commonly treated as the set of items the order requires)
-- `selected_items` (items “matched” during conveyor input)
-- `ready_items` (items that reached the “ready” threshold)
-- `items_completed` (an additional counter)
-
-In most of the conveyor pipeline, `items` appears to be the **required list**, while `selected_items` and `ready_items` represent progress. However, `BoxItemSystem` mutates `order.items` by **erasing** items as they are boxed (treating `items` like “remaining items”), which makes the meaning of `items` inconsistent across the codebase.
+If you want to keep lists for convenience, they must be derived from these counts (not the other way around).
 
 ---
 
-## Why the current state machine feels complicated / non-obvious
+## Implementation steps (intern checklist)
 
-### 1) One enum is doing several jobs
-`TimelineStageState` simultaneously encodes:
-- “Where am I in the process?” (stage)
-- “Is this step active/pending/done?” (phase)
-- “Should the UI flash?” (attention state)
-- “How many stamp steps have been completed?” (progress)
+### Step 0 — Document the state table
+- Create a single `STATE_TABLE` that contains metadata for every microstate:
+  - `kind` (Input/Processing/Terminal)
+  - `macro` (Incoming/Opened/…)
+  - `next` (the next microstate)
+  - `min_duration_seconds` (0 for non-timed processing states)
+  - `is_complete(order, world, time_in_state)` predicate (for Processing states; for timed states this just checks duration)
+  - timeline metadata: `segment_from_macro`, `segment_to_macro`, `dash_index`, `dash_count`
+- Add a comment that this table is the single source of truth.
 
-That makes it hard to answer simple questions like:
-- “Is this order waiting to be opened, or already being worked?”
-- “Is this order shipped, or only partially stamped?”
+### Step 1 — Add the new order-state component
+- Store the authoritative microstate.
+- Add `time_in_state` (or equivalent) for Processing states.
 
-### 2) Numeric `+1` transitions are fragile
-Advancing by `+1` makes transitions **implicit** and **hard to audit**.
-- Adding/reordering enum values can silently break runtime behavior.
-- It’s difficult to see the intended graph (which edges exist and why).
+### Step 2 — Tag sync system
+- Implement a system that:
+  - reads the order’s microstate
+  - disables any old order-state tags
+  - enables the correct micro + macro tag
 
-### 3) UI state is embedded in business state
-`ConveyorActiveFlash` is a UI effect (“selected => flash”), but it is stored as a distinct workflow state. That creates extra “states” that are not meaningful to the order’s actual lifecycle.
+### Step 3 — Tick (auto-advance) system
+- Runs for **all orders** every frame.
+- Uses `advance_if_complete` to advance **Processing** states.
+- Guarantees forward-only progression.
 
-### 4) “Stamp progress” being modeled as states multiplies complexity
-Representing `ReadyStamp0..3` as separate FSM states causes a state explosion and makes “shipped-ness” ambiguous (e.g., shipped vs. fully stamped vs. complete).
+Make completion rules explicit for the initial set:
+- `Requesting_InputError`: timed (~0.25s–0.5s) feedback, then advance.
+- `Requesting_AllRequested`: timed (0s) or immediate handoff.
+- `Receiving_*`: condition-based (conveyor entities reaching threshold / counts updated).
+- `Receiving_AllReceived`: timed (0s) handoff.
+- `Complete_CloseoutDelay`: timed (1.0s).
 
-### 5) Item truth is split across multiple fields
-The system tracks item progress in multiple vectors/counters, and at least one system treats `items` as mutable “remaining items.” Even if it works, it makes “what items are in this order?” less obvious.
+### Step 4 — Input transition wiring
+- Update the existing input systems to:
+  - only advance when the current state is an Input state that matches the action
+  - advance to the **exact next microstate** from the state table
 
----
+### Step 5 — Timeline renderer update
+- Render macro milestones as `[ MAJOR ]` blocks.
+- Render Processing microstates as `-` dashes between major blocks using `dash_index/dash_count`.
 
-## Recommendation: build a story-first order lifecycle
-
-### The primary state should be story-readable
-Use a single, small set of order states that read like the narrative.
-
-A good story-first set (forward-only) is:
-
-1) **Incoming** *(order comes in)*
-2) **Opened** *(you open the order / commit to working it)*
-3) **RequestingItems** *(you are requesting items from the warehouse)*
-4) **ReceivingItems** *(items are arriving / moving through fulfillment)*
-5) **ReadyToBox** *(all required items are received and staged)*
-6) **Boxing** *(packing interaction in progress)*
-7) **Shipped** *(shipment action complete; may require stamping/confirmation)*
-8) **Complete** *(fully finished; slot can be freed)*
-
-This maps 1:1 to your story beats; the only “compression” is that “customer places order” is *pre-game world state* and can be represented as the moment an order entity is created.
-
-### Keep progress out of the state list
-For story readability, keep the **macro-states** free of UI/progress detail (i.e., don’t turn the *story* state list into 50 states).
-
-However, if the design goal is “**no flags** and the next step is always obvious”, then it’s reasonable to model things like **flashing** and **stamp 0/1/2/3** as **microstates** (see the addendum above) while keeping the macro story beats unchanged.
+### Step 6 — Debug tooling
+- Add a tiny debug overlay/log line for each order:
+  - `order_id`, `macro`, `microstate`, `kind`, `time_in_state`
+- Add a way to toggle it on/off.
 
 ---
 
-## Make item status obvious (recommended regardless of FSM approach)
+## Validation plan (how to verify each step)
+This should be done incrementally as the intern implements.
 
-### One canonical definition for “items in the order”
-Pick a single canonical representation for the order’s contents and keep it immutable:
-- **Preferred**: `required_counts: map<ItemType,int>`
-- **Acceptable**: `required_items: vector<ItemType>` but never mutate it
+### Validation A — State invariants
+- **Exactly one microstate tag** per order at all times.
+- **Exactly one macro tag** per order at all times.
+- **Forward-only**: state never moves backward.
 
-Then represent progress with counts (these are naturally forward-only):
-- `requested_counts` (what you asked the warehouse for)
-- `received_counts` (what has arrived)
-- `boxed_counts` (what is packed)
+How to validate:
+- Add an assertion/check in the tag sync system during development builds.
 
-From those, you can derive the most important “obvious” views:
-- **What items are in this order?** → `required_*`
-- **What’s missing?** → `required - received`
-- **What’s ready but not boxed?** → `received - boxed`
-- **What’s done?** → `boxed == required`
+### Validation B — Background progression
+- Start processing on an order (e.g., receiving/conveyor), switch to another order, confirm the first order continues to advance.
 
-This also makes UI easy: you can show a per-item row as `received/required` and `boxed/required`.
+How to validate:
+- Use the debug overlay: verify `time_in_state` advances and Processing microstates transition without selection.
 
----
+### Validation C — Input vs Processing behavior
+- In an **Input** state: verify ticking does not advance.
+- In a **Processing** state: verify ticking advances when conditions are met.
 
-## Two implementation styles (conceptual)
+How to validate:
+- Force an order into each microstate (dev-only hotkeys or test setup) and observe.
 
-## Option A (simplest): derived story state from progress (no explicit FSM)
+### Validation D — Closeout behavior
+- After `Shipped_Stamp3`, verify the order auto-completes after ~1 second:
+  - `Shipped_Stamp3` → `Complete_CloseoutDelay` → (1s) → `Complete_ClosedOut`.
 
-### Concept
-Store only minimal forward-only facts (counts + flags), and compute the story state as a pure function.
+### Validation E — Timeline rendering
+- Confirm the timeline:
+  - shows correct macro milestone
+  - fills the correct dash position while in Processing microstates
+  - flashes only for Input microstates (when selected)
 
-### Example derived story rules (illustrative)
-- `Incoming` if created but not opened
-- `Opened` if opened but no requests made
-- `RequestingItems` if `requested < required`
-- `ReceivingItems` if `requested == required` but `received < required`
-- `ReadyToBox` if `received == required` and not boxing started
-- `Boxing` if boxing started and `boxed < required`
-- `Shipped` if boxing finished and shipping triggered
-- `Complete` if shipment confirmed (e.g., stamp/ack complete)
-
-### Why this fits the story well
-- You can always explain the state with a number: “Received 2/3 items, waiting on 1.”
-- It’s hard to get stuck in an invalid state.
-
-## Option B: explicit forward-only FSM with story states
-
-### Concept
-Keep an explicit FSM, but keep it story-readable and keep the transition table small.
-
-### Events (story actions) and transitions
-- `OrderArrived`: (creates entity) → Incoming
-- `OpenOrder`: Incoming → Opened
-- `RequestNextItem` / `RequestAllItems`: Opened/RequestingItems → RequestingItems
-- `AllItemsRequested`: RequestingItems → ReceivingItems
-- `ItemReceived`: ReceivingItems → ReceivingItems (stays)
-- `AllItemsReceived`: ReceivingItems → ReadyToBox
-- `BeginBoxing`: ReadyToBox → Boxing
-- `BoxingFinished`: Boxing → Shipped
-- `ConfirmShipment` (or `StampAdvanced`): Shipped → Complete
-
-### Keep micro-steps as progress fields
-If shipping confirmation is a minigame (like the existing stamp sequence), model it as:
-- state: `Shipped`
-- field: `ship_confirm_progress` (0..N)
-
-Not separate FSM states.
+### Validation F — Items clarity
+- For any selected order, verify the UI can always render:
+  - required counts
+  - requested counts
+  - received counts
+  - boxed counts
+- Verify `required_counts` never changes after order creation.
 
 ---
 
-## UI “attention” should be derived, not stored as a state
-
-Today, the system uses a special state (`ConveyorActiveFlash`) to indicate “needs attention.” In a story-first model:
-- compute `attention_reason` from (selected/active order) + (derived state) + (missing counts)
-- examples:
-  - `attention_reason = NeedsWarehouseRequest` when Opened/RequestingItems
-  - `attention_reason = NeedsBoxing` when ReadyToBox
-  - `attention_reason = NeedsShipmentConfirm` when Shipped but confirm_progress < N
-
-This keeps the order lifecycle clean and narrative-aligned.
-
----
-
-## If using a header-only FSM library is helpful
-If you choose Option B (explicit FSM), a header-only FSM can make the transition table obvious and enforce “forward-only” by construction.
-
-### Good header-only candidates
-- **Boost.SML** (`boost::sml`): very expressive for “events + guards + actions”.
-- **tinyfsm**: small and approachable; less compile-time machinery.
-
-If you choose Option A (derived state), a library is usually unnecessary.
-
----
-
-## Concrete simplification steps (conceptual migration plan)
-(These are steps you could take later; not performed here.)
-
-1) **Rename/reframe states around the story** (Incoming → Opened → … → Complete).
-2) **Separate UI effects** from lifecycle (flash/attention becomes a derived flag).
-3) **Replace stamp-as-states** with `ship_confirm_progress`.
-4) **Choose a single “items in order” truth** (immutable required items) and represent progress with counts.
-5) Add a single `OrderSnapshot`/`order_status_string()` generator so every screen shows the same story state and the same item breakdown.
-
----
-
-## Bottom line
-The system becomes much less complicated if the lifecycle is defined in the same language as the game story, and everything else is modeled as **progress data**. That yields a small forward-only state set where you can always answer:
-- **Where am I in the story?** (state)
-- **What items are in this order and what’s left?** (required vs received/boxed)
-- **What should the player do next?** (derived attention reason)
+## Notes on the current code (why this change is needed)
+The current implementation mixes workflow, UI, and progress in `TimelineStageState`, and advances by numeric `+1`, which is fragile and hard to extend safely. The plan above replaces that with an explicit state table so adding/renaming/reordering states is safe and obvious.
