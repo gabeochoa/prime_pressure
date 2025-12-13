@@ -65,6 +65,77 @@ The macro timeline nodes are:
 - `Shipped`
 - `Complete`
 
+### Enum-style definitions (copy/paste friendly)
+Use these as the canonical names for enums/tags.
+
+#### `OrderMacroState` (timeline blocks)
+```cpp
+enum class OrderMacroState {
+  Incoming,
+  Opened,
+  RequestingItems,
+  ReceivingItems,
+  ReadyToBox,
+  Boxing,
+  Shipped,
+  Complete,
+};
+```
+
+#### `OrderState` (microstates; one active per order)
+```cpp
+enum class OrderState {
+  // Incoming
+  Incoming_Arrived,
+  Incoming_Backlogged, // optional/future
+
+  // Opened
+  Opened_Active,
+  Opened_Inactive, // optional/future
+
+  // RequestingItems
+  Requesting_NeedsInput,
+  Requesting_InputError,
+  Requesting_AllRequested,
+
+  // ReceivingItems (processing/dash steps; loops until AllReceived)
+  Receiving_OnConveyorWaiting,
+  Receiving_OnConveyorMoving,
+  Receiving_ReceivedToReady,
+  Receiving_AllReceived,
+
+  // ReadyToBox
+  ReadyToBox_Waiting,
+  ReadyToBox_Queued, // optional/future
+
+  // Boxing
+  Boxing_FoldBox,
+  Boxing_PutItems,
+  Boxing_Fold,
+  Boxing_Tape,
+  Boxing_Ship,
+
+  // Shipped (READY/TO/SHIP confirmation)
+  Shipped_Stamp0,
+  Shipped_Stamp1,
+  Shipped_Stamp2,
+  Shipped_Stamp3,
+
+  // Complete
+  Complete_CloseoutDelay,
+  Complete_ClosedOut,
+};
+```
+
+#### `OrderStateKind` (input vs processing vs terminal)
+```cpp
+enum class OrderStateKind {
+  Input,
+  Processing,
+  Terminal,
+};
+```
+
 ### Microstate list (ordered, forward-only)
 Each line is **State (kind) → next**.
 
