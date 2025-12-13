@@ -20,59 +20,79 @@ You described the core story arc as:
 8) items are shipped
 9) order complete
 
-A key simplification principle: **every “story beat” should map to exactly one primary state**, and anything else (UI flashing, stamp progress, item-by-item progress) should be *data attached to that state*, not additional “states.”
+A key simplification principle: **every “story beat” should map to exactly one macro-state**. If you want “next step is obvious” *without flags*, then UI flashing and stamp steps can live as **explicit microstates** nested under that macro-state.
 
 ---
 
-## Addendum: track microstates explicitly (nested under the story) — simplified
-You asked to include microstates so we can track them, but the earlier list was too verbose. Here is a simpler structure that **keeps every story beat** while minimizing bookkeeping.
+## Addendum: track microstates explicitly (nested under the story) — **explicit next-step, no flags**
+You don’t want flags/counters (that’s why flashing and 0/1/2/3 were modeled as states). That’s compatible with the story as long as we make the “next step” obvious.
 
-### Rule: only “track” microstates that change player actions
-To keep this simple, we only make something a *tracked microstate* if it:\n+- changes what the player is supposed to do next, or\n+- is a modal interruption, or\n+- is a true step-FSM (boxing / shipping confirmation).\n+\n+Everything else is a **derived indicator** from counts (requested/received/boxed) and does not need to be a discrete state.
+### Design rule
+- **One active order-state at a time** (an enum value).
+- States are **ordered forward-only**.
+- Every state has an obvious **next state** (either “advance to the next enum” or a small transition table).
 
-### Macro-states (story)
-1) **Incoming**\n+2) **Opened**\n+3) **RequestingItems**\n+4) **ReceivingItems**\n+5) **ReadyToBox**\n+6) **Boxing**\n+7) **Shipped**\n+8) **Complete**
+### Macro-states (story beats)
+Incoming → Opened → RequestingItems → ReceivingItems → ReadyToBox → Boxing → Shipped → Complete
 
-### Tracked microstates (minimal set)
+### Microstates (explicit, ordered, forward-only)
+Each line shows **State → Next state**.
 
 #### Incoming
-- **Arrived**: visible in slot/list, not yet opened
-- **Backlogged** *(future/optional)*: can’t be opened due to capacity/pressure rules
+- **Incoming_Arrived** → **Opened_Active**
+- **Incoming_Backlogged** *(optional/future)* → **Incoming_Arrived**
 
 #### Opened
-- **Active**: this is the currently opened/active order\n+- **Inactive**: opened but not the one currently in focus
+- **Opened_Active** → **Requesting_NeedsInput**
+- **Opened_Inactive** *(optional)* → **Opened_Active**
 
-#### RequestingItems
-Track only the player-facing input loop:
-- **NeedsRequestInput**: order is asking for more item requests (typing)\n+- **RequestInputError**: most recent input didn’t advance progress (feedback)\n+- **AllRequested** *(optional)*: if you want an explicit moment when request phase ends (otherwise derived)
+#### RequestingItems (typing/request loop + attention)
+- **Requesting_NeedsInput** → **Requesting_InputFlash**
+- **Requesting_InputFlash** → **Requesting_NeedsInput**
+- **Requesting_InputError** → **Requesting_NeedsInput**
+- **Requesting_AllRequested** → **Receiving_OnConveyorWaiting**
 
-#### ReceivingItems
-Don’t enumerate conveyor minutiae; keep one transport microstate + counts:
-- **InTransit**: requested items are still arriving\n+- **AllReceived**: all required items have been received (this is the ReadyToBox transition trigger)
+#### ReceivingItems (transport microstates)
+- **Receiving_OnConveyorWaiting** → **Receiving_OnConveyorMoving**
+- **Receiving_OnConveyorMoving** → **Receiving_ReceivedToReady**
+- **Receiving_ReceivedToReady** → **Receiving_OnConveyorWaiting**
+- **Receiving_AllReceived** → **ReadyToBox_Waiting**
+
+*(Important: “AllReceived” is a **state** you enter exactly once when the last required item is received.)*
 
 #### ReadyToBox
-- **WaitingToStartBoxing**: all received, boxing not started\n+- **QueuedForBoxing** *(optional/future)*: if only one boxing station/order can be processed at a time
+- **ReadyToBox_Waiting** → **Boxing_FoldBox** *(or → Boxing_PutItems if you skip FoldBox)*
+- **ReadyToBox_Queued** *(optional/future)* → **ReadyToBox_Waiting**
 
-#### Boxing (tracked step-FSM)
-Reuse the actual step-FSM conceptually (this matches current gameplay well):
-- **PutItems** → **Fold** → **Tape** → **Ship**\n+- *(If you later use it)* **FoldBox** can be a first step
+#### Boxing (explicit step-FSM)
+- **Boxing_FoldBox** → **Boxing_PutItems**
+- **Boxing_PutItems** → **Boxing_Fold**
+- **Boxing_Fold** → **Boxing_Tape**
+- **Boxing_Tape** → **Boxing_Ship**
+- **Boxing_Ship** → **Shipped_Stamp0**
 
-#### Shipped (tracked confirmation micro-FSM)
-Instead of 4 distinct states, track one substate + a progress counter:
-- **ConfirmingShipment** with `confirm_progress = 0..3` (READY/TO/SHIP)\n+- **ShipmentConfirmed** when `confirm_progress == 3`
+#### Shipped (explicit stamp/confirmation steps)
+- **Shipped_Stamp0** → **Shipped_Stamp1**
+- **Shipped_Stamp1** → **Shipped_Stamp2**
+- **Shipped_Stamp2** → **Shipped_Stamp3**
+- **Shipped_Stamp3** → **Complete_ClosedOut**
 
 #### Complete
-- **ClosedOut**: removed from active list / slot freed
+- **Complete_ClosedOut** (terminal)
 
-### Overlays (interrupts; can occur during any macro-state)
-These are not part of the forward-only chain; they block input until resolved:
-- **ModalReroutePrompt** (“Accept reroute?” Y/N)\n+- **ModalTutorialPrompt** (“Press Enter to continue”) *(optional)*
+### Interrupt microstates (explicit overlays)
+These are still states (no booleans), but they temporarily override input and then return to the underlying main state:
+- **Overlay_ReroutePrompt** → (return to previous)
+- **Overlay_TutorialPrompt** *(optional)* → (return to previous)
 
-### Outcomes (pressure-system layer; orthogonal to story)
-These are tags/flags that can modify urgency or end the order, without rewriting the story states:
-- **Late** *(non-terminal)*\n+- **FailedTimeout** *(terminal)*\n+- **Cancelled** *(optional)*\n+- **Returned/Refunded** *(optional)*
+### Future pressure outcomes (explicit terminal states)
+If/when timers/quota are added, keep them explicit (no flags) by branching to terminal outcome states:
+- **Outcome_Late** (non-terminal; can be an explicit state if you want it to affect gameplay)
+- **Outcome_FailedTimeout** (terminal)
+- **Outcome_Cancelled** *(optional terminal)*
+- **Outcome_ReturnedRefunded** *(optional terminal)*
 
-> Practical rule: macro-state stays forward-only; overlays appear/disappear; outcomes are orthogonal and can become terminal.
+> Practical rule: the main chain is forward-only; overlays are temporary; outcome states are terminal branches.
 
 ---
 
@@ -146,12 +166,9 @@ A good story-first set (forward-only) is:
 This maps 1:1 to your story beats; the only “compression” is that “customer places order” is *pre-game world state* and can be represented as the moment an order entity is created.
 
 ### Keep progress out of the state list
-For the same story readability, **do not add states** like:
-- “flashing”
-- “stamp 1/2/3”
-- “selected vs ready”
+For story readability, keep the **macro-states** free of UI/progress detail (i.e., don’t turn the *story* state list into 50 states).
 
-Those should be fields that *explain why* the state is what it is.
+However, if the design goal is “**no flags** and the next step is always obvious”, then it’s reasonable to model things like **flashing** and **stamp 0/1/2/3** as **microstates** (see the addendum above) while keeping the macro story beats unchanged.
 
 ---
 
