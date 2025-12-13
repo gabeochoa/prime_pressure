@@ -183,10 +183,8 @@ If you later add more transport nuance, you add/remove dash states **inside that
 
 > This structure also makes adding states easy: add a new Processing microstate as another dash in a segment, or add a new Input state as a new major node.
 
-### Interrupt microstates (explicit overlays)
-These are still states (no booleans), but they temporarily override input and then return to the underlying main state:
-- **Overlay_ReroutePrompt** → (return to previous)
-- **Overlay_TutorialPrompt** *(optional)* → (return to previous)
+### Interrupt microstates (explicit overlays) *(future / optional)*
+If you later add modal prompts, you can model them as explicit overlay states (no booleans) that temporarily override input and then return to the underlying main state.
 
 ### ECS-friendly rendering: “filter by tag” (recommended)
 If you want renderers to be able to **query orders by state via tags**, treat “state” as a first-class concept in ECS:
@@ -219,10 +217,8 @@ If/when timers/quota are added, keep them explicit (no flags) by branching to te
 
 > Practical rule: the main chain is forward-only; overlays are temporary; outcome states are terminal branches.
 
-### “Accept reroute?” — what that refers to
-This phrase appears in the **cutscene email text** (the XP mail briefing) as a foreshadowed gameplay mechanic: a popup might ask “Accept reroute?” and the player would press a key to respond.
-
-Important: **it is not implemented as gameplay logic yet** (it currently exists only as narrative text). In this design, it would naturally become an **overlay state** (e.g., `Overlay_ReroutePrompt`) that temporarily blocks input until resolved, then returns the order to its underlying microstate.
+### Cutscenes / narrative prompts
+Out of scope for now. The state model above doesn’t depend on cutscenes; you can layer narrative later using optional overlay states if/when you need them.
 
 ### Making it easy to add new states (recommended pattern)
 To make extension safe and obvious, define states and transitions **declaratively** in one place:
