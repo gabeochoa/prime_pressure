@@ -234,6 +234,78 @@ This table is also the single source of truth for:
 
 ## State update API (what to implement)
 
+## Implementation details: answering the 4 key questions
+This section is the “how” behind the plan. It answers:
+1) what state we are in
+2) when user input is marked complete
+3) where the order is actually complete
+4) how the next state is chosen
+
+### 1) What state we are in
+- **Authoritative source**: the order entity stores exactly one `OrderState` value (microstate).
+  - Recommendation: create a dedicated component (e.g., `OrderWorkflow`) rather than stuffing more into the existing `Order` component.
+- **Renderer/source-of-truth for queries**: a tag sync system mirrors the `OrderState` into:
+  - **exactly one microstate tag** (e.g., `Tag::OrderState_Requesting_NeedsInput`)
+  - **exactly one macro tag** (e.g., `Tag::OrderMacro_RequestingItems`)
+
+### 2) When user input is marked “complete”
+- **Only input systems advance Input states.** The tick system must never advance Input states.
+- Definition: if `STATE_TABLE[state].kind == OrderStateKind::Input`, then the order stays in that state until the expected player action happens.
+- When the player action is accepted by the input system:
+  - set `state = next_state` (from the state table)
+  - set `time_in_state = 0`
+  - (optional) perform the state’s “on-exit/on-enter” actions
+
+### 3) Where the order is actually complete
+- **Terminal completion** is represented by reaching the microstate:
+  - `OrderState::Complete_ClosedOut`
+- The requirement “after READY TO SHIP, then 1 second later complete” is modeled as:
+  - `Shipped_Stamp3` (**Input**) → `Complete_CloseoutDelay` (**Processing**, 1.0s) → `Complete_ClosedOut` (**Terminal**)
+- Any cleanup (freeing a slot / removing from active list) should happen **when entering** `Complete_ClosedOut` (or in a cleanup system that queries the `Complete_ClosedOut` tag).
+
+### 4) Where “next state after” comes from
+The **only** source of truth for transitions is the `STATE_TABLE`. Do not rely on enum `+1`.
+
+#### Required state table shape
+```cpp
+struct StateSpec {
+  OrderMacroState macro;
+  OrderStateKind kind;
+
+  // For simple states:
+  OrderState next;
+
+  // For Processing states:
+  float min_duration_seconds; // 0 if not time-based
+  bool (*is_complete)(const Order& order,
+                      float time_in_state
+                      /* + world access as needed */);
+
+  // Optional: for Processing states where next depends on conditions
+  // (e.g., receiving loop deciding whether to go to AllReceived).
+  // OrderState (*next_fn)(const Order& order /* + world access */);
+};
+extern const StateSpec STATE_TABLE[];
+```
+
+#### Two distinct advance paths (must both be implemented)
+1) **Processing path (runs every frame for all orders)**:
+   - `advance_if_complete(state, dt, time_in_state, order, world) -> state`
+   - Behavior:
+     - if `kind != Processing`: return `state`
+     - else accumulate `time_in_state`, check `is_complete`, return `next` (or `next_fn`)
+
+2) **Input path (runs on input events)**:
+   - `try_advance_on_input(order, input_event) -> bool advanced`
+   - Behavior:
+     - if `kind != Input`: ignore
+     - if the event matches this state’s expected input: set `state = next`, reset `time_in_state`
+
+This split is what makes these simultaneously true:
+- “Most states start with user input”
+- “Then they take time to process”
+- “Orders continue processing in the background”
+
 ### 1) Tick-based auto-advance (Processing only)
 Implement a helper with this behavior:
 
