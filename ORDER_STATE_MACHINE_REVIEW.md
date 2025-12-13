@@ -129,9 +129,10 @@ Each line shows **State → Next state**.
 - **Shipped_Stamp0** *(Input)* → **Shipped_Stamp1**
 - **Shipped_Stamp1** *(Input)* → **Shipped_Stamp2**
 - **Shipped_Stamp2** *(Input)* → **Shipped_Stamp3**
-- **Shipped_Stamp3** *(Input)* → **Complete_ClosedOut**
+- **Shipped_Stamp3** *(Input)* → **Complete_CloseoutDelay**
 
 #### Complete
+- **Complete_CloseoutDelay** *(Processing, ~1s)* → **Complete_ClosedOut**
 - **Complete_ClosedOut** *(Terminal)*
 
 ### Timeline rendering idea: major blocks with minor “dash” steps between
@@ -163,6 +164,10 @@ For every `OrderState`, define:
 - **major_index**: which major node this belongs to on the story timeline (0..N-1)
 - **minor_index** and **minor_count**: if it’s a Processing state, which dash segment (0..minor_count-1) between `major_index` and `major_index+1`
 - **kind**: Input / Processing / Terminal (already described above)
+
+Notes:
+- **Dash count is naturally variable**: `minor_count` is “how many Processing microstates exist in this segment right now.” If you add/remove processing steps, the timeline automatically gains/loses dashes for that segment.
+- **Make debugging easy**: keep a small debug renderer/log that prints `(order_id, state_name, time_in_state)` so you can see which dash you’re in and why it hasn’t advanced yet.
 
 Then timeline UI can do:
 - draw all major nodes (labels/icons)
