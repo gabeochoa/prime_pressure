@@ -7,6 +7,23 @@
 
 ---
 
+## Reframing: the state machine should match the story
+You described the core story arc as:
+
+1) customer places order
+2) order comes in
+3) you open an order
+4) start requesting the items from the warehouse
+5) items are received from the warehouse
+6) items are ready to be boxed up
+7) items are boxed up
+8) items are shipped
+9) order complete
+
+A key simplification principle: **every “story beat” should map to exactly one primary state**, and anything else (UI flashing, stamp progress, item-by-item progress) should be *data attached to that state*, not additional “states.”
+
+---
+
 ## What exists today (as observed)
 
 ### Current “workflow state” representation
@@ -39,7 +56,7 @@ In most of the conveyor pipeline, `items` appears to be the **required list**, w
 - “How many stamp steps have been completed?” (progress)
 
 That makes it hard to answer simple questions like:
-- “Is this order currently waiting for conveyor input, or done with conveyor?”
+- “Is this order waiting to be opened, or already being worked?”
 - “Is this order shipped, or only partially stamped?”
 
 ### 2) Numeric `+1` transitions are fragile
@@ -53,155 +70,144 @@ Advancing by `+1` makes transitions **implicit** and **hard to audit**.
 ### 4) “Stamp progress” being modeled as states multiplies complexity
 Representing `ReadyStamp0..3` as separate FSM states causes a state explosion and makes “shipped-ness” ambiguous (e.g., shipped vs. fully stamped vs. complete).
 
-### 5) Some guards/interpretations appear inconsistent
-From reading the code, there are a few patterns that make state harder to trust:
-- A forward increment can land on values whose meaning is unclear or whose phase flags don’t match other helpers.
-- Item progress is tracked in multiple places (vectors + counters), and at least one system mutates `order.items` as a “remaining” list.
-
-Even if everything “works in practice,” these patterns make the system **hard to reason about**.
+### 5) Item truth is split across multiple fields
+The system tracks item progress in multiple vectors/counters, and at least one system treats `items` as mutable “remaining items.” Even if it works, it makes “what items are in this order?” less obvious.
 
 ---
 
-## Recommendation: separate the concerns
-A simpler, more obvious design is to separate:
-1) **Workflow stage** (what step of the pipeline the order is in)
-2) **Progress within the stage** (counts, stamp progress)
-3) **UI attention** (flash, “input needed”) derived from selection + stage
-4) **Item state** represented from a single source of truth
+## Recommendation: build a story-first order lifecycle
 
-Below are two good options.
+### The primary state should be story-readable
+Use a single, small set of order states that read like the narrative.
+
+A good story-first set (forward-only) is:
+
+1) **Incoming** *(order comes in)*
+2) **Opened** *(you open the order / commit to working it)*
+3) **RequestingItems** *(you are requesting items from the warehouse)*
+4) **ReceivingItems** *(items are arriving / moving through fulfillment)*
+5) **ReadyToBox** *(all required items are received and staged)*
+6) **Boxing** *(packing interaction in progress)*
+7) **Shipped** *(shipment action complete; may require stamping/confirmation)*
+8) **Complete** *(fully finished; slot can be freed)*
+
+This maps 1:1 to your story beats; the only “compression” is that “customer places order” is *pre-game world state* and can be represented as the moment an order entity is created.
+
+### Keep progress out of the state list
+For the same story readability, **do not add states** like:
+- “flashing”
+- “stamp 1/2/3”
+- “selected vs ready”
+
+Those should be fields that *explain why* the state is what it is.
 
 ---
 
-## Option A (simplest): derive state from progress (no explicit FSM)
+## Make item status obvious (recommended regardless of FSM approach)
+
+### One canonical definition for “items in the order”
+Pick a single canonical representation for the order’s contents and keep it immutable:
+- **Preferred**: `required_counts: map<ItemType,int>`
+- **Acceptable**: `required_items: vector<ItemType>` but never mutate it
+
+Then represent progress with counts (these are naturally forward-only):
+- `requested_counts` (what you asked the warehouse for)
+- `received_counts` (what has arrived)
+- `boxed_counts` (what is packed)
+
+From those, you can derive the most important “obvious” views:
+- **What items are in this order?** → `required_*`
+- **What’s missing?** → `required - received`
+- **What’s ready but not boxed?** → `received - boxed`
+- **What’s done?** → `boxed == required`
+
+This also makes UI easy: you can show a per-item row as `received/required` and `boxed/required`.
+
+---
+
+## Two implementation styles (conceptual)
+
+## Option A (simplest): derived story state from progress (no explicit FSM)
 
 ### Concept
-Instead of storing a detailed state machine value, store only the minimal forward-only “facts” about progress, and compute the display/logic state as a pure function.
+Store only minimal forward-only facts (counts + flags), and compute the story state as a pure function.
 
-### Suggested forward-only facts
-- **Required items**: immutable definition (e.g., `required_items` or `required_counts`)
-- **Selection progress**: how many items have been matched/selected
-- **Ready progress**: how many items have reached the ready queue
-- **Boxing progress**: either “boxing complete” or “boxed count”
-- **Shipping/stamp progress**: `stamp_progress` 0..3
-- **Completion flag**: `is_complete` (or “slot cleared” is the completion)
+### Example derived story rules (illustrative)
+- `Incoming` if created but not opened
+- `Opened` if opened but no requests made
+- `RequestingItems` if `requested < required`
+- `ReceivingItems` if `requested == required` but `received < required`
+- `ReadyToBox` if `received == required` and not boxing started
+- `Boxing` if boxing started and `boxed < required`
+- `Shipped` if boxing finished and shipping triggered
+- `Complete` if shipment confirmed (e.g., stamp/ack complete)
 
-### Derived state function (illustrative)
-Compute a single “headline state” for the UI and logic:
-- **Collecting**: not all required items are ready
-- **ReadyToPack**: all required items are ready, not yet boxed
-- **Packing**: boxing in progress (or if an active boxing session exists)
-- **Stamping**: shipped but stamp progress < 3
-- **Complete**: stamp progress == 3 (or slot cleared)
+### Why this fits the story well
+- You can always explain the state with a number: “Received 2/3 items, waiting on 1.”
+- It’s hard to get stuck in an invalid state.
 
-### Why this is nice
-- **No invalid states**: the state is always consistent with the data.
-- **Forward-only by construction**: counts/progress only increase.
-- **Obviousness**: you can show the state by showing the underlying counts.
-
-### Where UI flash fits
-Instead of encoding a flash state:
-- `needs_attention = (selected && state == Collecting && missing_items > 0)`
-- or `attention_reason = ConveyorInputNeeded | BoxingNeeded | StampingNeeded | None`
-
-This keeps UI effects out of the lifecycle.
-
----
-
-## Option B: explicit forward-only FSM with a small state set
+## Option B: explicit forward-only FSM with story states
 
 ### Concept
-Keep an explicit FSM, but keep the number of states small and make transitions explicit in a table.
+Keep an explicit FSM, but keep it story-readable and keep the transition table small.
 
-### Proposed minimal workflow states
-A practical small set (5 states):
-1) **Collecting** (conveyor input / items moving)
-2) **QueueReady** (all items ready; waiting to begin packing)
-3) **Packing** (boxing in progress)
-4) **Stamping** (shipping done; stamp progress 0..3)
-5) **Complete** (order finished; slot can be freed)
+### Events (story actions) and transitions
+- `OrderArrived`: (creates entity) → Incoming
+- `OpenOrder`: Incoming → Opened
+- `RequestNextItem` / `RequestAllItems`: Opened/RequestingItems → RequestingItems
+- `AllItemsRequested`: RequestingItems → ReceivingItems
+- `ItemReceived`: ReceivingItems → ReceivingItems (stays)
+- `AllItemsReceived`: ReceivingItems → ReadyToBox
+- `BeginBoxing`: ReadyToBox → Boxing
+- `BoxingFinished`: Boxing → Shipped
+- `ConfirmShipment` (or `StampAdvanced`): Shipped → Complete
 
-### Events and guards (forward-only)
-Model transitions as events with guards:
-- `OrderCreated` -> Collecting
-- `AllItemsReady` -> QueueReady
-- `BeginPacking` -> Packing
-- `PackingFinished` -> Stamping (stamp_progress=0)
-- `StampAdvanced` (progress++) stays in Stamping
-- `StampComplete` -> Complete
+### Keep micro-steps as progress fields
+If shipping confirmation is a minigame (like the existing stamp sequence), model it as:
+- state: `Shipped`
+- field: `ship_confirm_progress` (0..N)
 
-Guards make it obvious why a transition is allowed:
-- `AllItemsReady` guard: `ready_count == required_count`
-- `BeginPacking` guard: state==QueueReady
-- `PackingFinished` guard: boxing session done
-- `StampAdvanced` guard: next expected key
-
-### Why this is nice
-- **Explicit graph**: easy to read and reason about.
-- **Easy to move forward**: transitions are just event applications.
-- **Still obvious**: state name is meaningful; progress fields are separate.
+Not separate FSM states.
 
 ---
 
-## Make item progress obvious (recommended regardless of Option A/B)
+## UI “attention” should be derived, not stored as a state
 
-### Single source of truth for “what items are in the order”
-Pick one canonical representation for required items and keep it immutable:
-- **Best for clarity**: `std::map<ItemType,int> required_counts`
-- **Also OK**: `std::vector<ItemType> required_items` but never mutate it
+Today, the system uses a special state (`ConveyorActiveFlash`) to indicate “needs attention.” In a story-first model:
+- compute `attention_reason` from (selected/active order) + (derived state) + (missing counts)
+- examples:
+  - `attention_reason = NeedsWarehouseRequest` when Opened/RequestingItems
+  - `attention_reason = NeedsBoxing` when ReadyToBox
+  - `attention_reason = NeedsShipmentConfirm` when Shipped but confirm_progress < N
 
-Then represent progress as counts (not additional lists you have to reconcile):
-- `selected_counts` (matched / keyed)
-- `ready_counts` (arrived at ready)
-- `boxed_counts` (packed)
-
-From these, you can derive:
-- **Missing** = required - ready
-- **Still needs input** = required - selected - on_conveyor
-- **Ready but unboxed** = ready - boxed
-
-### Why counts are clearer than multiple vectors
-- Vectors allow duplicates and need reconciliation logic.
-- Counts make the UI and guard checks straightforward and cheap.
-
-### Resulting UI clarity
-For each order card, you can show:
-- **State**: `Collecting / ReadyToPack / Packing / Stamping / Complete`
-- **Items**: required counts + per-item progress bars (selected/ready/boxed)
-- **Next action**: derived “attention reason”
+This keeps the order lifecycle clean and narrative-aligned.
 
 ---
 
-## If using a library is helpful (header-only suggestions)
-
-If you prefer explicit FSMs with a transition table, a header-only library can enforce correctness.
+## If using a header-only FSM library is helpful
+If you choose Option B (explicit FSM), a header-only FSM can make the transition table obvious and enforce “forward-only” by construction.
 
 ### Good header-only candidates
-- **Boost.SML** (`boost::sml`): compile-time FSM, very explicit transitions, good for “events + guards + actions”.
-- **tinyfsm**: lightweight, simple, more runtime-oriented.
+- **Boost.SML** (`boost::sml`): very expressive for “events + guards + actions”.
+- **tinyfsm**: small and approachable; less compile-time machinery.
 
-### What a library would buy you
-- A single place to define the state graph.
-- Compile-time checking (depending on library) that transitions are valid.
-- Cleaner “apply_event(order, event)” flow.
-
-### When not to use a library
-If you adopt **Option A (derived state)**, a library likely adds more complexity than value.
+If you choose Option A (derived state), a library is usually unnecessary.
 
 ---
 
 ## Concrete simplification steps (conceptual migration plan)
 (These are steps you could take later; not performed here.)
 
-1) **Define canonical required items** (immutable) and stop using `items` as a mutable “remaining” list.
-2) Replace `TimelineStageState` with either:
-   - Option A: a derived state function + minimal progress fields, or
-   - Option B: a small explicit FSM state + separate progress fields.
-3) Move `ConveyorActiveFlash` out of the lifecycle and into a derived UI flag.
-4) Replace `ReadyStamp0..3` as states with a single `Stamping` state + `stamp_progress`.
-5) Add a single `order_status_string()`/`OrderSnapshot` concept for UI so “what state is this in?” is always consistent.
+1) **Rename/reframe states around the story** (Incoming → Opened → … → Complete).
+2) **Separate UI effects** from lifecycle (flash/attention becomes a derived flag).
+3) **Replace stamp-as-states** with `ship_confirm_progress`.
+4) **Choose a single “items in order” truth** (immutable required items) and represent progress with counts.
+5) Add a single `OrderSnapshot`/`order_status_string()` generator so every screen shows the same story state and the same item breakdown.
 
 ---
 
 ## Bottom line
-The current system is complicated mainly because **workflow, UI effects, and progress are fused into one enum**. Splitting those concerns and using either **(A) derived state** or **(B) a small explicit FSM** will make it much more obvious what each order is doing and what items remain, while keeping the “forward-only” rule easy to enforce.
+The system becomes much less complicated if the lifecycle is defined in the same language as the game story, and everything else is modeled as **progress data**. That yields a small forward-only state set where you can always answer:
+- **Where am I in the story?** (state)
+- **What items are in this order and what’s left?** (required vs received/boxed)
+- **What should the player do next?** (derived attention reason)
