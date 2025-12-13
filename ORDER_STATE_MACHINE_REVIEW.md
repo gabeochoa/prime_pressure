@@ -20,17 +20,21 @@ You described the core story arc as:
 8) items are shipped
 9) order complete
 
-A key simplification principle: **every “story beat” should map to exactly one macro-state**. If you want “next step is obvious” *without flags*, then UI flashing and stamp steps can live as **explicit microstates** nested under that macro-state.
+A key simplification principle: **every “story beat” should map to exactly one macro-state**. If you want “next step is obvious” without hidden progress, model **progress steps** (like stamp 0/1/2/3) as explicit microstates, but keep **UI effects (like flashing)** as derived rendering behavior from `(state, selection)`.
 
 ---
 
-## Addendum: track microstates explicitly (nested under the story) — **explicit next-step, no flags**
-You don’t want flags/counters (that’s why flashing and 0/1/2/3 were modeled as states). That’s compatible with the story as long as we make the “next step” obvious.
+## Addendum: track microstates explicitly (nested under the story) — **explicit next-step, easy to extend**
+Goal alignment update:
+- **Flashing does not need to be a state** (treat it as UI behavior derived from state + selection).
+- Some progress steps (like **stamp 0/1/2/3**) *can* remain explicit states if you want “next step is obvious” with no hidden counters.
+- It should be **easy to add new states** without breaking existing transitions.
 
 ### Design rule
 - **One active order-state at a time** (an enum value).
 - States are **ordered forward-only**.
-- Every state has an obvious **next state** (either “advance to the next enum” or a small transition table).
+- Every state has an obvious **next state** (prefer a small transition table; avoid relying on `+1` enum math).
+- UI behaviors like flashing are **state metadata** (how to render), not a stored per-order flag and not a distinct lifecycle state.
 
 ### Macro-states (story beats)
 Incoming → Opened → RequestingItems → ReceivingItems → ReadyToBox → Boxing → Shipped → Complete
@@ -47,10 +51,13 @@ Each line shows **State → Next state**.
 - **Opened_Inactive** *(optional)* → **Opened_Active**
 
 #### RequestingItems (typing/request loop + attention)
-- **Requesting_NeedsInput** → **Requesting_InputFlash**
-- **Requesting_InputFlash** → **Requesting_NeedsInput**
+- **Requesting_NeedsInput** → **Requesting_InputError** *(on invalid input)* or → **Requesting_AllRequested**
 - **Requesting_InputError** → **Requesting_NeedsInput**
 - **Requesting_AllRequested** → **Receiving_OnConveyorWaiting**
+
+**Flashing (UI behavior, not a state):**
+- Example policy: when the order is selected and state is `Requesting_NeedsInput`, render with a pulsing accent.
+- This is derived from `(is_selected, state)` and doesn’t require storing “flash” as an order state.
 
 #### ReceivingItems (transport microstates)
 - **Receiving_OnConveyorWaiting** → **Receiving_OnConveyorMoving**
@@ -93,6 +100,17 @@ If/when timers/quota are added, keep them explicit (no flags) by branching to te
 - **Outcome_ReturnedRefunded** *(optional terminal)*
 
 > Practical rule: the main chain is forward-only; overlays are temporary; outcome states are terminal branches.
+
+### Making it easy to add new states (recommended pattern)
+To make extension safe and obvious, define states and transitions **declaratively** in one place:
+- **Enum**: add the new state name.
+- **Transition table**: add one row describing:
+  - **next** (the intended forward step)
+  - **guard** (when it is allowed)
+  - **action** (what data updates happen on transition, if any)
+  - **UI metadata** (e.g., “flash when selected”, “show ‘boxing needed’ banner”)
+
+This avoids fragile “`+1` means next” coupling while keeping “what’s next?” readable in a single list.
 
 ---
 
