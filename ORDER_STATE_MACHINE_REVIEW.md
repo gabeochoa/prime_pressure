@@ -36,6 +36,52 @@ Goal alignment update:
 - Every state has an obvious **next state** (prefer a small transition table; avoid relying on `+1` enum math).
 - UI behaviors like flashing are **state metadata** (how to render), not a stored per-order flag and not a distinct lifecycle state.
 
+### Key requirement: “doesn’t need user input but is not complete”
+Support this by splitting states into three kinds:
+ - **Input states**: progress can only occur via an explicit player action (typing/pressing a key/choosing a modal prompt).
+   - **UI**: flash (when selected) because the order is waiting on the player.
+   - **Tick behavior**: `advance_if_complete(state, dt)` returns the **same state**.
+ - **Processing states**: no user input needed; the game is “working” (items moving, delays, animations).
+   - **UI**: no flash; show “in progress” / “moving”.
+   - **Tick behavior**: once complete, `advance_if_complete` returns the **next state**.
+ - **Terminal states**: finished; no transitions.
+
+This matches your observation: **many states start with needed user input, then take time to process before moving on**.
+
+### Proposed helper: auto-advance only when complete
+Your desired shape (“given current state and `dt`, return the new state if it’s complete”) fits naturally as:
+
+`advance_if_complete(current_state, dt) -> state`
+
+- For **Input** and **Terminal** states, it returns `current_state`.
+- For **Processing** states, it returns `next_state` once the completion condition is met.
+
+Conceptually:
+
+```cpp
+// Pseudocode: designed to be easy to read and extend.
+OrderState advance_if_complete(const OrderState current,
+                               float dt,
+                               float &time_in_state /* per-order */) {
+  const StateSpec &spec = STATE_TABLE[current];
+  if (spec.kind == StateKind::Input || spec.kind == StateKind::Terminal) {
+    return current;
+  }
+
+  // Processing state: accumulate time and auto-advance when done.
+  time_in_state += dt;
+  if (time_in_state >= spec.min_duration_seconds /* or other condition */) {
+    time_in_state = 0.0f;
+    return spec.next;
+  }
+  return current;
+}
+```
+
+Notes:
+- You still need an **input event handler** to move from an Input state to its next state at the moment the player acts.
+- `time_in_state` is not a “flag”; it’s the per-order timer needed to make Processing states advance with `dt`.
+- If a Processing state completes based on a non-time condition (e.g., “all conveyor items reached ready”), the `spec` can hold a predicate instead of a duration.
 ### Macro-states (story beats)
 Incoming → Opened → RequestingItems → ReceivingItems → ReadyToBox → Boxing → Shipped → Complete
 
@@ -43,17 +89,17 @@ Incoming → Opened → RequestingItems → ReceivingItems → ReadyToBox → Bo
 Each line shows **State → Next state**.
 
 #### Incoming
-- **Incoming_Arrived** → **Opened_Active**
+- **Incoming_Arrived** *(Input)* → **Opened_Active**
 - **Incoming_Backlogged** *(optional/future)* → **Incoming_Arrived**
 
 #### Opened
-- **Opened_Active** → **Requesting_NeedsInput**
+- **Opened_Active** *(Input)* → **Requesting_NeedsInput**
 - **Opened_Inactive** *(optional)* → **Opened_Active**
 
 #### RequestingItems (typing/request loop + attention)
-- **Requesting_NeedsInput** → **Requesting_InputError** *(on invalid input)* or → **Requesting_AllRequested**
-- **Requesting_InputError** → **Requesting_NeedsInput**
-- **Requesting_AllRequested** → **Receiving_OnConveyorWaiting**
+- **Requesting_NeedsInput** *(Input)* → **Requesting_InputError** *(on invalid input)* or → **Requesting_AllRequested**
+- **Requesting_InputError** *(Processing)* → **Requesting_NeedsInput**
+- **Requesting_AllRequested** *(Processing)* → **Receiving_OnConveyorWaiting**
 
 **Flashing (UI behavior, not a state):**
 - Policy: **flash whenever the current state needs user input**.
@@ -61,32 +107,32 @@ Each line shows **State → Next state**.
 - This is derived from `(state, is_selected)` and a simple table of “input-driven states” (or metadata on each state), and does not require storing “flash” as an order state.
 
 #### ReceivingItems (transport microstates)
-- **Receiving_OnConveyorWaiting** → **Receiving_OnConveyorMoving**
-- **Receiving_OnConveyorMoving** → **Receiving_ReceivedToReady**
-- **Receiving_ReceivedToReady** → **Receiving_OnConveyorWaiting**
-- **Receiving_AllReceived** → **ReadyToBox_Waiting**
+- **Receiving_OnConveyorWaiting** *(Processing)* → **Receiving_OnConveyorMoving**
+- **Receiving_OnConveyorMoving** *(Processing)* → **Receiving_ReceivedToReady**
+- **Receiving_ReceivedToReady** *(Processing)* → **Receiving_OnConveyorWaiting**
+- **Receiving_AllReceived** *(Processing)* → **ReadyToBox_Waiting**
 
 *(Important: “AllReceived” is a **state** you enter exactly once when the last required item is received.)*
 
 #### ReadyToBox
-- **ReadyToBox_Waiting** → **Boxing_FoldBox** *(or → Boxing_PutItems if you skip FoldBox)*
+- **ReadyToBox_Waiting** *(Input)* → **Boxing_FoldBox** *(or → Boxing_PutItems if you skip FoldBox)*
 - **ReadyToBox_Queued** *(optional/future)* → **ReadyToBox_Waiting**
 
 #### Boxing (explicit step-FSM)
-- **Boxing_FoldBox** → **Boxing_PutItems**
-- **Boxing_PutItems** → **Boxing_Fold**
-- **Boxing_Fold** → **Boxing_Tape**
-- **Boxing_Tape** → **Boxing_Ship**
-- **Boxing_Ship** → **Shipped_Stamp0**
+- **Boxing_FoldBox** *(Input)* → **Boxing_PutItems**
+- **Boxing_PutItems** *(Input)* → **Boxing_Fold**
+- **Boxing_Fold** *(Input)* → **Boxing_Tape**
+- **Boxing_Tape** *(Input)* → **Boxing_Ship**
+- **Boxing_Ship** *(Input)* → **Shipped_Stamp0**
 
 #### Shipped (explicit stamp/confirmation steps)
-- **Shipped_Stamp0** → **Shipped_Stamp1**
-- **Shipped_Stamp1** → **Shipped_Stamp2**
-- **Shipped_Stamp2** → **Shipped_Stamp3**
-- **Shipped_Stamp3** → **Complete_ClosedOut**
+- **Shipped_Stamp0** *(Input)* → **Shipped_Stamp1**
+- **Shipped_Stamp1** *(Input)* → **Shipped_Stamp2**
+- **Shipped_Stamp2** *(Input)* → **Shipped_Stamp3**
+- **Shipped_Stamp3** *(Input)* → **Complete_ClosedOut**
 
 #### Complete
-- **Complete_ClosedOut** (terminal)
+- **Complete_ClosedOut** *(Terminal)*
 
 ### Interrupt microstates (explicit overlays)
 These are still states (no booleans), but they temporarily override input and then return to the underlying main state:
