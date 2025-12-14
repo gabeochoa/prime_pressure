@@ -25,6 +25,20 @@ The MVP deliverable is a cohesive **Days 1–3** slice that proves the **Day Loo
 
 This MVP must preserve the Prime Pressure input rules (Shift encoded in data with `^`; no direct Shift checks in gameplay code) and avoid softlocks across day transitions.
 
+### PRD FR Coverage Map (MVP: Day 1–3 Slice)
+
+This is an explicit traceability map for the PRD’s “Success Criteria + MVP Scope” requirements.
+
+| FR | Requirement (short) | Epic / Story coverage |
+|---|---|---|
+| FR1 | Clarify/stabilize core fulfillment loop | E01 1.1, E01 1.2 |
+| FR2 | Day Loop Days 1–3 (Pledge → Shift → Review) with Day 3 endpoint | E03 3.0 (primary), E02 2.3, E04 4.3 (MVP subset) |
+| FR3 | Morning pledge ritual (Days 1–3) | E02 2.3 |
+| FR4 | End-of-day review/email + day summary + “Day 3 Complete” endpoint | E03 3.0 (endpoint + review flow), E04 4.3 (MVP subset content) |
+| FR5 | At least one pressure hook (TOT recommended) in Days 1–3 | E02 2.1 (TOT), E02 2.2 (optional Smile) |
+| FR6 | Minimum event logging (session/day/run) | E03 3.0 |
+| FR7 | Metric semantics (start/complete definitions + quit-day + exit reasons) | E03 3.0 |
+
 ### Epic 1: Core Fulfillment Loop (P0 - MVP)
 
 **Goal:** Solidify the "happy path" of receiving, typing, boxing, and shipping an order.
@@ -37,18 +51,30 @@ This MVP must preserve the Prime Pressure input rules (Shift encoded in data wit
 *   **I want** the boxing phase to accept typed input clearly (Place -> Fold -> Tape -> Label),
 *   **So that** I can complete the physical shipping process.
 *   **Acceptance Criteria:**
-    *   [ ] Pressing keys in sequence triggers boxing animations.
-    *   [ ] "Tape" requires a specific multi-key sequence (e.g., Hold Space + Drag/Type).
-    *   [ ] Completion triggers `OrderShipped` state.
+    *   **Given** I am in the Boxing phase of an active order during Shift  
+        **When** I enter the required boxing key sequence for the current step (Place → Fold → Tape → Label)  
+        **Then** the boxing step advances and the UI reflects the new step.  
+    *   **Given** I am at the Tape step  
+        **When** I perform the Tape sequence correctly  
+        **Then** the Tape step completes and the workflow advances to the next step.  
+    *   **Given** I complete the final boxing step for the order  
+        **When** the order is ready to ship  
+        **Then** the order enters an `OrderShipped`/shipped-complete state and is no longer treated as in-progress.
 
 **Story 1.2: Order Monitor UI**
 *   **As a** Player,
 *   **I want** to see the incoming stream of orders on the "Computer Screen",
 *   **So that** I know what items are coming next.
 *   **Acceptance Criteria:**
-    *   [ ] Computer View lists current active order + next 3 in queue.
-    *   [ ] Default State: **Locked/Linear** (Player cannot reject orders).
-    *   [ ] Pressing `[TAB]` switches between Computer and Warehouse views.
+    *   **Given** I am in the Computer view during Shift  
+        **When** I look at the order monitor  
+        **Then** I see the current active order and the next 3 queued orders.  
+    *   **Given** the MVP is “Locked/Linear” order flow  
+        **When** new orders arrive  
+        **Then** I cannot reject them (only progress through the queue).  
+    *   **Given** I am in the Computer view during Shift  
+        **When** I press `[TAB]`  
+        **Then** the active view switches between Computer and Warehouse.
 
 ---
 
@@ -63,10 +89,18 @@ This MVP must preserve the Prime Pressure input rules (Shift encoded in data wit
 *   **I want** to track player inactivity,
 *   **So that** I can punish them for being slow.
 *   **Acceptance Criteria:**
-    *   [ ] Timer bar fills up when no input is detected for > 2 seconds.
-    *   [ ] Filling the bar triggers a "Warning" SFX and visual overlay (Red Border).
-    *   [ ] 3 Warnings = 1 Strike (Fine).
-    *   [ ] **MVP constraint:** TOT only applies during **Shift** (not during pledge/review screens).
+    *   **Given** `CampaignProgress.phase == Shift`  
+        **When** no gameplay-relevant input is detected for > 2 seconds  
+        **Then** the TOT meter begins filling.  
+    *   **Given** the TOT meter reaches its warning threshold  
+        **When** the threshold is crossed  
+        **Then** a warning SFX plays and a clear warning overlay is shown.  
+    *   **Given** I have received 3 warnings  
+        **When** the third warning is applied  
+        **Then** a Strike/Fine is recorded (exact penalty can be placeholder for MVP).  
+    *   **Given** `CampaignProgress.phase == Pledge` or `CampaignProgress.phase == Review`  
+        **When** time passes without input  
+        **Then** TOT does not advance (Shift-only constraint).
 
 **Story 2.2: Smile Verification System**
 *   **As a** System,
@@ -84,14 +118,22 @@ This MVP must preserve the Prime Pressure input rules (Shift encoded in data wit
 *   **I want** the player to type a loyalty pledge before starting the day,
 *   **So that** they are indoctrinated.
 *   **Acceptance Criteria:**
-    *   [ ] New Day Phase: `Pledge` (e.g., stored on the Sophie singleton entity as `CampaignProgress.phase`).
-    *   [ ] Text crawler shows the daily slogan.
-    *   [ ] Player must type it 100% correctly to begin the Shift phase.
-    *   [ ] **MVP scope:** implement pledges for Days 1–3 (content can be simple and escalate lightly).
+    *   **Given** a new day begins (Day 1–3)  
+        **When** the day starts  
+        **Then** `CampaignProgress.phase` is set to `Pledge` and the pledge prompt is shown.  
+    *   **Given** the pledge prompt is visible  
+        **When** I type the pledge text exactly correctly  
+        **Then** the day advances to `CampaignProgress.phase == Shift`.  
+    *   **Given** the pledge prompt is visible  
+        **When** I type an incorrect character  
+        **Then** the pledge does not complete and the UI indicates the error clearly (MVP: simplest possible feedback is acceptable).  
+    *   **Given** the MVP slice is Days 1–3  
+        **When** Day 1, Day 2, or Day 3 begins  
+        **Then** a pledge exists for that day (text can be minimal; escalation is optional).
 
 ---
 
-### Epic 3: Economy & Meta (P1)
+### Epic 3: Day Loop (P0) + Economy & Meta (P1)
 
 **Goal:** Implement the Day Loop state machine and (later) the resource loop (Earn Tokens -> Buy Survival).
 
@@ -102,11 +144,30 @@ This MVP must preserve the Prime Pressure input rules (Shift encoded in data wit
 *   **I want** the game to advance through Day 1–3 as a clear ritualized loop (Pledge → Shift → Review),
 *   **So that** the experience feels like a campaign, not a disconnected sandbox.
 *   **Acceptance Criteria:**
-    *   [ ] The Sophie singleton entity stores `day_index` (1..3) and `phase` (Pledge/Shift/Review).
-    *   [ ] Completing pledge moves to Shift; completing Shift moves to Review; completing Review advances the day.
-    *   [ ] End-of-Day 3 reaches a hard “Day 3 Complete” endpoint.
-    *   [ ] No known softlocks across Day 1–3 transitions.
-    *   [ ] **MVP telemetry hooks:** `day_start`, `day_end`, `run_completed(day=3)` or `run_ended(reason=...)`.
+    *   **Given** a new run begins  
+        **When** the session starts and the player provides the first actionable input of Day 1  
+        **Then** `session_start` is recorded and the run is considered “started” for completion-rate accounting.  
+    *   **Given** the Sophie singleton entity exists  
+        **When** the Day Loop is active  
+        **Then** Sophie stores `day_index` (1..3) and `phase` (Pledge/Shift/Review).  
+    *   **Given** I complete the pledge for the current day  
+        **When** pledge completion is detected  
+        **Then** the game transitions to `phase == Shift` and records `day_start(day_index)`.  
+    *   **Given** I complete the shift for the current day  
+        **When** shift completion is detected  
+        **Then** the game transitions to `phase == Review` and records `day_end(day_index)`.  
+    *   **Given** I complete the Review phase for Day 1 or Day 2  
+        **When** I acknowledge the end-of-day summary/email screen  
+        **Then** the game advances to the next day and returns to `phase == Pledge`.  
+    *   **Given** I complete the Review phase for Day 3  
+        **When** I acknowledge the end-of-day summary/email screen  
+        **Then** the game reaches the hard endpoint “Day 3 Complete” and records `run_completed(day=3)`.  
+    *   **Given** the run ends before completion  
+        **When** I quit, fail, crash, or hit a softlock watchdog  
+        **Then** `run_ended(reason=quit|fail|crash|softlock, day_index=<current>)` is recorded and `session_end` is recorded.  
+    *   **Given** Day Loop transitions occur  
+        **When** moving between Pledge → Shift → Review → next day  
+        **Then** there are no known softlocks across Days 1–3 (manual playtest checklist is acceptable for MVP).
 
 **Story 3.1: Dual Economy System**
 *   **As a** Designer,
@@ -173,7 +234,9 @@ This MVP must preserve the Prime Pressure input rules (Shift encoded in data wit
 *   **I want** to push emails to the player's inbox between shifts,
 *   **So that** I can deliver lore and foreshadowing.
 *   **Acceptance Criteria:**
-    *   [ ] **MVP subset:** end-of-day Review phase shows at least one “email/message” per day for Days 1–3.
+    *   **Given** `CampaignProgress.phase == Review`  
+        **When** the end-of-day review screen is shown for Day 1–3  
+        **Then** at least one “email/message” is shown and the player can acknowledge/dismiss it to continue.  
     *   [ ] Full system later: `EmailManager` queues messages based on Day #.
     *   [ ] Full system later: unread badge on "Email" icon.
     *   [ ] Full system later: "Forwarded" chains that show corporate conversations.
