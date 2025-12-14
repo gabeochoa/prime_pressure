@@ -20,6 +20,51 @@ struct TestSystem : afterhours::System<> {
     std::string test_error;
     int max_total_frames = 6000; // hard timeout per test (fail loudly)
 
+    std::optional<OrderState> last_traced_state;
+
+    void reset_trace() {
+        test_app::reset_state_trace();
+        last_traced_state.reset();
+    }
+
+    void trace_selected_order_state() {
+        // SelectedOrder is always present as a singleton in run_test()
+        afterhours::Entity &sel_entity =
+            afterhours::EntityHelper::get_singleton<SelectedOrder>();
+        const SelectedOrder &sel = sel_entity.get<SelectedOrder>();
+        if (!sel.order_id.order_id.has_value()) {
+            return;
+        }
+        auto order_id = sel.order_id.order_id.value();
+        auto order_opt =
+            afterhours::EntityQuery()
+                .whereID(order_id)
+                .whereHasComponent<OrderWorkflow>()
+                .gen_first();
+        if (!order_opt.has_value()) {
+            return;
+        }
+        const afterhours::Entity &order_entity = order_opt.asE();
+        const OrderWorkflow &workflow = order_entity.get<OrderWorkflow>();
+        OrderState s = workflow.state;
+        if (!last_traced_state.has_value() || last_traced_state.value() != s) {
+            test_app::record_state_trace(test_app::frame_counter, s);
+            last_traced_state = s;
+        }
+    }
+
+    std::string format_trace() const {
+        if (test_app::state_trace.empty()) {
+            return "State trace: <empty>";
+        }
+        std::string out = "State trace (frame: state):\n";
+        for (const auto &[frame, st] : test_app::state_trace) {
+            out += "  " + std::to_string(frame) + ": " +
+                   std::string(magic_enum::enum_name(st)) + "\n";
+        }
+        return out;
+    }
+
     void set_test(const std::string &name, TestApp test) {
         log_info("TestSystem: Setting test '{}'", name);
         test_name = name;
@@ -29,11 +74,12 @@ struct TestSystem : afterhours::System<> {
         test_input::test_mode = true;
         test_input::clear_queue();
         test_app::frame_counter = 0;
+        reset_trace();
     }
 
     void once(float) override {
-        test_input::reset_frame();
-        test_app::frame_counter++;
+        // NOTE: frame counter + input reset happens in TestFrameBeginSystem
+        // (runs early in the frame).
         if (current_test.has_value()) {
             // Log every 10 frames to avoid spam
             if (test_app::frame_counter % 10 == 0) {
@@ -50,11 +96,14 @@ struct TestSystem : afterhours::System<> {
             return;
         }
 
+        // Trace the selected order's state (if any) each frame.
+        trace_selected_order_state();
+
         // Hard-stop timeout: if a test doesn't reach the end, it's a failure.
         if (test_app::frame_counter >= max_total_frames) {
             test_error =
                 "Test timed out (did not reach completion) after " +
-                std::to_string(max_total_frames) + " frames";
+                std::to_string(max_total_frames) + " frames\n" + format_trace();
             test_complete = true;
             test_input::test_mode = false;
             current_test.reset();
@@ -114,7 +163,7 @@ struct TestSystem : afterhours::System<> {
                 // as complete)
                 std::string error = current_test->get_error();
                 if (!error.empty()) {
-                    test_error = error;
+                    test_error = error + "\n" + format_trace();
                     test_complete = true;  // Mark as complete with error
                     test_input::test_mode = false;
                     current_test.reset();
@@ -123,7 +172,8 @@ struct TestSystem : afterhours::System<> {
                     // failure
                     test_error =
                         "Test completed but did not return 0 (returned " +
-                        std::to_string(current_test->get_return_value()) + ")";
+                        std::to_string(current_test->get_return_value()) +
+                        ")\n" + format_trace();
                     test_complete = true;
                     test_input::test_mode = false;
                     current_test.reset();

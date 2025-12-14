@@ -4,6 +4,7 @@
 #include "../input_wrapper.h"
 #include "../order_components.h"
 #include "../order_state_machine.h"
+#include "../testing/test_input.h"
 #include <afterhours/ah.h>
 
 struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {

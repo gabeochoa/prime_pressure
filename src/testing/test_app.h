@@ -42,6 +42,10 @@ static char item_key_for(ItemType type) {
 
 namespace test_app {
 extern int frame_counter;
+extern std::vector<std::pair<int, OrderState>> state_trace;
+void reset_state_trace();
+void record_state_trace(int frame, OrderState state);
+bool was_state_seen(OrderState state);
 }
 
 struct TestApp {
@@ -179,6 +183,7 @@ struct TestApp {
         std::function<bool()> condition;
         int max_frames;
         std::coroutine_handle<promise_type> handle;
+        bool was_suspended = false;
 
         WaitForCondition(std::function<bool()> cond, int max)
             : condition(std::move(cond)), max_frames(max) {}
@@ -187,6 +192,7 @@ struct TestApp {
 
         void await_suspend(std::coroutine_handle<promise_type> coro_handle) {
             handle = coro_handle;
+            was_suspended = true;
             auto &p = handle.promise();
             p.wait.kind = promise_type::WaitKind::Condition;
             p.wait.start_frame = test_app::frame_counter;
@@ -196,11 +202,17 @@ struct TestApp {
         }
 
         bool await_resume() {
+            // If the condition was already met, await_suspend() was never
+            // called, so we must not touch the coroutine handle/promise here.
+            if (!was_suspended) {
+                return condition && condition();
+            }
             auto &p = handle.promise();
             if (p.wait_timed_out) {
                 p.wait_timed_out = false;
                 throw std::runtime_error(
-                    "Condition not met within max frames");
+                    "Condition not met within max frames (" +
+                    std::to_string(max_frames) + ")");
             }
             return condition && condition();
         }
@@ -523,6 +535,10 @@ struct TestApp {
 
     static bool is_selected_order_in_state(OrderState expected_state) {
         return get_selected_order_state() == expected_state;
+    }
+
+    static bool was_selected_order_state_seen(OrderState state) {
+        return test_app::was_state_seen(state);
     }
 
     static void set_selected_order_state(OrderState state) {

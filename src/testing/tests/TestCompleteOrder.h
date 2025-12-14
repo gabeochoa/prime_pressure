@@ -44,16 +44,73 @@ TEST(test_complete_order) {
         throw std::runtime_error("Selected order has no required item counts");
     }
 
+    // STRICT: typing must cause requested-counts to increment, per key press.
     for (const auto &[item_type, required_count] : required_counts) {
         for (int i = 0; i < required_count; ++i) {
+            // Ensure we're in the input state for requesting.
+            co_await TestApp::wait_for_condition(
+                []() {
+                    return TestApp::is_selected_order_in_state(
+                        OrderState::Requesting_NeedsInput);
+                },
+                120);
+
+            auto before = TestApp::get_selected_order_requested_counts();
+            int before_count = 0;
+            if (auto it = before.find(item_type); it != before.end()) {
+                before_count = it->second;
+            }
+
             char key = item_key_for(item_type);
             TestApp::simulate_char(key);
-            co_await TestApp::wait_for_frames(2);
+            co_await TestApp::wait_for_frames(3);
+
+            auto after = TestApp::get_selected_order_requested_counts();
+            int after_count = 0;
+            if (auto it = after.find(item_type); it != after.end()) {
+                after_count = it->second;
+            }
+
+            if (after_count != before_count + 1) {
+                throw std::runtime_error(
+                    "Typing did not request expected item (key '" +
+                    std::string(1, key) + "'): requested_count for " +
+                    std::string(magic_enum::enum_name(item_type)) + " was " +
+                    std::to_string(before_count) + " then " +
+                    std::to_string(after_count));
+            }
         }
     }
 
     co_await TestApp::wait_for_condition(
         []() { return TestApp::are_all_items_requested(); }, 600);
+
+    // STRICT but non-flaky: states can be very transient (same-frame advances),
+    // so we require they were *observed* in the per-frame trace.
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::was_selected_order_state_seen(
+                OrderState::Requesting_AllRequested);
+        },
+        240);
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::was_selected_order_state_seen(
+                OrderState::Receiving_OnConveyorWaiting);
+        },
+        240);
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::was_selected_order_state_seen(
+                OrderState::Receiving_OnConveyorMoving);
+        },
+        240);
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::was_selected_order_state_seen(
+                OrderState::Receiving_ReceivedToReady);
+        },
+        240);
 
     // Wait for state machine to reach ReadyToBox_Staged
     co_await TestApp::wait_for_condition(
@@ -71,14 +128,37 @@ TEST(test_complete_order) {
         },
         240);
 
+    // STRICT: boxing_progress must be initialized for this order.
+    co_await TestApp::wait_for_condition(
+        []() { return TestApp::get_boxing_state() == BoxingState::FoldBox; },
+        600);
+
+    // STRICT: we expect no backlog of synthetic input by this point.
+    co_await TestApp::wait_for_condition(
+        []() { return test_input::input_queue.empty(); }, 600);
+
+    // STRICT: boxing input is processed only for the active order.
+    if (TestApp::get_active_order_id() != TestApp::get_selected_order_id()) {
+        throw std::runtime_error(
+            "ActiveOrder does not match SelectedOrder at boxing start");
+    }
+
     TestApp::simulate_key(raylib::KEY_B);
     co_await TestApp::wait_for_frames(2);
+
+    // STRICT: B must be consumed (otherwise boxing input isn't being processed)
+    co_await TestApp::wait_for_condition(
+        []() { return test_input::input_queue.empty(); }, 120);
 
     co_await TestApp::wait_for_condition(
         []() {
             return TestApp::is_selected_order_in_state(
                 OrderState::Boxing_PutItems);
         },
+        120);
+
+    co_await TestApp::wait_for_condition(
+        []() { return TestApp::get_boxing_state() == BoxingState::PutItems; },
         120);
 
     int total_items = 0;
