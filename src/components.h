@@ -28,15 +28,36 @@ struct Order : afterhours::BaseComponent {
   int items_completed = 0;
 
   // Helper methods using the new state machine
-  int get_ready_stamp_progress() const {
-    // This should be replaced with logic that checks OrderWorkflow state
-    // For now, return 0 as a placeholder
-    return 0;
+  static int get_ready_stamp_progress(const afterhours::Entity &order_entity) {
+    // Check OrderWorkflow state to determine stamping progress
+    const OrderWorkflow &workflow = order_entity.get<OrderWorkflow>();
+    switch (workflow.state) {
+      case OrderState::Shipped_Stamp0:
+        return 0;
+      case OrderState::Shipped_Stamp1:
+        return 1;
+      case OrderState::Shipped_Stamp2:
+        return 2;
+      case OrderState::Shipped_Stamp3:
+        return 3;
+      case OrderState::Complete_CloseoutDelay:
+      case OrderState::Complete_ClosedOut:
+        return 4; // Fully complete
+      default:
+        return 0;
+    }
   }
 
   bool is_shipped() const {
-    // This should be replaced with logic that checks if order is in shipped states
-    // For now, return false as a placeholder
+    // Check if order is in shipped or complete states (since shipping now goes directly to complete)
+    for (const afterhours::Entity &entity :
+         afterhours::EntityQuery()
+             .whereHasComponent<OrderWorkflow>()
+             .gen()) {
+      const OrderWorkflow &workflow = entity.get<OrderWorkflow>();
+      OrderMacroState macro_state = macro_state_of(workflow.state);
+      return macro_state == OrderMacroState::Shipped || macro_state == OrderMacroState::Complete;
+    }
     return false;
   }
 
@@ -109,6 +130,13 @@ struct BoxingProgress : afterhours::BaseComponent {
   BoxingState state = BoxingState::None;
   int items_placed = 0;
   std::vector<afterhours::EntityID> boxing_items;
+};
+
+struct ShippingAnimation : afterhours::BaseComponent {
+  bool is_active = false;
+  float animation_time = 0.0f;
+  float animation_duration = 1.0f; // seconds
+  std::optional<afterhours::EntityID> order_id;
 };
 
 const std::map<ItemType, char> ITEM_KEY_MAP = {

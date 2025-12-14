@@ -71,13 +71,13 @@ private:
     case TimelineStageState::BoxingActive:
       return order.is_shipped();
     case TimelineStageState::ReadyActive:
-      return order.get_ready_stamp_progress() >= 1;
+      return Order::get_ready_stamp_progress(order_entity) >= 1;
     case TimelineStageState::ReadyStamp0:
-      return order.get_ready_stamp_progress() >= 1;
+      return Order::get_ready_stamp_progress(order_entity) >= 1;
     case TimelineStageState::ReadyStamp1:
-      return order.get_ready_stamp_progress() >= 2;
+      return Order::get_ready_stamp_progress(order_entity) >= 2;
     case TimelineStageState::ReadyStamp2:
-      return order.get_ready_stamp_progress() >= 3;
+      return Order::get_ready_stamp_progress(order_entity) >= 3;
     case TimelineStageState::ReadyStamp3:
       return order.is_fully_complete();
     case TimelineStageState::BoxingPending:

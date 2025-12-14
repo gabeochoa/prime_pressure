@@ -59,7 +59,8 @@ bool is_ready_to_box_staged_complete(const Order& order, float time_in_state, co
 }
 
 bool is_complete_closeout_delay_complete(const Order& order, float time_in_state, const std::map<ItemType, int>& required_counts, const std::map<ItemType, int>& received_counts) {
-  // Processing state - complete after 1 second delay
+  // Processing state - complete after animation finishes (handled by animation system)
+  // For now, keep the time-based completion as fallback
   return time_in_state >= 1.0f;
 }
 

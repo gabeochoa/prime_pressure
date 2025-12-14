@@ -57,8 +57,8 @@ CXXFLAGS_SUPPRESS := -Wno-deprecated-volatile -Wno-missing-field-initializers \
     -Wno-import -Wno-inline -Wno-invalid-pch \
     -Wno-long-long -Wno-missing-format-attribute \
     -Wno-missing-noreturn -Wno-packed -Wno-redundant-decls \
-    -Wno-sequence-point -Wno-trigraphs -Wno-variadic-macros \
-    -Wno-volatile-register-var
+    -Wno-sequence-point -Wno-switch-default -Wno-trigraphs -Wno-variadic-macros \
+    -Wno-volatile-register-var -Wno-#warnings
 
 # Time tracing for ClangBuildAnalyzer
 CXXFLAGS_TIME_TRACE := -ftime-trace

@@ -35,6 +35,11 @@ struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
     bool pressed_t = game_input::IsKeyPressed(raylib::KEY_T);
     bool pressed_s = game_input::IsKeyPressed(raylib::KEY_S);
 
+    if (pressed_r || pressed_t || pressed_s) {
+      log_info("ProcessReadyStampSystem: Key pressed - R:{}, T:{}, S:{} for order {}",
+               pressed_r, pressed_t, pressed_s, order_entity.id);
+    }
+
     if (!pressed_r && !pressed_t && !pressed_s) {
       return;
     }
@@ -63,9 +68,18 @@ struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
         }
         break;
       case OrderState::Shipped_Stamp3:
-        // READY TO SHIP confirmed - advance to closeout delay
-        if (pressed_s) {  // Allow any key? Or specific sequence?
-          expected_key = 's'; // For now, accept S
+        // READY TO SHIP confirmed - start shipping animation and advance to closeout delay
+        if (pressed_s) {
+          log_info("Starting shipping animation for order {}", order_entity.id);
+          // Start shipping animation
+          afterhours::Entity &animation_entity =
+              afterhours::EntityHelper::get_singleton<ShippingAnimation>();
+          ShippingAnimation &animation = animation_entity.get<ShippingAnimation>();
+          animation.is_active = true;
+          animation.animation_time = 0.0f;
+          animation.order_id = order_entity.id;
+
+          expected_key = 's';
           next_state = OrderState::Complete_CloseoutDelay;
         }
         break;
