@@ -20,6 +20,11 @@ date: '2025-12-14'
 
 _This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
 
+## Architecture Invariants
+
+- **Sophie is ECS**: Sophie is an **ECS singleton entity** used for global/meta-game persistence (currencies, day/run state, etc.).
+  - **Prohibited**: Do not introduce a `Sophie::get()` C++ singleton pattern for Prime Pressure.
+
 ## Project Context Analysis
 
 ### Requirements Overview

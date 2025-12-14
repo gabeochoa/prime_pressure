@@ -1,19 +1,56 @@
-# Project Context
-\n---\n
-## reference_project_context
+# Project Context (Prime Pressure)
+---
 
-# kart chaos
+## Prime Pressure (Canonical)
 
-## Critical Rules
+This document is the **single source of truth** for Prime Pressure conventions.
 
-### Architecture & ECS
-- **Core Library**: Must use the `afterhours` vendor library for ECS functionality.
+- **Authoritative architecture**: `docs/architecture.md`
+- **Authoritative coding rules**: `PROJECT_RULES.md`
+- **Reference-only (non-authoritative)**: Kart Chaos / Pharmasea notes below are included only as examples of prior preferences and familiarity.
+
+### Critical Rules
+
+#### Architecture & ECS
+- **Core library**: Use the `afterhours` vendor library for ECS functionality.
+- **Fluent queries**: Use `EntityQuery` (or `EQ()`) with fluent syntax for ad-hoc entity retrieval.
+  - Example: `EntityQuery().whereHasComponent<T>().whereLambda(...).gen_first()`
+- **Sophie persistence (Prime Pressure invariant)**: Sophie is an **ECS singleton entity** for global/meta-game state.
+  - Do **not** implement or use a `Sophie::get()` C++ singleton in Prime Pressure.
+- **Functionality-first rendering**: Rendering logic is split into focused render systems, not a monolithic render loop.
+
+#### Coding Standards
+- **Standard**: C++23 is strictly enforced.
+- **Naming**:
+  - **Variables/Functions**: `snake_case` (e.g., `get_spawn_position`, `running`)
+  - **Types/Classes/Components**: `PascalCase` (e.g., `SystemManager`, `Transform`)
+- **Ownership**: Use `std::unique_ptr` for system registration and ownership transfer. Avoid raw pointers for ownership.
+
+#### Input Handling
+- **Single Keystroke JSON syntax**: Input configuration uses a specific JSON syntax where `^` denotes the Shift modifier.
+  - Example: `^P` represents `Shift + P`.
+  - Do NOT use `"Shift+P"` or other variations.
+- **No Shift checks in gameplay**: Do NOT check for `IsKeyDown(KEY_LEFT_SHIFT)` (or similar) in gameplay code for command inputs. Rely on the input mapping system and the `^` syntax.
+
+---
+
+## Appendix: Reference contexts (non-authoritative)
+
+### Kart Chaos (reference only)
+
+#### Notes
+These are reference conventions from Kart Chaos and are **not** authoritative for Prime Pressure.
+
+#### Critical Rules (Kart Chaos)
+
+##### Architecture & ECS
+- **Core Library**: Kart Chaos used the `afterhours` vendor library for ECS functionality.
 - **Fluent Queries**: Use `EntityQuery` (or `EQ()`) with fluent syntax for ad-hoc entity retrieval.
     - Example: `EntityQuery().whereHasComponent<T>().whereLambda(...).gen_first()`
-- **"Sophie" Singleton**: Use the "Sophie" pattern for global/meta-game state persistence. Access singleton components via `EntityHelper::get_singleton_cmp<T>()`.
+- **"Sophie" Singleton**: Kart Chaos used the "Sophie" pattern for global/meta-game state persistence, accessed via `EntityHelper::get_singleton_cmp<T>()`.
 - **Functionality-First Rendering**: Rendering logic is split into specific systems (e.g., `RenderSpritesWithShaders`, `RenderEntities`) rather than a monolithic render loop.
 
-### Coding Standards
+##### Coding Standards
 - **Standard**: C++23 is strictly enforced.
 - **Naming Conventions**:
     - **Variables/Functions**: `snake_case` (e.g., `get_spawn_position`, `running`).
@@ -21,14 +58,14 @@
     - **Constants**: `snake_case` or `kCamelCase` (mixed usage, prefer consistent `snake_case` for new constants).
 - **Ownership**: Use `std::unique_ptr` for system registration and ownership transfer. Avoid raw pointers for ownership.
 
-### Input Handling
+##### Input Handling
 - **Single Keystroke Syntax**: Input configuration uses a specific JSON syntax where `^` denotes the Shift modifier.
     - Example: `^P` represents `Shift + P`.
     - Do NOT use "Shift+P" or other variations.
 
-## Implementation Patterns
+#### Implementation Patterns
 
-### Component Definition
+##### Component Definition
 Components must inherit from `::afterhours::BaseComponent` and should be primarily Plain Old Data (POD) structs.
 ```cpp
 struct Transform : ::afterhours::BaseComponent {
@@ -39,7 +76,7 @@ struct Transform : ::afterhours::BaseComponent {
 };
 ```
 
-### System Definition
+##### System Definition
 Systems inherit from `afterhours::System<Components...>` to define required components for iteration.
 ```cpp
 struct MoveSystem : afterhours::System<Transform, Velocity> {
@@ -49,20 +86,20 @@ struct MoveSystem : afterhours::System<Transform, Velocity> {
 };
 ```
 
-### Rendering Pipeline
+##### Rendering Pipeline
 The rendering pipeline is multi-pass, utilizing `RenderTexture2D`:
 1.  **World Render**: Entities, map elements.
 2.  **Tag Shader**: Special effects (e.g., spotlight).
 3.  **Post Processing**: Global screenspace effects (CRT, chromatic aberration).
 4.  **UI**: HUD and debug overlays on top.
 
-### Input Mapping
+##### Input Mapping
 Inputs are mapped to abstract `InputAction` enums rather than checking keys directly in game logic.
 ```cpp
 if (action_matches(input.action, InputAction::Boost)) { ... }
 ```
 
-## Anti-Patterns (What NOT to do)
+#### Anti-Patterns (What NOT to do)
 
 - **Native Shift Checks**: Do NOT check for `IsKeyDown(KEY_LEFT_SHIFT)` directly in gameplay code for command inputs. Rely on the input mapping system and the `^` syntax.
 - **Monolithic Systems**: Avoid creating "God Systems" that do everything. Break down logic into small, focused systems (e.g., `UpdateSpriteTransform`, `UpdateAnimationTransform`).
@@ -71,15 +108,17 @@ if (action_matches(input.action, InputAction::Boost)) { ... }
 
 
 
-# pharmasea 
+### Pharmasea (reference only)
 
-# Project Context: 
+Note: Pharmasea used a C++ singleton access pattern (`Sophie::get()`). Prime Pressure does **not**; Prime Pressure uses an **ECS singleton entity** for Sophie instead.
 
-## Critical Rules
+#### Project Context (Pharmasea reference)
+
+#### Critical Rules (Pharmasea)
 
 - **ECS Patterns**
   - Use the **afterhours** library for all entity management. All queries must be performed via the fluent `EntityQuery` API (see `src/entity_query.h`).
-  - The **Sophie** singleton pattern is the canonical way to access global game state (see `src/system/sophie.cpp`). Access via `Sophie::get()` – never store raw pointers to the singleton.
+  - In Pharmasea, **Sophie** was a C++ singleton accessed via `Sophie::get()` (see `src/system/sophie.cpp`). Never store raw pointers to the singleton.
   - Components must be **PascalCase** structs inheriting from `BaseComponent` (see `src/components/*.h`).
   - Systems operate on `RefEntity`/`OptEntity` returned by `EntityQuery` and must not manually iterate over raw containers.
 
