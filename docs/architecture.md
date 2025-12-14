@@ -25,6 +25,28 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - **Sophie is ECS**: Sophie is an **ECS singleton entity** used for global/meta-game persistence (currencies, day/run state, etc.).
   - **Prohibited**: Do not introduce a `Sophie::get()` C++ singleton pattern for Prime Pressure.
 
+## Executive Summary
+
+Prime Pressure is a C++23 + Raylib game implemented as a **pure ECS** on the vendored `afterhours` library. The architecture prioritizes low-latency keyboard input, small focused systems, and an ECS-backed global state (“Sophie” as a singleton **entity**) to keep gameplay, meta-progression, and UI consistent and AI-agent-friendly.
+
+## Decision Summary
+
+| Category | Decision | Notes |
+|---|---|---|
+| Language | C++23 | Enforced by `makefile` (`-std=c++23`). |
+| Build | GNU Make | Single-binary build; Raylib pulled via `pkg-config` on non-Windows. |
+| Rendering | Raylib | Multi-view rendering via focused render systems; avoid monolithic render loop. |
+| ECS | `afterhours` (vendored) | Components are POD-ish `BaseComponent` structs; logic lives in systems. |
+| Global state | Sophie = ECS singleton entity | Systems query Sophie entity/components; no C++ singleton accessors. |
+| Input | Buffered typing + JSON mapping | Use the single-keystroke JSON syntax; `^` encodes Shift in data/config, not in gameplay code. |
+
+## Development Environment
+
+- Build: `make`
+- Run: `make run`
+- Clean: `make clean`
+- Dependency: Raylib must be discoverable via `pkg-config` on Linux/macOS (see `makefile`).
+
 ## Project Context Analysis
 
 ### Requirements Overview
@@ -73,7 +95,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 **Architectural Decisions Verified:**
 *   **Build:** GNU Make with clang++ (C++23) - Chosen for simplicity.
 *   **ECS:** `afterhours` custom library (Vendored).
-*   **Pattern:** Pure ECS (Components in `src/components`, Logic in `src/systems`).
+*   **Pattern:** Pure ECS (Today: components aggregated in `src/components.h` + `src/order_components.h`; systems in `src/systems/*.h`. Target: split components into `src/components/*` and consolidate systems into `src/systems/*.cpp`).
 *   **Platform:** macOS Native (Codesigned).
 
 ## Core Architectural Decisions
@@ -82,7 +104,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 **Critical Decisions (Block Implementation):**
 *   **Input Architecture:** Keystroke Sequence Mapping (Keyboard-only Focus).
-*   **Meta-Persistence:** "Sophie" Pattern (Singleton Entity).
+*   **Meta-Persistence:** "Sophie" Pattern (singleton entity).
 *   **Render Strategy:** Functional/Direct Mode (Defer Art).
 
 ### Input & Interaction Architecture
@@ -91,6 +113,11 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 *   **Pattern:** Gameplay actions are defined by *sequences of keystrokes* (e.g., "PPPBFTS") rather than single hotkeys.
 *   **Device:** **Keyboard Only** for core loop. Mouse is restricted to Menu/UI interactions.
 *   **Implementation:** `InputSystem` buffers character streams and matches against `OrderConstraint` patterns.
+
+**Input implementation notes (Prime Pressure)**
+*   Treat each frame as authoritative: poll input every frame, append to `InputBuffer`, and let downstream systems consume buffer state.
+*   Do not rely on OS repeat-rate for gameplay feel; gameplay timing should be driven by dt + your own buffering rules.
+*   Shift-modified commands are represented via the JSON `^` syntax in config/data; do not check Shift directly in gameplay code.
 
 ### Meta-Game Persistence ("Sophie" Pattern)
 
@@ -104,7 +131,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 **Decision:** **Function over Form (MVP)**
 *   **Strategy:** Implement rendering via direct `RenderSystem` calls using primitive shapes/text initially.
 *   **Polish:** Post-processing, shaders, and complex art assets are explicitly **deferred** until gameplay loops are solid.
-*   **Rationle:** Focus engineering effort on the "Typing Feel" and "Sophie" logic first.
+*   **Rationale:** Focus engineering effort on the "Typing Feel" and "Sophie" logic first.
 
 ### Decision Impact Analysis
 
@@ -138,7 +165,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 *   **Pattern:** Use the custom `EntityQuery()` builder for looking up entities.
 *   **Syntax:** `EntityQuery().whereHasComponent<T>().gen()`
 *   **Guidance:**
-    *   `gen_first()`: For Singletons (Player, Sophie).
+    *   `gen_first()`: For singleton entities (Player, Sophie).
     *   `gen_ids()`: If only ID is needed (faster).
     *   **Prohibited:** Do NOT iterate `EntityQuery` inside another tight loop (O(N^2)).
 
@@ -159,23 +186,20 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 ### Complete Project Directory Structure
 
-```
-### Complete Project Directory Structure
-
 **Current vs. Target Migration Plan**
 
-We are transitioning from the current "Header-Heavy" structure to a "Cpp-Based" Pure ECS structure.
+We are transitioning from the current "header-heavy" structure to a "cpp-based" pure ECS structure.
 
-**1. Current Inventory (To Be Refactored)**
-*   `src/systems/*.h` (34+ Header-only Systems) -> **Consolidate** into `src/systems/*.cpp`.
-    *   *Example:* Merge `ProcessBoxingInputSystem.h`, `ProcessTypingInputSystem.h` -> `input_system.cpp`.
-    *   *Example:* Merge `RenderBoxingViewSystem.h`, `RenderComputerView.h` -> `render_system.cpp`.
-*   `src/components.h` & `src/order_components.h` -> **Split** into `src/components/*.h`.
-*   `src/order_state_machine.cpp` -> **Port logic** to `boxing_system.cpp`.
+**1. Current inventory (today)**
 
-**2. Target Structure (Goal)**
+- Systems: `src/systems/*.h` (header-only systems; e.g., `ProcessTypingInputSystem.h`, `RenderBoxingViewSystem.h`)
+- Components: `src/components.h` and `src/order_components.h` (aggregated headers)
+- State machine: `src/order_state_machine.cpp`
+- Views/render: `src/render_*.cpp` + render systems under `src/systems/Render*`
 
-```
+**2. Target structure (goal)**
+
+```text
 prime_pressure/
 ├── makefile                # Existing (Keep)
 ├── src/
@@ -186,13 +210,13 @@ prime_pressure/
 │   │   ├── oppression.h    # (Refactor from components.h)
 │   │   ├── meta.h          # (New Sophie Components)
 │   │   └── ui.h            # (New UI Components)
-│   ├── systems/            # [REFACTOR] Consolidate 34 files into core logic
-│   │   ├── input_system.cpp      # Handles "PPPBFTS" & Buffer
-│   │   ├── boxing_system.cpp     # Handles Box/Fold/Tape Logic
-│   │   ├── oppression_system.cpp # Handles TOT/Smile Logic
-│   │   └── meta_system.cpp       # Handles Day/Save/Sophie Logic
-│   └── engine/
-│       └── entity_query.h  # Shared Utility (Keep)
+│   ├── systems/            # [REFACTOR] Consolidate into core logic
+│   │   ├── input_system.cpp      # Typing buffer + command parsing
+│   │   ├── boxing_system.cpp     # Box/Fold/Tape/Label workflow
+│   │   ├── oppression_system.cpp # TOT/Smile/Pledge interruptions
+│   │   └── meta_system.cpp       # Day cycle + Sophie persistence
+│   └── engine/             # Shared utilities (if/when separated)
+│       └── entity_query.h
 ```
 
 ### Architectural Boundaries
@@ -202,7 +226,7 @@ prime_pressure/
 *   It does *not* directly trigger gameplay actions. It produces data that other systems consume.
 
 **Meta Boundary:**
-*   `MetaSystem` manages the `Sophie` singleton.
+*   `MetaSystem` manages the `Sophie` singleton entity.
 *   Other systems (e.g., Boxing) query `Sophie` to check "Can I box right now?" (Is Day Active?).
 
 **Render Boundary:**
@@ -211,9 +235,17 @@ prime_pressure/
 
 ### Requirements to Structure Mapping
 
-**Epic 1: Fulfillment** -> `src/systems/boxing_system.cpp` + `src/components/boxing.h`
-**Epic 2: Oppression** -> `src/systems/oppression_system.cpp` + `src/components/oppression.h`
-**Epic 3: Meta** -> `src/systems/meta_system.cpp` + `src/components/meta.h`
+**Current mapping (today)**
+
+- **Epic 1: Fulfillment** -> `src/order_state_machine.*` + `src/order_components.h` + systems in `src/systems/` (e.g., `ProcessTypingInputSystem.h`, `ProcessBoxingInputSystem.h`, `MatchItemToOrderSystem.h`, `BoxItemSystem.h`, `ManageConveyorItemsSystem.h`) + render systems (`RenderBoxingViewSystem.h`, `RenderWarehouseView*.h`, `RenderComputerView.h`)
+- **Epic 2: Oppression** -> new/extended systems under `src/systems/` (e.g., TOT timer + smile check + pledge), gated by timeline/state (`UpdateTimelineStateSystem.h`)
+- **Epic 3: Meta** -> Sophie entity/components + systems under `src/systems/` for day cycle and persistence + configuration (`src/settings.*`)
+
+**Target mapping (goal)**
+
+- **Epic 1: Fulfillment** -> `src/systems/boxing_system.cpp` + `src/components/boxing.h`
+- **Epic 2: Oppression** -> `src/systems/oppression_system.cpp` + `src/components/oppression.h`
+- **Epic 3: Meta** -> `src/systems/meta_system.cpp` + `src/components/meta.h`
 
 ## Architecture Validation Results
 
@@ -245,7 +277,7 @@ The flat `src/systems` structure matches the MVP requirements. Separation of `co
 - [x] Input requirement (Zero Latency) mapped to `InputBuffer` pattern.
 
 **✅ Architecture Decisions**
-- [x] "Sophie" Singleton pattern chosen for Persistence.
+- [x] Sophie singleton entity chosen for persistence.
 - [x] "EntityQuery" pattern chosen for State Access.
 - [x] Input Syntax standard defined.
 
@@ -258,7 +290,7 @@ The flat `src/systems` structure matches the MVP requirements. Separation of `co
 **Overall Status:** READY FOR IMPLEMENTATION
 
 **First Implementation Priority:**
-Refactor `src/systems/input_system.cpp` to use the new `InputBuffer` + `^P` (Shift-P) prefix logic.
+Refactor the current input systems (e.g., `src/systems/ProcessTypingInputSystem.h`, `src/systems/ProcessBoxingInputSystem.h`) to use a clear `InputBuffer` contract and the JSON `^` shift-encoding rules (no direct Shift checks in gameplay code).
 
 ## Architecture Completion Summary
 
@@ -267,7 +299,7 @@ Refactor `src/systems/input_system.cpp` to use the new `InputBuffer` + `^P` (Shi
 **📋 Complete Architecture Document**
 *   **Validated**: 2025-12-14
 *   **Status**: `complete`
-*   **Key Decisions**: Pure ECS, Keyboard-Sequence Input, "Sophie" Persistence, Make Build System.
+*   **Key Decisions**: Pure ECS, Keyboard-Sequence Input, Sophie singleton entity persistence, Make build system.
 
 **🏗️ Implementation Ready Foundation**
 *   **Build**: Use existing `makefile`.
@@ -288,7 +320,7 @@ Refactor `src/systems/input_system.cpp` to use the new `InputBuffer` + `^P` (Shi
 
 **✅ Requirements Coverage**
 - [x] Input (Zero Latency) -> `InputBuffer` Component.
-- [x] Meta (Persistence) -> `Sophie` Singleton Entity.
+- [x] Meta (Persistence) -> Sophie singleton entity.
 - [x] Oppression (Stress) -> `TOTTimer` Components.
 
 ---
