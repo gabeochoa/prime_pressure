@@ -39,7 +39,7 @@ tools/dependency_graph
 build-analysis.html
 build-analysis.txt
 
-.agent
-.bmad
-.cursor/
-.claude/
+# .agent
+# .bmad
+# .cursor/
+# .claude/
