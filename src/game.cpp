@@ -200,16 +200,18 @@ void game() {
     }
 }
 
-void run_test(const std::string &test_name, bool slow_mode) {
+int run_test(const std::string &test_name, bool slow_mode) {
     log_info("run_test: Starting test '{}'", test_name);
     TestRegistry &registry = TestRegistry::get();
     auto it = registry.tests.find(test_name);
     if (it == registry.tests.end()) {
-        std::cout << "Test '" << test_name << "' not found" << std::endl;
-        return;
+        std::cout << "Test '" << test_name << "' failed: not found"
+                  << std::endl;
+        return 2;
     }
 
     test_input::slow_test_mode = slow_mode;
+    running = true;
 
     mainRT = raylib::LoadRenderTexture(Settings::get().get_screen_width(),
                                        Settings::get().get_screen_height());
@@ -357,11 +359,18 @@ void run_test(const std::string &test_name, bool slow_mode) {
                 std::cout << "Test '" << test_system_ptr->get_test_name()
                           << "' failed: " << error << std::endl;
                 running = false;
+                return 1;
             } else {
                 std::cout << "Test '" << test_system_ptr->get_test_name()
                           << "' passed!" << std::endl;
                 running = false;
+                return 0;
             }
         }
     }
+
+    // If we exited the loop without a result, that's a failure.
+    std::cout << "Test '" << test_name
+              << "' failed: runner exited without completion" << std::endl;
+    return 1;
 }

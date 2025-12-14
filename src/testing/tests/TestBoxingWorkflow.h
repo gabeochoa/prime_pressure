@@ -80,7 +80,8 @@ TEST(test_boxing_workflow) {
         },
         60);
 
-    TestApp::simulate_key(raylib::KEY_F);
+    // Boxing starts with FoldBox -> press B to begin putting items
+    TestApp::simulate_key(raylib::KEY_B);
     co_await TestApp::wait_for_frames(2);
 
     co_await TestApp::wait_for_condition(

@@ -60,7 +60,8 @@ TEST(test_ready_stamp_sequence) {
         },
         60);
 
-    TestApp::simulate_key(raylib::KEY_F);
+    // Boxing starts with FoldBox -> press B to begin putting items
+    TestApp::simulate_key(raylib::KEY_B);
     co_await TestApp::wait_for_frames(2);
 
     co_await TestApp::wait_for_condition(
@@ -146,8 +147,11 @@ TEST(test_ready_stamp_sequence) {
         },
         60);
 
-    // Should automatically transition to Complete_CloseoutDelay, then
-    // Complete_ClosedOut
+    // Stamp3 requires one more S to actually ship (starts animation)
+    TestApp::simulate_key(raylib::KEY_S);
+    co_await TestApp::wait_for_frames(1);
+
+    // Should transition to Complete_CloseoutDelay, then Complete_ClosedOut
     co_await TestApp::wait_for_condition(
         []() {
             return TestApp::is_selected_order_in_state(

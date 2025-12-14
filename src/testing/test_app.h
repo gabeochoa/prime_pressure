@@ -50,6 +50,18 @@ struct TestApp {
         bool done = false;
         int return_code = -1;  // -1 means not returned yet
 
+        // Waiting support (so co_await actually waits)
+        enum class WaitKind { None, Frames, Condition };
+        struct WaitState {
+            WaitKind kind = WaitKind::None;
+            int target_frame = 0;
+            int start_frame = 0;
+            int max_frames = 0;
+            std::function<bool()> condition;
+        };
+        WaitState wait;
+        bool wait_timed_out = false;
+
         TestApp get_return_object() {
             return TestApp{
                 std::coroutine_handle<promise_type>::from_promise(*this)};
@@ -140,80 +152,63 @@ struct TestApp {
     }
 
     struct WaitFrames {
-        int target_frame;
-        int start_frame;
+        int frames;
         int slow_multiplier;
+        std::coroutine_handle<promise_type> handle;
 
         WaitFrames(int frames)
-            : target_frame(test_app::frame_counter + frames),
-              start_frame(test_app::frame_counter),
+            : frames(frames),
               slow_multiplier(test_input::slow_test_mode ? 100 : 1) {
-            if (test_input::slow_test_mode) {
-                target_frame =
-                    test_app::frame_counter + (frames * slow_multiplier);
-            }
         }
 
-        bool await_ready() const {
-            return test_app::frame_counter >= target_frame;
+        bool await_ready() const { return frames <= 0; }
+
+        void await_suspend(std::coroutine_handle<promise_type> coro_handle) {
+            handle = coro_handle;
+            int effective_frames = frames * slow_multiplier;
+            auto &p = handle.promise();
+            p.wait.kind = promise_type::WaitKind::Frames;
+            p.wait.target_frame = test_app::frame_counter + effective_frames;
         }
-        void await_suspend(std::coroutine_handle<promise_type>) {}
         void await_resume() {}
     };
 
     static WaitFrames wait_for_frames(int frames) { return WaitFrames{frames}; }
 
-    template<typename Func>
-    struct WaitCondition {
-        Func condition;
+    struct WaitForCondition {
+        std::function<bool()> condition;
         int max_frames;
-        int start_frame;
-        std::coroutine_handle<promise_type> suspended_handle;
+        std::coroutine_handle<promise_type> handle;
 
-        WaitCondition(Func cond, int max)
-            : condition(cond),
-              max_frames(max),
-              start_frame(test_app::frame_counter),
-              suspended_handle(nullptr) {}
+        WaitForCondition(std::function<bool()> cond, int max)
+            : condition(std::move(cond)), max_frames(max) {}
 
-        bool await_ready() const {
-            return condition();  // Ready if condition is already met
-        }
+        bool await_ready() const { return condition && condition(); }
 
         void await_suspend(std::coroutine_handle<promise_type> coro_handle) {
-            suspended_handle = coro_handle;
-            // Coroutine is suspended - TestSystem will resume it when condition
-            // is met or timeout
+            handle = coro_handle;
+            auto &p = handle.promise();
+            p.wait.kind = promise_type::WaitKind::Condition;
+            p.wait.start_frame = test_app::frame_counter;
+            p.wait.max_frames = max_frames;
+            p.wait.condition = condition;
+            p.wait_timed_out = false;
         }
 
         bool await_resume() {
-            // Check for timeout
-            if (test_app::frame_counter - start_frame >= max_frames) {
-                suspended_handle = nullptr;
-                throw std::runtime_error("Condition not met within max frames");
+            auto &p = handle.promise();
+            if (p.wait_timed_out) {
+                p.wait_timed_out = false;
+                throw std::runtime_error(
+                    "Condition not met within max frames");
             }
-            suspended_handle = nullptr;
-            return condition();  // Return current condition state
-        }
-
-        // Method for TestSystem to check if ready to resume
-        bool should_resume() const {
-            return condition() ||
-                   (test_app::frame_counter - start_frame >= max_frames);
-        }
-
-        // Method for TestSystem to resume if ready
-        void resume_if_ready() {
-            if (should_resume() && suspended_handle) {
-                suspended_handle.resume();
-            }
+            return condition && condition();
         }
     };
 
-    template<typename Func>
-    static WaitCondition<Func> wait_for_condition(Func condition,
-                                                  int max_frames = 300) {
-        return WaitCondition<Func>{condition, max_frames};
+    static WaitForCondition wait_for_condition(std::function<bool()> condition,
+                                               int max_frames = 300) {
+        return WaitForCondition{std::move(condition), max_frames};
     }
 
     static bool has_order() {

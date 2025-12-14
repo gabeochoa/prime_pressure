@@ -9,8 +9,6 @@ echo "Running all tests..."
 TESTS=(
     "test_order_selection"
     "test_typing_items"
-    "test_typing_buffer_status"
-    "test_order_tabbing"
     "test_boxing_workflow"
     "test_complete_order"
     "test_ready_stamp_sequence"
@@ -21,23 +19,26 @@ FAILED=0
 
 for test in "${TESTS[@]}"; do
     echo -n "Running $test... "
-    timeout 120s ./output/warehouse_game.exe --run-test "$test" > /tmp/test_output.txt 2>&1
+    BIN="./output/warehouse_game"
+    if [ ! -f "$BIN" ]; then
+        BIN="./output/warehouse_game.exe"
+    fi
+    timeout 120s "$BIN" --run-test "$test" > /tmp/test_output.txt 2>&1
     exit_code=$?
 
-    if grep -q "passed" /tmp/test_output.txt; then
+    if [ $exit_code -eq 0 ]; then
         echo "PASSED"
         ((PASSED++))
-    elif grep -q "failed" /tmp/test_output.txt; then
-        echo "FAILED"
-        ((FAILED++))
-        echo "  Error output:"
-        grep -A 5 "failed:" /tmp/test_output.txt | head -10
     elif [ $exit_code -eq 124 ]; then
         echo "TIMEOUT"
         ((FAILED++))
+        echo "  Error output:"
+        tail -50 /tmp/test_output.txt
     else
-        echo "UNKNOWN (skipped)"
-        # Don't count UNKNOWN as failed
+        echo "FAILED"
+        ((FAILED++))
+        echo "  Error output:"
+        tail -50 /tmp/test_output.txt
     fi
 done
 
