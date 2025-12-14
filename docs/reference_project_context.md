@@ -1,3 +1,11 @@
+# Reference Project Context (Non-Authoritative)
+
+This file is **reference-only** (historical preferences / examples).
+
+- **Canonical (Prime Pressure)**: `docs/project_context.md`
+- **Canonical architecture**: `docs/architecture.md`
+
+---
 
 # kart chaos
 
