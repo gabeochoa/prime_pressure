@@ -33,7 +33,7 @@ Prime Pressure is a satirical, retro-desktop warehouse fulfillment game where ty
 
 Planned feature progression (high level):
 - Stabilize/clarify the existing core loop (moment-to-moment gameplay)
-- Add the Day Loop (start-of-day ritual → shift → end-of-day review/email)
+- Add the Day Loop (start-of-day ritual → work phase → end-of-day review/email)
 - Add intermediate progression (Gold Stars as a persistent consequence/reward loop)
 - Add advanced gameplay (hazard materials and input modifiers as “handling procedures”)
 - Flesh out story primarily through items + emails; cutscenes are optional/late
@@ -57,7 +57,7 @@ This PRD focuses on new features that integrate cleanly with the existing ECS pa
 ### User Success (player-facing)
 
 - **Primary metric: Day 1–3 vertical slice completion rate**
-  - **Campaign (MVP) definition:** the **Day Loop** implemented for **Days 1–3** (start-of-day ritual → shift → end-of-day review/email) with a hard endpoint at **End of Day 3**.
+  - **Campaign (MVP) definition:** the **Day Loop** implemented for **Days 1–3** (start-of-day ritual → work phase → end-of-day review/email) with a hard endpoint at **End of Day 3**.
   - **Completion definition:** a player is counted as “complete” when they reach the **End-of-Day 3** screen and successfully advances past it to the “Day 3 Complete” endpoint.
   - **Start definition:** a player is counted as “started” when they complete the first actionable input of Day 1 (i.e., the run is not just a boot-to-menu).
   - **Interpretation metrics (to separate ‘not fun’ from ‘broken’):**
@@ -77,7 +77,7 @@ This PRD focuses on new features that integrate cleanly with the existing ECS pa
 - **Performance:** 60fps minimum during normal gameplay (no systemic stutter introduced by Day Loop screens).
 - **Input latency:** perceived typing responsiveness stays effectively **< 1 frame** (no buffering/focus regressions across view transitions).
 - **Stability:** no hard crashes in normal play.
-- **Progression integrity:** no known softlocks across Day 1–3 transitions (start-of-day → shift → end-of-day → next day).
+- **Progression integrity:** no known softlocks across Day 1–3 transitions (start-of-day → work phase → end-of-day → next day).
 
 ### Measurement & Instrumentation (MVP-appropriate)
 
@@ -98,7 +98,7 @@ Deliver a cohesive, replayable **Days 1–3** slice that proves the Day Loop add
   - Order selection → fulfill/request → box/ship is understandable, readable, and difficult to break.
 - **Day Loop (Days 1–3)**
   - **Start-of-day:** morning pledge ritual (Day 1–3 present; escalation can be light).
-  - **Shift:** core work phase contained within the day.
+  - **Work phase:** core fulfillment gameplay contained within the day.
   - **End-of-day:** review/email delivery + day summary; clean transition to the next day until the Day 3 endpoint.
 - **Pressure hooks (minimal, to support the premise)**
   - Include at least one “oppression system” interruption within the Day 1–3 slice (e.g., TOT and/or Smile Verification), keeping complexity minimal while validating pacing and state transitions.

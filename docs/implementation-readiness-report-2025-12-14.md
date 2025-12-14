@@ -70,7 +70,7 @@ inputDocuments:
 FR1: Stabilize/clarify the existing core fulfillment loop so “order selection → fulfill/request → box/ship” is “understandable, readable, and difficult to break.”  
 (Source: PRD “Product Scope → MVP (Option A) — Day 1–3 Vertical Slice”)
 
-FR2: Implement a Day Loop for Days 1–3 with phases “start-of-day ritual → shift → end-of-day review/email” and a hard endpoint at “End of Day 3.”  
+FR2: Implement a Day Loop for Days 1–3 with phases “start-of-day ritual → work phase → end-of-day review/email” and a hard endpoint at “End of Day 3.”  
 (Source: PRD “Success Criteria → User Success” and “Product Scope → Day Loop (Days 1–3)”)
 
 FR3: Provide a Start-of-day Morning Pledge ritual for Days 1–3.  
@@ -107,7 +107,7 @@ NFR2 (Responsiveness): Maintain perceived typing responsiveness “< 1 frame” 
 NFR3 (Stability): “No hard crashes in normal play.”  
 (Source: PRD “Technical Success (non-negotiables)”)
 
-NFR4 (Reliability / State integrity): “No known softlocks across Day 1–3 transitions (start-of-day → shift → end-of-day → next day).”  
+NFR4 (Reliability / State integrity): “No known softlocks across Day 1–3 transitions (start-of-day → work phase → end-of-day → next day).”  
 (Source: PRD “Technical Success (non-negotiables)”)
 
 Total NFRs: 4
@@ -136,7 +136,7 @@ AR2 (Scope constraints): Explicitly out of MVP Option A:
 | FR Number | PRD Requirement | Epic Coverage | Status |
 |---|---|---|---|
 | FR1 | Stabilize/clarify the existing core fulfillment loop so it’s understandable/readable/hard to break | **E01** Story 1.1 (boxing input clarity), Story 1.2 (order monitor UI) | ✓ Covered |
-| FR2 | Implement Day Loop Days 1–3 (pledge → shift → review/email) with hard endpoint at End of Day 3 | **E03** Story 3.0 (Day Loop state machine) + **E02** Story 2.3 (pledge phase) + **E04** Story 4.3 (Review/email MVP subset) | ✓ Covered |
+| FR2 | Implement Day Loop Days 1–3 (pledge → work phase → review/email) with hard endpoint at End of Day 3 | **E03** Story 3.0 (Day Loop state machine) + **E02** Story 2.3 (pledge phase) + **E04** Story 4.3 (Review/email MVP subset) | ✓ Covered |
 | FR3 | Start-of-day Morning Pledge ritual for Days 1–3 | **E02** Story 2.3 (Morning Pledge) | ✓ Covered |
 | FR4 | End-of-day review/email + day summary for Days 1–3 and “Day 3 Complete” endpoint | **E03** Story 3.0 (Day 3 endpoint) + **E04** Story 4.3 (Review/email MVP subset) | ✓ Covered *(email content minimal by design)* |
 | FR5 | At least one oppression system pressure hook in Days 1–3 (TOT and/or Smile) | **E02** Story 2.1 (TOT) *(Smile optional via Story 2.2)* | ✓ Covered |
@@ -175,7 +175,7 @@ FR7 (partial): “Start definition” (“first actionable input of Day 1”) an
 ### UX ↔ PRD Alignment
 
 - **Aligned (high-level):** UX specifies a retro desktop / 90s Windows aesthetic and “warehouse/mail-sorting UI” framing, which matches the PRD’s “retro-desktop warehouse fulfillment” premise.
-- **Missing specificity:** The PRD’s MVP is a Day 1–3 Day Loop with explicit phase transitions (pledge → shift → review/email). The UX doc does not yet define these screens/flows, error states, or transition affordances.
+- **Missing specificity:** The PRD’s MVP is a Day 1–3 Day Loop with explicit phase transitions (pledge → work phase → review/email). The UX doc does not yet define these screens/flows, error states, or transition affordances.
 
 ### UX ↔ Architecture Alignment
 

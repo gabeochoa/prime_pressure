@@ -19,11 +19,11 @@
 The MVP deliverable is a cohesive **Days 1–3** slice that proves the **Day Loop** works:
 
 - **Start-of-day:** pledge ritual
-- **Shift:** fulfillment gameplay
+- **Work phase:** fulfillment gameplay
 - **End-of-day:** review/email delivery + day summary
 - **Hard endpoint:** “Day 3 Complete”
 
-This MVP must preserve the Prime Pressure input rules (Shift encoded in data with `^`; no direct Shift checks in gameplay code) and avoid softlocks across day transitions.
+This MVP must preserve the Prime Pressure input rules (keyboard Shift encoded in data with `^`; no direct keyboard Shift checks in gameplay code) and avoid softlocks across day transitions.
 
 ### PRD FR Coverage Map (MVP: Day 1–3 Slice)
 
@@ -32,7 +32,7 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
 | FR | Requirement (short) | Epic / Story coverage |
 |---|---|---|
 | FR1 | Clarify/stabilize core fulfillment loop | E01 1.1, E01 1.2 |
-| FR2 | Day Loop Days 1–3 (Pledge → Shift → Review) with Day 3 endpoint | E03 3.0 (primary), E02 2.3, E04 4.3 (MVP subset) |
+| FR2 | Day Loop Days 1–3 (Pledge → Work → Review) with Day 3 endpoint | E03 3.0 (primary), E02 2.3, E04 4.3 (MVP subset) |
 | FR3 | Morning pledge ritual (Days 1–3) | E02 2.3 |
 | FR4 | End-of-day review/email + day summary + “Day 3 Complete” endpoint | E03 3.0 (endpoint + review flow), E04 4.3 (MVP subset content) |
 | FR5 | At least one pressure hook (TOT recommended) in Days 1–3 | E02 2.1 (TOT), E02 2.2 (optional Smile) |
@@ -51,7 +51,7 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
 *   **I want** the boxing phase to accept typed input clearly (Place -> Fold -> Tape -> Label),
 *   **So that** I can complete the physical shipping process.
 *   **Acceptance Criteria:**
-    *   **Given** I am in the Boxing phase of an active order during Shift  
+    *   **Given** I am in the Boxing phase of an active order during the Work phase  
         **When** I enter the required boxing key sequence for the current step (Place → Fold → Tape → Label)  
         **Then** the boxing step advances and the UI reflects the new step.  
     *   **Given** I am at the Tape step  
@@ -66,13 +66,13 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
 *   **I want** to see the incoming stream of orders on the "Computer Screen",
 *   **So that** I know what items are coming next.
 *   **Acceptance Criteria:**
-    *   **Given** I am in the Computer view during Shift  
+    *   **Given** I am in the Computer view during the Work phase  
         **When** I look at the order monitor  
         **Then** I see the current active order and the next 3 queued orders.  
     *   **Given** the MVP is “Locked/Linear” order flow  
         **When** new orders arrive  
         **Then** I cannot reject them (only progress through the queue).  
-    *   **Given** I am in the Computer view during Shift  
+    *   **Given** I am in the Computer view during the Work phase  
         **When** I press `[TAB]`  
         **Then** the active view switches between Computer and Warehouse.
 
@@ -89,7 +89,7 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
 *   **I want** to track player inactivity,
 *   **So that** I can punish them for being slow.
 *   **Acceptance Criteria:**
-    *   **Given** `CampaignProgress.phase == Shift`  
+    *   **Given** `CampaignProgress.phase == Work`  
         **When** no gameplay-relevant input is detected for > 2 seconds  
         **Then** the TOT meter begins filling.  
     *   **Given** the TOT meter reaches its warning threshold  
@@ -100,7 +100,7 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
         **Then** a Strike/Fine is recorded (exact penalty can be placeholder for MVP).  
     *   **Given** `CampaignProgress.phase == Pledge` or `CampaignProgress.phase == Review`  
         **When** time passes without input  
-        **Then** TOT does not advance (Shift-only constraint).
+        **Then** TOT does not advance (Work-only constraint).
 
 **Story 2.2: Smile Verification System**
 *   **As a** System,
@@ -109,7 +109,7 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
 *   **Acceptance Criteria:**
     *   [ ] Randomly triggers during the `Work Phase`.
     *   [ ] Pop-up covers center screen: "Please Smile for Verification".
-    *   [ ] Player must hold a **non-Shift** key for 1 second to clear (Shift checks are prohibited in gameplay code; Shift is encoded via `^` in data instead).
+    *   [ ] Player must hold a **non-keyboard-Shift** key for 1 second to clear (keyboard Shift checks are prohibited in gameplay code; keyboard Shift is encoded via `^` in data instead).
     *   [ ] Failure to smile pauses all inputs and raises TOT.
     *   [ ] **MVP note:** Smile Verification is optional for the Day 1–3 slice if TOT is the chosen minimal pressure hook.
 
@@ -123,7 +123,7 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
         **Then** `CampaignProgress.phase` is set to `Pledge` and the pledge prompt is shown.  
     *   **Given** the pledge prompt is visible  
         **When** I type the pledge text exactly correctly  
-        **Then** the day advances to `CampaignProgress.phase == Shift`.  
+        **Then** the day advances to `CampaignProgress.phase == Work`.  
     *   **Given** the pledge prompt is visible  
         **When** I type an incorrect character  
         **Then** the pledge does not complete and the UI indicates the error clearly (MVP: simplest possible feedback is acceptable).  
@@ -141,7 +141,7 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
 
 **Story 3.0: Day Loop State Machine (Days 1–3 Vertical Slice)**
 *   **As a** Player,
-*   **I want** the game to advance through Day 1–3 as a clear ritualized loop (Pledge → Shift → Review),
+*   **I want** the game to advance through Day 1–3 as a clear ritualized loop (Pledge → Work → Review),
 *   **So that** the experience feels like a campaign, not a disconnected sandbox.
 *   **Acceptance Criteria:**
     *   **Given** a new run begins  
@@ -149,10 +149,10 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
         **Then** `session_start` is recorded and the run is considered “started” for completion-rate accounting.  
     *   **Given** the Sophie singleton entity exists  
         **When** the Day Loop is active  
-        **Then** Sophie stores `day_index` (1..3) and `phase` (Pledge/Shift/Review).  
+        **Then** Sophie stores `day_index` (1..3) and `phase` (Pledge/Work/Review).  
     *   **Given** I complete the pledge for the current day  
         **When** pledge completion is detected  
-        **Then** the game transitions to `phase == Shift` and records `day_start(day_index)`.  
+        **Then** the game transitions to `phase == Work` and records `day_start(day_index)`.  
     *   **Given** I complete the shift for the current day  
         **When** shift completion is detected  
         **Then** the game transitions to `phase == Review` and records `day_end(day_index)`.  
@@ -166,7 +166,7 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
         **When** I quit, fail, crash, or hit a softlock watchdog  
         **Then** `run_ended(reason=quit|fail|crash|softlock, day_index=<current>)` is recorded and `session_end` is recorded.  
     *   **Given** Day Loop transitions occur  
-        **When** moving between Pledge → Shift → Review → next day  
+        **When** moving between Pledge → Work → Review → next day  
         **Then** there are no known softlocks across Days 1–3 (manual playtest checklist is acceptable for MVP).
 
 **Story 3.1: Dual Economy System**
@@ -225,7 +225,7 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
 *   **I want** to attach special input rules to dangerous items,
 *   **So that** they are harder to type.
 *   **Acceptance Criteria:**
-    *   [ ] Support for input modifiers **without direct Shift checks in gameplay code**.
+    *   [ ] Support for input modifiers **without direct keyboard Shift checks in gameplay code**.
     *   [ ] Shifted requirements are expressed via the `^` encoding in data/config and resolved by the input layer.
     *   [ ] Visual indicator on the typing prompt showing the required modifier.
 

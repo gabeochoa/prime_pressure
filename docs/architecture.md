@@ -29,7 +29,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 Prime Pressure is a C++23 + Raylib game implemented as a **pure ECS** on the vendored `afterhours` library. The architecture prioritizes low-latency keyboard input, small focused systems, and an ECS-backed global state (“Sophie” as a singleton **entity**) to keep gameplay, meta-progression, and UI consistent and AI-agent-friendly.
 
-This document is aligned to the current PRD MVP target: a **Day 1–3 vertical slice** that proves the Day Loop (pledge → shift → review/email) integrates cleanly with the existing fulfillment gameplay without sacrificing typing feel or architectural invariants.
+This document is aligned to the current PRD MVP target: a **Day 1–3 vertical slice** that proves the Day Loop (pledge → work phase → review/email) integrates cleanly with the existing fulfillment gameplay without sacrificing typing feel or architectural invariants.
 
 ## Decision Summary
 
@@ -40,7 +40,7 @@ This document is aligned to the current PRD MVP target: a **Day 1–3 vertical s
 | Rendering | Raylib | Multi-view rendering via focused render systems; avoid monolithic render loop. |
 | ECS | `afterhours` (vendored) | Components are POD-ish `BaseComponent` structs; logic lives in systems. |
 | Global state | Sophie = ECS singleton entity | Systems query Sophie entity/components; no C++ singleton accessors. |
-| Input | Buffered typing + JSON mapping | Use the single-keystroke JSON syntax; `^` encodes Shift in data/config, not in gameplay code. |
+| Input | Buffered typing + JSON mapping | Use the single-keystroke JSON syntax; `^` encodes keyboard Shift in data/config, not in gameplay code. |
 
 ## Development Environment
 
@@ -119,7 +119,7 @@ This document is aligned to the current PRD MVP target: a **Day 1–3 vertical s
 **Input implementation notes (Prime Pressure)**
 *   Treat each frame as authoritative: poll input every frame, append to `InputBuffer`, and let downstream systems consume buffer state.
 *   Do not rely on OS repeat-rate for gameplay feel; gameplay timing should be driven by dt + your own buffering rules.
-*   Shift-modified commands are represented via the JSON `^` syntax in config/data; do not check Shift directly in gameplay code.
+*   Keyboard-Shift-modified commands are represented via the JSON `^` syntax in config/data; do not check keyboard Shift directly in gameplay code.
 
 ### Meta-Game Persistence ("Sophie" Pattern)
 
@@ -136,14 +136,14 @@ This document is aligned to the current PRD MVP target: a **Day 1–3 vertical s
 **Core concept:**
 - A “day” is a structured sequence of phases:
   - **Start-of-day:** pledge ritual
-  - **Shift:** normal fulfillment gameplay (existing loop)
+  - **Work phase:** normal fulfillment gameplay (existing loop)
   - **End-of-day:** review/email + day summary
 - The MVP slice hard-ends at **End of Day 3**.
 
 **Proposed ECS state (stored on the Sophie singleton entity):**
 - `CampaignProgress`
   - `int day_index` (1..3 for MVP)
-  - `enum DayPhase { Pledge, Shift, Review }`
+  - `enum DayPhase { Pledge, Work, Review }`
   - `bool slice_complete` (true at End of Day 3)
 - `RunTelemetryState`
   - `uint64_t session_id` (or string)
@@ -151,7 +151,7 @@ This document is aligned to the current PRD MVP target: a **Day 1–3 vertical s
   - counters/flags: `crash_flag`, `softlock_flag`, `last_exit_reason`, and a small “event counters” struct (see Instrumentation section below)
 
 **Phase gating rule (architectural):**
-- Gameplay systems that mutate fulfillment state should only run when `CampaignProgress.phase == Shift`.
+- Gameplay systems that mutate fulfillment state should only run when `CampaignProgress.phase == Work`.
 - Pledge/review systems run only in their phases.
 - Render systems remain read-only (they can display phase UI based on Sophie state).
 
@@ -166,9 +166,9 @@ This document is aligned to the current PRD MVP target: a **Day 1–3 vertical s
 
 **Implementation Sequence:**
 1.  **Sophie Entity:** Create the persistent entity and MVP meta components (`CampaignProgress`, `RunTelemetryState`).
-2.  **Day Loop:** Implement the Day 1–3 phase state machine (Pledge → Shift → Review) with a hard endpoint at End of Day 3.
+2.  **Day Loop:** Implement the Day 1–3 phase state machine (Pledge → Work → Review) with a hard endpoint at End of Day 3.
 3.  **Input Buffer:** Preserve typing feel while ensuring view/phase transitions never drop or “eat” characters.
-4.  **Minimal pressure hook:** Add **TOT** (recommended for MVP) gated to Shift phase only. (Smile can be added later without changing the Day Loop structure.)
+4.  **Minimal pressure hook:** Add **TOT** (recommended for MVP) gated to Work phase only. (Smile can be added later without changing the Day Loop structure.)
 5.  **Debug UI:** Add simple text UI to show Day/Phase and basic telemetry counters for playtests.
 
 **Cross-Component Dependencies:**
@@ -274,7 +274,7 @@ prime_pressure/
 | Epic | Current core code (authoritative) | Current systems/files (update loop) | Current systems/files (render loop) |
 |---|---|---|---|
 | **E01 – Core Fulfillment Loop (P0)** | `src/order_components.h` (OrderWorkflow + state enums + tags + count components)<br>`src/order_state_machine.*` (state table + transitions)<br>`src/components.h` (Order, TypingBuffer, BoxingProgress, ConveyorItem, view + selection singletons) | `src/systems/SpawnItemsSystem.h` (spawn shelf items)<br>`src/systems/GenerateOrdersSystem.h` (spawn orders + workflow/count components)<br>`src/systems/ManageInProgressOrderTagSystem.h` (derives `IsInProgressOrder` tag from `OrderSlot`)<br>`src/systems/ManageSelectedOrderTagSystem.h` (derives `IsSelectedOrder` tag from SelectedOrder singleton)<br>`src/systems/ProcessOrderSelectionSystem.h` (1–9 select/open orders; resets typing buffer)<br>`src/systems/ProcessOrderTabbingSystem.h` (TAB cycle active order)<br>`src/systems/ProcessTypingInputSystem.h` (character buffer + timeout + status)<br>`src/systems/MatchItemToOrderSystem.h` (warehouse “request item” input → requested counts + conveyor move)<br>`src/systems/SpawnConveyorItemsSystem.h` (spawn conveyor items per order)<br>`src/systems/ManageConveyorItemsSystem.h` (move conveyor items; mark items ready + received counts)<br>`src/systems/ProcessBoxingInputSystem.h` (boxing key sequence; syncs OrderWorkflow to BoxingProgress)<br>`src/systems/ProcessReadyStampSystem.h` (READY/TO/SHIP stamping states)<br>`src/systems/ManageOrderStateTagsSystem.h` (keeps macro/micro state tags in sync)<br>`src/systems/UpdateOrderWorkflowSystem.h` (advances processing states via state machine)<br>`src/systems/DebugOrderWorkflowSystem.h` (periodic workflow logging)<br>`src/systems/GrabItemSystem.h` + `src/systems/BoxItemSystem.h` (WIP: grabbed → boxed; needs boxed-count wiring) | `src/systems/RenderComputerView.h` (order cards + timeline rendering)<br>`src/systems/RenderWarehouseView*.h` (warehouse belt + request prompt rendering)<br>`src/systems/RenderBoxingViewSystem.h` (boxing UI + prompts)<br>`src/systems/RenderTypingBufferSystem.h` (status strip + hints)<br>`src/systems/RenderRenderTextureSystem.h` + `src/systems/UpdateRenderTextureSystem.h` (present / resize render textures)<br>`src/render_*.cpp` + `src/render_views.h` (view registration) |
-| **E02 – Oppression Systems (P0)** | `docs/GDD.md` + `docs/epics.md` define TOT / Smile / Pledge requirements | *(Not implemented yet in `src/systems/`)*<br>**MVP subset required:** Morning pledge gate + **TOT** (recommended) integrated with the Day Loop phases (Shift-only).<br>Planned: systems/components for TOT timer, Smile verification interruptions, and pledge gate. | *(Not implemented yet in `src/systems/`)* |
+| **E02 – Oppression Systems (P0)** | `docs/GDD.md` + `docs/epics.md` define TOT / Smile / Pledge requirements | *(Not implemented yet in `src/systems/`)*<br>**MVP subset required:** Morning pledge gate + **TOT** (recommended) integrated with the Day Loop phases (Work-only).<br>Planned: systems/components for TOT timer, Smile verification interruptions, and pledge gate. | *(Not implemented yet in `src/systems/`)* |
 | **E03 – Economy & Meta (P1)** | `src/settings.*` (save/load + settings persistence)<br>`src/preload.*` (startup + resource setup) | *(Not implemented yet as “Sophie” ECS state)*<br>**MVP subset required:** Sophie singleton entity + `CampaignProgress` (Day 1–3, phase state) + minimal run/session telemetry state.<br>Current global-ish runtime state is handled via afterhours singleton components created in `src/game.cpp` (e.g., `TypingBuffer`, `ActiveView`, `SelectedOrder`, `ActiveOrder`, `BoxingProgress`). Planned: introduce a dedicated Sophie singleton **entity** for currencies/day-cycle/meta. | *(N/A)* |
 
 **Target mapping (goal)**
@@ -300,7 +300,7 @@ The flat `src/systems` structure matches the MVP requirements. Separation of `co
     *   **Decision:** Game input is primarily **Single Keystroke** (Letters & Unshifted Symbols).
     *   **Progression:** **Shifted Symbols** (e.g., `{`, `}`, `?`) are permitted for **Late Game** difficulty spikes.
     *   **Syntax:** Use the **single-keystroke JSON syntax** where `^` encodes Shift in data/config (not in gameplay code).
-        *   Example: `"recipe": "PPP^T"` means the final key is `Shift+T`.
+        *   Example: `"recipe": "PPP^T"` means the final key is `keyboard Shift+T`.
         *   For shifted symbols, encode the *base key* with `^` (e.g., `^[` for `{`, `^/` for `?`) rather than placing raw `{` / `?` in gameplay recipes.
     *   **Reserved Keys:** Numbers (`0-9`) are reserved for Order Selection.
 
@@ -330,9 +330,9 @@ The flat `src/systems` structure matches the MVP requirements. Separation of `co
 **First Implementation Priority:**
 Implement the **Day 1–3 vertical slice foundation** without risking typing feel:
 1. Create the **Sophie** singleton entity with `CampaignProgress` + minimal `RunTelemetryState`.
-2. Implement the Day Loop phases (Pledge → Shift → Review) and hard endpoint at **End of Day 3**.
+2. Implement the Day Loop phases (Pledge → Work → Review) and hard endpoint at **End of Day 3**.
 3. Keep `InputBuffer` behavior stable across phase/view transitions (no dropped characters), continuing to honor the JSON `^` shift-encoding rules (no direct Shift checks in gameplay code).
-4. Add **TOT** as the minimal “pressure hook,” gated to Shift phase only.
+4. Add **TOT** as the minimal “pressure hook,” gated to Work phase only.
 
 ## Architecture Completion Summary
 
