@@ -1,88 +1,159 @@
 #pragma once
 
+#include <afterhours/ah.h>
+
+#include <stdexcept>
+
 #include "../../components.h"
+#include "../../order_components.h"
 #include "../../rl.h"
 #include "../test_app.h"
 #include "../test_macros.h"
-#include <afterhours/ah.h>
-#include <stdexcept>
 
 TEST(test_ready_stamp_sequence) {
-  bool order_generated = co_await TestApp::wait_for_condition(
-      []() { return TestApp::has_order(); }, 3600);
-  if (!order_generated) {
-    throw std::runtime_error("No order generated for ready stamp test");
-  }
+    bool order_generated = co_await TestApp::wait_for_condition(
+        []() { return TestApp::has_order(); }, 3600);
+    if (!order_generated) {
+        throw std::runtime_error("No order generated for ready stamp test");
+    }
 
-  TestApp::simulate_key(raylib::KEY_ONE);
-  co_await TestApp::wait_for_frames(2);
-
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::is_order_selected(); }, 60);
-
-  std::vector<ItemType> order_items = TestApp::get_order_items();
-  for (ItemType item_type : order_items) {
-    std::string item_name = item_type_to_string(item_type);
-    TestApp::simulate_typing(item_name);
-    co_await TestApp::wait_for_frames(3);
-  }
-
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::are_all_items_selected(); }, 120);
-
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::get_boxing_state() == BoxingState::PutItems; },
-      60);
-
-  int total_items = TestApp::get_total_items_to_box();
-  for (int i = 0; i < total_items; ++i) {
-    TestApp::simulate_key(raylib::KEY_P);
+    // Select and complete the full order workflow up to shipping
+    TestApp::simulate_key(raylib::KEY_ONE);
     co_await TestApp::wait_for_frames(2);
-  }
 
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::get_boxing_state() == BoxingState::Fold; }, 60);
+    co_await TestApp::wait_for_condition(
+        []() { return TestApp::is_order_selected(); }, 60);
 
-  TestApp::simulate_key(raylib::KEY_F);
-  co_await TestApp::wait_for_frames(2);
+    // Start requesting items
+    TestApp::simulate_key(raylib::KEY_ENTER);
+    co_await TestApp::wait_for_frames(2);
 
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::get_boxing_state() == BoxingState::Tape; }, 60);
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Requesting_NeedsInput);
+        },
+        60);
 
-  TestApp::simulate_key(raylib::KEY_T);
-  co_await TestApp::wait_for_frames(2);
+    // Request all items
+    auto required_counts = TestApp::get_selected_order_required_counts();
+    for (const auto& [item_type, required_count] : required_counts) {
+        for (int i = 0; i < required_count; ++i) {
+            char key = item_key_for(item_type);
+            TestApp::simulate_char(key);
+            co_await TestApp::wait_for_frames(3);
+        }
+    }
 
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::get_boxing_state() == BoxingState::Ship; }, 60);
+    // Wait for all items to be requested and received
+    co_await TestApp::wait_for_condition(
+        []() { return TestApp::are_all_items_requested(); }, 120);
 
-  TestApp::simulate_key(raylib::KEY_S);
-  co_await TestApp::wait_for_frames(2);
+    co_await TestApp::wait_for_condition(
+        []() { return TestApp::are_all_items_received(); }, 300);
 
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::is_order_shipped(); }, 60);
+    // Complete boxing workflow
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Boxing_FoldBox);
+        },
+        60);
 
-  TestApp::simulate_key(raylib::KEY_ONE);
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::is_order_selected(); }, 120);
+    TestApp::simulate_key(raylib::KEY_F);
+    co_await TestApp::wait_for_frames(2);
 
-  // Stamp READY/TO/SHIP via input
-  TestApp::simulate_key(raylib::KEY_R);
-  co_await TestApp::wait_for_frames(1);
-  if (TestApp::get_ready_stamp_progress() < 1) {
-    throw std::runtime_error("R stamp not recorded");
-  }
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Boxing_PutItems);
+        },
+        60);
 
-  TestApp::simulate_key(raylib::KEY_T);
-  co_await TestApp::wait_for_frames(6);
-  if (TestApp::get_ready_stamp_progress() < 2) {
-    throw std::runtime_error("T stamp not recorded");
-  }
+    int total_items = 0;
+    for (const auto& [_, count] : required_counts) {
+        total_items += count;
+    }
 
-  TestApp::simulate_key(raylib::KEY_S);
-  co_await TestApp::wait_for_frames(6);
+    for (int i = 0; i < total_items; ++i) {
+        TestApp::simulate_key(raylib::KEY_P);
+        co_await TestApp::wait_for_frames(2);
+    }
 
-  co_await TestApp::wait_for_condition(
-      []() { return TestApp::is_order_fully_complete(); }, 120);
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(OrderState::Boxing_Fold);
+        },
+        60);
 
-  co_return;
+    TestApp::simulate_key(raylib::KEY_F);
+    co_await TestApp::wait_for_frames(2);
+
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(OrderState::Boxing_Tape);
+        },
+        60);
+
+    TestApp::simulate_key(raylib::KEY_T);
+    co_await TestApp::wait_for_frames(2);
+
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(OrderState::Boxing_Ship);
+        },
+        60);
+
+    TestApp::simulate_key(raylib::KEY_S);
+    co_await TestApp::wait_for_frames(2);
+
+    // Should now be in shipped state ready for stamping
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Shipped_Stamp0);
+        },
+        60);
+
+    // Test the READY/TO/SHIP stamp sequence
+    TestApp::simulate_key(raylib::KEY_R);
+    co_await TestApp::wait_for_frames(1);
+
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Shipped_Stamp1);
+        },
+        60);
+
+    TestApp::simulate_key(raylib::KEY_T);
+    co_await TestApp::wait_for_frames(1);
+
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Shipped_Stamp2);
+        },
+        60);
+
+    TestApp::simulate_key(raylib::KEY_S);
+    co_await TestApp::wait_for_frames(1);
+
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Shipped_Stamp3);
+        },
+        60);
+
+    // Should automatically transition to Complete_CloseoutDelay, then
+    // Complete_ClosedOut
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Complete_ClosedOut);
+        },
+        2000);
+
+    co_return 0;
 }

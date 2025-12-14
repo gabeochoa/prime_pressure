@@ -201,6 +201,7 @@ void game() {
 }
 
 void run_test(const std::string &test_name, bool slow_mode) {
+    log_info("run_test: Starting test '{}'", test_name);
     TestRegistry &registry = TestRegistry::get();
     auto it = registry.tests.find(test_name);
     if (it == registry.tests.end()) {
@@ -297,6 +298,8 @@ void run_test(const std::string &test_name, bool slow_mode) {
         systems.register_update_system(
             std::make_unique<ProcessBoxingInputSystem>());
         systems.register_update_system(
+            std::make_unique<UpdateOrderWorkflowSystem>());
+        systems.register_update_system(
             std::make_unique<UpdateShippingAnimationSystem>());
         systems.register_update_system(
             std::make_unique<MatchItemToOrderSystem>());
@@ -306,6 +309,8 @@ void run_test(const std::string &test_name, bool slow_mode) {
         systems.register_update_system(std::make_unique<BoxItemSystem>());
         systems.register_update_system(
             std::make_unique<UpdateRenderTextureSystem>());
+
+        log_info("Test systems registered, running test...");
 
         auto test_system = std::make_unique<TestSystem>();
         test_system_ptr = test_system.get();
