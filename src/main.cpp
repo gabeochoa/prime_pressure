@@ -58,11 +58,11 @@ int main(int argc, char *argv[]) {
         .make_singleton();
     Settings::get().refresh_settings();
 
-    run_test(test_name, slow_mode);
+    int rc = run_test(test_name, slow_mode);
 
     Settings::get().write_save_file();
 
-    return 0;
+    return rc;
   }
 
   int screenWidth, screenHeight;

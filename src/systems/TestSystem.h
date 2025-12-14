@@ -18,6 +18,7 @@ struct TestSystem : afterhours::System<> {
     std::string test_name;
     bool test_complete = false;
     std::string test_error;
+    int max_total_frames = 6000; // hard timeout per test (fail loudly)
 
     void set_test(const std::string &name, TestApp test) {
         log_info("TestSystem: Setting test '{}'", name);
@@ -49,8 +50,53 @@ struct TestSystem : afterhours::System<> {
             return;
         }
 
+        // Hard-stop timeout: if a test doesn't reach the end, it's a failure.
+        if (test_app::frame_counter >= max_total_frames) {
+            test_error =
+                "Test timed out (did not reach completion) after " +
+                std::to_string(max_total_frames) + " frames";
+            test_complete = true;
+            test_input::test_mode = false;
+            current_test.reset();
+            return;
+        }
+
         if (current_test->handle && !current_test->handle.done()) {
-            current_test->resume();
+            auto &promise = current_test->handle.promise();
+
+            // If the coroutine is waiting, only resume when the wait is ready
+            // (or timed out).
+            if (promise.wait.kind != TestApp::promise_type::WaitKind::None) {
+                bool should_resume = false;
+                bool timed_out = false;
+
+                if (promise.wait.kind ==
+                    TestApp::promise_type::WaitKind::Frames) {
+                    should_resume =
+                        test_app::frame_counter >= promise.wait.target_frame;
+                } else if (promise.wait.kind ==
+                           TestApp::promise_type::WaitKind::Condition) {
+                    bool cond_met =
+                        promise.wait.condition && promise.wait.condition();
+                    bool cond_timeout =
+                        (test_app::frame_counter - promise.wait.start_frame) >=
+                        promise.wait.max_frames;
+                    should_resume = cond_met || cond_timeout;
+                    timed_out = (!cond_met && cond_timeout);
+                }
+
+                if (should_resume) {
+                    // Clear wait before resuming to avoid re-triggering.
+                    promise.wait.kind = TestApp::promise_type::WaitKind::None;
+                    if (timed_out) {
+                        promise.wait_timed_out = true;
+                    }
+                    current_test->resume();
+                }
+            } else {
+                // Not waiting on an awaitable; run one step this frame.
+                current_test->resume();
+            }
 
             if (test_input::slow_test_mode) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(250));
