@@ -155,6 +155,16 @@ This document is aligned to the current PRD MVP target: a **Day 1–3 vertical s
 - Pledge/review systems run only in their phases.
 - Render systems remain read-only (they can display phase UI based on Sophie state).
 
+### Phase Responsibility Matrix (Pledge / Work / Review)
+
+This is the “no ambiguity” contract for which systems can run, what input is accepted, and what gets cleared at phase boundaries.
+
+| Day phase | Player intent | Systems allowed to mutate gameplay state | Allowed inputs | Required buffer / state behavior |
+|---|---|---|---|---|
+| **Pledge** | Type the pledge to begin the day | Pledge system + meta/day-loop system only | Pledge typing only | Work-phase typing/boxing buffers must not accidentally dismiss pledge; completion moves to Work |
+| **Work** | Fulfillment gameplay (orders → typing → boxing/shipping) | Fulfillment systems + oppression systems (TOT, optional Smile) + meta/day-loop | Normal gameplay typing + view navigation | TOT runs only here; transitions out must not “eat” buffered characters |
+| **Review** | See end-of-day summary/email and continue | Review/email system + meta/day-loop system only | Confirm/continue inputs only | On entry, flush/ignore leftover Work-phase buffers so stray keystrokes don’t auto-advance |
+
 ### Rendering & Polish
 
 **Decision:** **Function over Form (MVP)**
@@ -299,7 +309,7 @@ The flat `src/systems` structure matches the MVP requirements. Separation of `co
 *   **Gap (Resolved): Input Constraints in Data (`items.json`)**
     *   **Decision:** Game input is primarily **Single Keystroke** (Letters & Unshifted Symbols).
     *   **Progression:** **Shifted Symbols** (e.g., `{`, `}`, `?`) are permitted for **Late Game** difficulty spikes.
-    *   **Syntax:** Use the **single-keystroke JSON syntax** where `^` encodes Shift in data/config (not in gameplay code).
+    *   **Syntax:** Use the **single-keystroke JSON syntax** where `^` encodes keyboard Shift in data/config (not in gameplay code).
         *   Example: `"recipe": "PPP^T"` means the final key is `keyboard Shift+T`.
         *   For shifted symbols, encode the *base key* with `^` (e.g., `^[` for `{`, `^/` for `?`) rather than placing raw `{` / `?` in gameplay recipes.
     *   **Reserved Keys:** Numbers (`0-9`) are reserved for Order Selection.
@@ -331,7 +341,7 @@ The flat `src/systems` structure matches the MVP requirements. Separation of `co
 Implement the **Day 1–3 vertical slice foundation** without risking typing feel:
 1. Create the **Sophie** singleton entity with `CampaignProgress` + minimal `RunTelemetryState`.
 2. Implement the Day Loop phases (Pledge → Work → Review) and hard endpoint at **End of Day 3**.
-3. Keep `InputBuffer` behavior stable across phase/view transitions (no dropped characters), continuing to honor the JSON `^` shift-encoding rules (no direct Shift checks in gameplay code).
+3. Keep `InputBuffer` behavior stable across phase/view transitions (no dropped characters), continuing to honor the JSON `^` keyboard-Shift-encoding rules (no direct keyboard Shift checks in gameplay code).
 4. Add **TOT** as the minimal “pressure hook,” gated to Work phase only.
 
 ## Architecture Completion Summary

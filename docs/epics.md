@@ -107,11 +107,19 @@ This is an explicit traceability map for the PRD’s “Success Criteria + MVP S
 *   **I want** to interrupt the player with a "Smile Check",
 *   **So that** I can ensure compliance and break their flow.
 *   **Acceptance Criteria:**
-    *   [ ] Randomly triggers during the `Work Phase`.
-    *   [ ] Pop-up covers center screen: "Please Smile for Verification".
-    *   [ ] Player must hold a **non-keyboard-Shift** key for 1 second to clear (keyboard Shift checks are prohibited in gameplay code; keyboard Shift is encoded via `^` in data instead).
-    *   [ ] Failure to smile pauses all inputs and raises TOT.
-    *   [ ] **MVP note:** Smile Verification is optional for the Day 1–3 slice if TOT is the chosen minimal pressure hook.
+    *   **Given** `CampaignProgress.phase == Work`  
+        **When** a Smile Check triggers  
+        **Then** a blocking pop-up is shown: “Please Smile for Verification”.  
+    *   **Given** the Smile Check pop-up is active  
+        **When** I hold the configured **non-keyboard-Shift** key for 1 second  
+        **Then** the pop-up clears and the Work phase resumes.  
+    *   **Given** the Smile Check pop-up is active  
+        **When** I do not complete the hold requirement within the allowed window (MVP: choose a single fixed window, or “until cleared”)  
+        **Then** the game applies a penalty (MVP: increment TOT/strike pressure) and blocks Work gameplay inputs until the check is cleared.  
+    *   **Given** `CampaignProgress.phase == Pledge` or `CampaignProgress.phase == Review`  
+        **When** the game is in those phases  
+        **Then** Smile Checks do not trigger (Work-only constraint).  
+    *   **MVP note:** Smile Verification is optional for the Day 1–3 slice if TOT (Story 2.1) ships as the single pressure hook.
 
 **Story 2.3: Morning Pledge Minigame**
 *   **As a** Company,

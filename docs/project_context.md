@@ -27,10 +27,10 @@ This document is the **single source of truth** for Prime Pressure conventions.
 - **Ownership**: Use `std::unique_ptr` for system registration and ownership transfer. Avoid raw pointers for ownership.
 
 #### Input Handling
-- **Single Keystroke JSON syntax**: Input configuration uses a specific JSON syntax where `^` denotes the Shift modifier.
-  - Example: `^P` represents `Shift + P`.
+- **Single Keystroke JSON syntax**: Input configuration uses a specific JSON syntax where `^` denotes the **keyboard Shift** modifier.
+  - Example: `^P` represents `keyboard Shift + P`.
   - Do NOT use `"Shift+P"` or other variations.
-- **No Shift checks in gameplay**: Do NOT check for `IsKeyDown(KEY_LEFT_SHIFT)` (or similar) in gameplay code for command inputs. Rely on the input mapping system and the `^` syntax.
+- **No keyboard Shift checks in gameplay**: Do NOT check for `IsKeyDown(KEY_LEFT_SHIFT)` (or similar) in gameplay code for command inputs. Rely on the input mapping system and the `^` syntax.
 
 ---
 
@@ -59,8 +59,8 @@ These are reference conventions from Kart Chaos and are **not** authoritative fo
 - **Ownership**: Use `std::unique_ptr` for system registration and ownership transfer. Avoid raw pointers for ownership.
 
 ##### Input Handling
-- **Single Keystroke Syntax**: Input configuration uses a specific JSON syntax where `^` denotes the Shift modifier.
-    - Example: `^P` represents `Shift + P`.
+- **Single Keystroke Syntax**: Input configuration uses a specific JSON syntax where `^` denotes the **keyboard Shift** modifier.
+    - Example: `^P` represents `keyboard Shift + P`.
     - Do NOT use "Shift+P" or other variations.
 
 #### Implementation Patterns
@@ -101,7 +101,7 @@ if (action_matches(input.action, InputAction::Boost)) { ... }
 
 #### Anti-Patterns (What NOT to do)
 
-- **Native Shift Checks**: Do NOT check for `IsKeyDown(KEY_LEFT_SHIFT)` directly in gameplay code for command inputs. Rely on the input mapping system and the `^` syntax.
+- **Native keyboard Shift Checks**: Do NOT check for `IsKeyDown(KEY_LEFT_SHIFT)` directly in gameplay code for command inputs. Rely on the input mapping system and the `^` syntax.
 - **Monolithic Systems**: Avoid creating "God Systems" that do everything. Break down logic into small, focused systems (e.g., `UpdateSpriteTransform`, `UpdateAnimationTransform`).
 - **Manual Memory Management**: Avoid `new`/`delete`. Use smart pointers and containers (`std::vector`, `std::optional`).
 - **Ignoring C++23 Features**: Do not use outdated C++ patterns when C++23 alternatives (like `std::ranges`, `std::format` via `fmt`, etc.) are available.
@@ -130,11 +130,11 @@ Note: Pharmasea used a C++ singleton access pattern (`Sophie::get()`). Prime Pre
   - Do not use `auto` for non‑template types – write explicit types.
 
 - **Input Handling**
-  - Input is defined using the **Single Keystroke JSON** syntax. Example: `{"key":"^P"}` represents **Shift‑P**. The caret (`^`) denotes the Shift modifier.
-  - **Never** encode Shift modifiers directly in code; always use the JSON representation and let the input system translate it.
+  - Input is defined using the **Single Keystroke JSON** syntax. Example: `{"key":"^P"}` represents **keyboard Shift‑P**. The caret (`^`) denotes the keyboard Shift modifier.
+  - **Never** encode keyboard Shift modifiers directly in code; always use the JSON representation and let the input system translate it.
 
 - **Constraints**
-  - **No `Shift` modifiers** may appear in source code – they must be expressed only via the JSON syntax.
+  - **No `keyboard Shift` modifiers** may appear in source code – they must be expressed only via the JSON syntax.
   - Target **C++23** features: structured bindings, `std::expected`, `co_await` for async tasks, and `constexpr` lambdas are encouraged.
   - Avoid deprecated C++20 features such as `std::bind` and raw `new/delete` – use smart pointers and `std::make_unique`.
   - Do not use `std::format` (not yet available in the toolchain) – rely on `fmt` library instead.
@@ -181,11 +181,11 @@ Note: Pharmasea used a C++ singleton access pattern (`Sophie::get()`). Prime Pre
   ```json
   { "key": "^P" }
   ```
-  This JSON is parsed by the input system and translated to a Shift‑P keystroke.
+  This JSON is parsed by the input system and translated to a keyboard Shift‑P keystroke.
 
 ## Anti‑Patterns (What NOT to do)
 
-- **Directly accessing Shift modifiers in code** – e.g., `if (IsKeyPressed(KEY_LEFT_SHIFT))` is prohibited.
+- **Directly accessing keyboard Shift modifiers in code** – e.g., `if (IsKeyPressed(KEY_LEFT_SHIFT))` is prohibited.
 - **Manual iteration over entity containers** – always use `EntityQuery`.
 - **Using `auto` for concrete types** – write the full type name.
 - **Mixing naming conventions** – do not use `camelCase` for variables or `snake_case` for components.
