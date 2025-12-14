@@ -17,6 +17,7 @@ struct OrderDisplayInfo {
 static std::pair<std::string, raylib::Color>
 get_boxing_status_text(const BoxingProgress &boxing_progress,
                        const Order &order) {
+  log_info("BoxingRender: Current boxing state: {}, items_placed: {}", static_cast<int>(boxing_progress.state), boxing_progress.items_placed);
   switch (boxing_progress.state) {
   case BoxingState::FoldBox:
     return {"Press 'B' to fold the box", ui_colors::TERMINAL_AMBER};
@@ -570,9 +571,11 @@ struct RenderBoxingViewSystem : BoxingViewRenderSystem {
     float y = content_start_y;
 
     if (!boxing_progress.order_id.has_value()) {
+      log_info("BoxingRender: No order_id set in boxing_progress");
       render_order_selection_list(right_x, y, boxing_progress, screen_width,
                                   screen_height);
     } else {
+      log_info("BoxingRender: Order {} is set for boxing", boxing_progress.order_id.value());
       for (const Order &order : afterhours::EntityQuery()
                                     .whereID(boxing_progress.order_id.value())
                                     .whereHasComponent<Order>()

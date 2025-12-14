@@ -2,28 +2,32 @@
 
 #include "../components.h"
 #include "../input_wrapper.h"
+#include "../order_components.h"
+#include "../order_state_machine.h"
 #include <afterhours/ah.h>
 
-struct ProcessReadyStampSystem : afterhours::System<> {
+struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
   bool should_run(float) const override {
-    return true; // Always run for debugging
+    return true;
   }
 
-  void once(float) override {
+  void for_each_with(afterhours::Entity &order_entity, Order &order, OrderWorkflow &workflow, float) override {
     // Get active order, fallback to selected order
     const ActiveOrder &active_order = get_singleton_as<ActiveOrder>();
+    const SelectedOrder &selected_order = get_singleton_as<SelectedOrder>();
 
-    std::optional<afterhours::EntityID> target_order_id;
-    if (active_order.order_id.order_id.has_value()) {
-      target_order_id = active_order.order_id.order_id.value();
-    } else {
-      const SelectedOrder &selected_order = get_singleton_as<SelectedOrder>();
-      if (selected_order.order_id.order_id.has_value()) {
-        target_order_id = selected_order.order_id.order_id.value();
-      }
+    bool is_active_order = active_order.order_id.is_matching_order(order_entity.id);
+    bool is_selected_order = selected_order.order_id.is_matching_order(order_entity.id);
+
+    // Only process input for orders that are either actively being worked on
+    // or are currently selected in the UI - skip all others
+    if (!is_active_order && !is_selected_order) {
+      return;
     }
 
-    if (!target_order_id.has_value()) {
+    // Only process if we're in a shipped stamping state
+    if (kind_of(workflow.state) != OrderStateKind::Input ||
+        macro_state_of(workflow.state) != OrderMacroState::Shipped) {
       return;
     }
 
@@ -35,32 +39,47 @@ struct ProcessReadyStampSystem : afterhours::System<> {
       return;
     }
 
-    char c = ' ';
-    if (pressed_r) {
-      c = 'r';
-    } else if (pressed_t) {
-      c = 't';
-    } else if (pressed_s) {
-      c = 's';
+    // Determine expected key based on current state
+    char expected_key = ' ';
+    OrderState next_state = workflow.state;
+
+    switch (workflow.state) {
+      case OrderState::Shipped_Stamp0:
+        if (pressed_r) {
+          expected_key = 'r';
+          next_state = OrderState::Shipped_Stamp1;
+        }
+        break;
+      case OrderState::Shipped_Stamp1:
+        if (pressed_t) {
+          expected_key = 't';
+          next_state = OrderState::Shipped_Stamp2;
+        }
+        break;
+      case OrderState::Shipped_Stamp2:
+        if (pressed_s) {
+          expected_key = 's';
+          next_state = OrderState::Shipped_Stamp3;
+        }
+        break;
+      case OrderState::Shipped_Stamp3:
+        // READY TO SHIP confirmed - advance to closeout delay
+        if (pressed_s) {  // Allow any key? Or specific sequence?
+          expected_key = 's'; // For now, accept S
+          next_state = OrderState::Complete_CloseoutDelay;
+        }
+        break;
+      default:
+        return;
     }
 
-    for (afterhours::Entity &order_entity :
-         afterhours::EntityQuery()
-             .whereID(target_order_id.value())
-             .whereHasComponent<Order>()
-             .gen()) {
-      Order &order = order_entity.get<Order>();
-      // Allow stamping on orders that aren't fully complete
-      if (order.is_fully_complete()) {
-        break;
-      }
+    if (expected_key != ' ') {
+      workflow.state = next_state;
+      workflow.time_in_state = 0.0f;
 
-      const char sequence[3] = {'r', 't', 's'};
-      int progress = order.get_ready_stamp_progress();
-      if (progress < 3 && c == sequence[progress]) {
-        order.set_ready_stamp_progress(progress + 1);
-      }
-      break;
+      log_info("Order {} shipped stamp advanced to state {}",
+               static_cast<unsigned long long>(order_entity.id),
+               static_cast<int>(workflow.state));
     }
   }
 };

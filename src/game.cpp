@@ -12,6 +12,8 @@
 #include "systems/GrabItemSystem.h"
 #include "systems/ManageConveyorItemsSystem.h"
 #include "systems/ManageInProgressOrderTagSystem.h"
+#include "systems/DebugOrderWorkflowSystem.h"
+#include "systems/ManageOrderStateTagsSystem.h"
 #include "systems/ManageSelectedOrderTagSystem.h"
 #include "systems/MatchItemToOrderSystem.h"
 #include "systems/ProcessBoxingInputSystem.h"
@@ -26,8 +28,8 @@
 #include "systems/SpawnConveyorItemsSystem.h"
 #include "systems/SpawnItemsSystem.h"
 #include "systems/TestSystem.h"
+#include "systems/UpdateOrderWorkflowSystem.h"
 #include "systems/UpdateRenderTextureSystem.h"
-#include "systems/UpdateTimelineStateSystem.h"
 #include "testing/test_input.h"
 #include "testing/test_macros.h"
 #include "testing/tests/all_tests.h"
@@ -129,8 +131,10 @@ void game() {
         std::make_unique<ManageConveyorItemsSystem>());
     systems.register_update_system(std::make_unique<GrabItemSystem>());
     systems.register_update_system(std::make_unique<BoxItemSystem>());
-    systems.register_update_system(
-        std::make_unique<UpdateTimelineStateSystem>());
+    // New order workflow systems
+    systems.register_update_system(std::make_unique<ManageOrderStateTagsSystem>());
+    systems.register_update_system(std::make_unique<UpdateOrderWorkflowSystem>());
+    systems.register_update_system(std::make_unique<DebugOrderWorkflowSystem>());
     systems.register_update_system(
         std::make_unique<UpdateRenderTextureSystem>());
 

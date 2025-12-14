@@ -17,16 +17,22 @@ struct ManageConveyorItemsSystem
 
     constexpr float READY_THRESHOLD_PCT = 0.5f; // middle of the screen
     if (item.x_position >= READY_THRESHOLD_PCT) {
-      bool added_to_ready = false;
-      for (Order &order : afterhours::EntityQuery()
-                              .whereID(item.order_id)
-                              .whereHasComponent<Order>()
-                              .gen_as<Order>()) {
+      auto order_opt = afterhours::EntityQuery()
+                           .whereID(item.order_id)
+                           .whereHasComponent<Order>()
+                           .gen_first();
+
+      if (order_opt.has_value()) {
+        afterhours::Entity &order_entity = order_opt.asE();
+        Order &order = order_entity.get<Order>();
         order.ready_items.push_back(item.type);
-        added_to_ready = true;
-        break;
-      }
-      if (added_to_ready) {
+
+        if (order_entity.has<OrderReceivedCounts>()) {
+          OrderReceivedCounts &received =
+              order_entity.get<OrderReceivedCounts>();
+          received.counts[item.type]++;
+        }
+
         entity.disableTag(GameTag::IsOnConveyor);
       }
     }

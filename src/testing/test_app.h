@@ -366,46 +366,30 @@ struct TestApp {
     for (const afterhours::Entity &order_entity :
          afterhours::EntityQuery()
              .whereID(target_id.value())
-             .whereHasComponent<Order>()
+             .whereHasComponent<OrderWorkflow>()
              .gen()) {
-      const Order &order = order_entity.get<Order>();
-      return order.get_ready_stamp_progress();
+      const OrderWorkflow &workflow = order_entity.get<OrderWorkflow>();
+      // Derive ready stamp progress from workflow state
+      switch (workflow.state) {
+      case OrderState::Shipped_Stamp0:
+        return 0;
+      case OrderState::Shipped_Stamp1:
+        return 1;
+      case OrderState::Shipped_Stamp2:
+        return 2;
+      case OrderState::Shipped_Stamp3:
+        return 3;
+      default:
+        return 0;
+      }
     }
     return 0;
   }
 
+  // Ready stamp char application is now handled by ProcessReadyStampSystem
   static void apply_ready_stamp_char(char c) {
-    const afterhours::Entity &selected_order_entity =
-        afterhours::EntityHelper::get_singleton<SelectedOrder>();
-    const SelectedOrder &selected_order =
-        selected_order_entity.get<SelectedOrder>();
-    std::optional<afterhours::EntityID> target_id =
-        selected_order.order_id.order_id;
-    if (!target_id.has_value()) {
-      const afterhours::Entity &active_order_entity =
-          afterhours::EntityHelper::get_singleton<ActiveOrder>();
-      const ActiveOrder &active_order = active_order_entity.get<ActiveOrder>();
-      target_id = active_order.order_id.order_id;
-    }
-    if (!target_id.has_value()) {
-      return;
-    }
-
-    for (afterhours::Entity &order_entity : afterhours::EntityQuery()
-                                                .whereID(target_id.value())
-                                                .whereHasComponent<Order>()
-                                                .gen()) {
-      Order &order = order_entity.get<Order>();
-      if (!order.is_shipped() || order.is_fully_complete()) {
-        return;
-      }
-      const char sequence[3] = {'r', 't', 's'};
-      int progress = order.get_ready_stamp_progress();
-      if (progress < 3 && c == sequence[progress]) {
-        order.set_ready_stamp_progress(progress + 1);
-      }
-      break;
-    }
+    // This function is deprecated - ready stamp input is handled by the ProcessReadyStampSystem
+    (void)c; // Suppress unused parameter warning
   }
 
   static void force_ready_complete() {
@@ -426,11 +410,12 @@ struct TestApp {
     }
 
     for (afterhours::Entity &order_entity : afterhours::EntityQuery()
-                                                .whereID(target_id.value())
-                                                .whereHasComponent<Order>()
-                                                .gen()) {
-      Order &order = order_entity.get<Order>();
-      order.set_ready_stamp_progress(3);
+                                               .whereID(target_id.value())
+                                               .whereHasComponent<OrderWorkflow>()
+                                               .gen()) {
+      OrderWorkflow &workflow = order_entity.get<OrderWorkflow>();
+      workflow.state = OrderState::Shipped_Stamp3;
+      workflow.time_in_state = 0.0f;
       break;
     }
   }

@@ -26,14 +26,10 @@ TEST(test_typing_items) {
   // Warehouse view is always visible, get order items
   std::vector<ItemType> order_items = TestApp::get_order_items();
 
-  // Type each item with delays between characters to ensure proper matching
+  // Type each item's key character
   for (ItemType item_type : order_items) {
-    std::string item_name = item_type_to_string(item_type);
-    // Type each character with a small delay
-    for (char c : item_name) {
-      TestApp::simulate_char(c);
-      co_await TestApp::wait_for_frames(2);
-    }
+    char key = item_key_for(item_type);
+    TestApp::simulate_char(key);
     // Wait for the item to be matched (MatchItemToOrder clears buffer on match)
     co_await TestApp::wait_for_frames(10);
   }

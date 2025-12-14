@@ -2,28 +2,105 @@
 
 #include "../components.h"
 #include "../input_wrapper.h"
+#include "../order_components.h"
+#include "../order_state_machine.h"
 #include <afterhours/ah.h>
 
-struct ProcessBoxingInputSystem : afterhours::System<> {
+struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {
   bool should_run(float) const override {
     return true; // Always run since all views are visible
   }
 
-  void once(float) override {
+  void for_each_with(afterhours::Entity &order_entity, Order &order, OrderWorkflow &workflow, float) override {
     const ActiveOrder &active_order = get_singleton_as<ActiveOrder>();
 
-    if (!active_order.order_id.order_id.has_value()) {
+    if (!active_order.order_id.is_matching_order(order_entity.id)) {
       return;
     }
 
-    BoxingProgress &boxing_progress = get_singleton_as<BoxingProgress>();
 
-    if (!boxing_progress.order_id.has_value()) {
-      start_boxing(boxing_progress, active_order.order_id.order_id.value());
+
+    // Only advance if we're in the Boxing macro state
+    if (macro_state_of(workflow.state) != OrderMacroState::Boxing) {
       return;
     }
 
+    afterhours::Entity &boxing_progress_entity =
+        afterhours::EntityHelper::get_singleton<BoxingProgress>();
+    BoxingProgress &boxing_progress =
+        boxing_progress_entity.get<BoxingProgress>();
+
+    // If we're in boxing state but boxing_progress isn't set up for this order,
+    // initialize it
+    if (!boxing_progress.order_id.has_value() ||
+        boxing_progress.order_id.value() != order_entity.id) {
+      start_boxing(boxing_progress, order_entity.id);
+    }
+
+    // Check for key presses first to avoid unnecessary work
+    bool f_pressed = game_input::IsKeyPressed(raylib::KEY_F);
+    bool p_pressed = game_input::IsKeyPressed(raylib::KEY_P);
+    bool t_pressed = game_input::IsKeyPressed(raylib::KEY_T);
+    bool s_pressed = game_input::IsKeyPressed(raylib::KEY_S);
+    bool b_pressed = game_input::IsKeyPressed(raylib::KEY_B);
+
+    if (!f_pressed && !p_pressed && !t_pressed && !s_pressed && !b_pressed) {
+      return; // No boxing input this frame
+    }
+
+    // Handle boxing input based on current state
+    bool advanced = false;
+
+
+    // Handle boxing actions using the internal helper which updates
+    // boxing_progress
     handle_boxing_actions(boxing_progress);
+
+    // Sync workflow state with boxing_progress state
+    // Check if boxing_progress state has advanced and update workflow accordingly
+    switch (boxing_progress.state) {
+    case BoxingState::PutItems:
+      if (workflow.state != OrderState::Boxing_PutItems) {
+        workflow.state = OrderState::Boxing_PutItems;
+        workflow.time_in_state = 0.0f;
+        advanced = true;
+      }
+      break;
+    case BoxingState::Fold:
+      if (workflow.state != OrderState::Boxing_Fold) {
+        workflow.state = OrderState::Boxing_Fold;
+        workflow.time_in_state = 0.0f;
+        advanced = true;
+      }
+      break;
+    case BoxingState::Tape:
+      if (workflow.state != OrderState::Boxing_Tape) {
+        workflow.state = OrderState::Boxing_Tape;
+        workflow.time_in_state = 0.0f;
+        advanced = true;
+      }
+      break;
+    case BoxingState::Ship:
+      if (workflow.state != OrderState::Boxing_Ship) {
+        workflow.state = OrderState::Boxing_Ship;
+        workflow.time_in_state = 0.0f;
+        advanced = true;
+      }
+      break;
+    case BoxingState::None:
+      // If we finished shipping (state went to None), verify we are sending
+      // shipped signal
+      if (workflow.state == OrderState::Boxing_Ship && s_pressed) {
+        workflow.state = OrderState::Shipped_Stamp0;
+        workflow.time_in_state = 0.0f;
+        advanced = true;
+      }
+      break;
+    default:
+      break;
+    }
+
+
   }
 
 private:
@@ -38,7 +115,6 @@ private:
   }
 
   void finish_shipping(BoxingProgress &boxing_progress, Order &order) const {
-    order.set_ready_stamp_progress(0);
     cleanup_boxing_items(boxing_progress);
     boxing_progress.order_id.reset();
     boxing_progress.state = BoxingState::None;
@@ -84,7 +160,7 @@ private:
     create_boxing_items(boxing_progress, items_to_create);
 
     boxing_progress.order_id = order_id;
-    boxing_progress.state = BoxingState::PutItems;
+    boxing_progress.state = BoxingState::FoldBox;
     boxing_progress.items_placed = 0;
   }
 
@@ -125,35 +201,59 @@ private:
       return;
     }
 
+    // Check for key presses first to avoid entity query overhead when no input
+    bool f_pressed = game_input::IsKeyPressed(raylib::KEY_F);
+    bool p_pressed = game_input::IsKeyPressed(raylib::KEY_P);
+    bool t_pressed = game_input::IsKeyPressed(raylib::KEY_T);
+    bool s_pressed = game_input::IsKeyPressed(raylib::KEY_S);
+    bool b_pressed = game_input::IsKeyPressed(raylib::KEY_B);
+
+    if (!f_pressed && !p_pressed && !t_pressed && !s_pressed && !b_pressed) {
+      return; // No boxing input this frame
+    }
+
     for (Order &order : afterhours::EntityQuery()
                             .whereID(boxing_progress.order_id.value())
                             .whereHasComponent<Order>()
                             .gen_as<Order>()) {
 
-      if (boxing_progress.state == BoxingState::PutItems &&
-          game_input::IsKeyPressed(raylib::KEY_P)) {
-        handle_put_items(boxing_progress);
-        break;
-      }
+      switch (boxing_progress.state) {
+        case BoxingState::FoldBox:
+          if (b_pressed) {
+            boxing_progress.state = BoxingState::PutItems;
+          }
+          break;
 
-      if (boxing_progress.state == BoxingState::Fold &&
-          game_input::IsKeyPressed(raylib::KEY_F)) {
-        boxing_progress.state = BoxingState::Tape;
-        break;
-      }
+        case BoxingState::PutItems:
+          if (p_pressed) {
+            handle_put_items(boxing_progress);
+          }
+          break;
 
-      if (boxing_progress.state == BoxingState::Tape &&
-          game_input::IsKeyPressed(raylib::KEY_T)) {
-        boxing_progress.state = BoxingState::Ship;
-        break;
-      }
+        case BoxingState::Fold:
+          if (f_pressed) {
+            boxing_progress.state = BoxingState::Tape;
+          }
+          break;
 
-      if (boxing_progress.state == BoxingState::Ship &&
-          game_input::IsKeyPressed(raylib::KEY_S)) {
-        finish_shipping(boxing_progress, order);
-        break;
+        case BoxingState::Tape:
+          if (t_pressed) {
+            boxing_progress.state = BoxingState::Ship;
+          }
+          break;
+
+        case BoxingState::Ship:
+          if (s_pressed) {
+            finish_shipping(boxing_progress, order);
+          }
+          break;
+
+        default:
+          // No action for None or invalid states
+          log_warn("Unhandled boxing progress state: {}", static_cast<int>(boxing_progress.state));
+          break;
       }
-      break;
+      break; // Exit after processing one order
     }
   }
 };

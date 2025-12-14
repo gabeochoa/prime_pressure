@@ -1,9 +1,9 @@
 #pragma once
 
+#include "item_type.h"
 #include "log.h"
 #include "std_include.h"
 #include <afterhours/ah.h>
-#include <magic_enum/magic_enum.hpp>
 #include <sys/resource.h>
 
 template <typename Component> inline Component &get_singleton_as() {
@@ -16,78 +16,9 @@ template <typename Component> inline Component &get_singleton_component() {
   return get_singleton_as<Component>();
 }
 
-enum struct ItemType { Book, Pen, Mug, Cup, Bag, Box, Toy, Hat, Key, Map };
 
-enum struct TimelineStage { Conveyor = 0, Boxing = 1, Ready = 2, Ship = 3 };
-
-enum class TimelinePhase { Pending, Active, Done };
-
-enum struct TimelineStageState {
-  ConveyorPending = 10,
-  BoxingPending = 20,
-  ReadyPending = 30,
-  ShipPending = 40,
-  //
-  ConveyorActive = 11,
-  ConveyorActiveFlash = 12,
-  BoxingActive = 21,
-  ReadyActive = 31,
-
-  ReadyStamp0 = 32,
-  ReadyStamp1 = 33,
-  ReadyStamp2 = 34,
-  ReadyStamp3 = 35,
-  //
-  ConveyorDone = 13,
-  BoxingDone = 22,
-  ReadyDone = 36,
-  //
-  ShipDone = 41
-};
-
-inline TimelinePhase timeline_phase(TimelineStageState state) {
-  switch (state) {
-  case TimelineStageState::ConveyorActiveFlash:
-  case TimelineStageState::ConveyorActive:
-  case TimelineStageState::BoxingActive:
-  case TimelineStageState::ReadyActive:
-  case TimelineStageState::ReadyStamp0:
-  case TimelineStageState::ReadyStamp1:
-  case TimelineStageState::ReadyStamp2:
-  case TimelineStageState::ReadyStamp3:
-    return TimelinePhase::Active;
-  case TimelineStageState::ConveyorDone:
-  case TimelineStageState::BoxingDone:
-  case TimelineStageState::ReadyDone:
-  case TimelineStageState::ShipDone:
-    return TimelinePhase::Done;
-  case TimelineStageState::ConveyorPending:
-  case TimelineStageState::BoxingPending:
-  case TimelineStageState::ReadyPending:
-  case TimelineStageState::ShipPending:
-  default:
-    return TimelinePhase::Pending;
-  }
-}
-
-inline TimelineStage timeline_stage_of(TimelineStageState state) {
-  if (state >= TimelineStageState::ConveyorPending &&
-      state <= TimelineStageState::ConveyorDone) {
-    return TimelineStage::Conveyor;
-  } else if (state >= TimelineStageState::BoxingPending &&
-             state <= TimelineStageState::BoxingDone) {
-    return TimelineStage::Boxing;
-  } else if (state >= TimelineStageState::ReadyPending &&
-             state <= TimelineStageState::ReadyDone) {
-    return TimelineStage::Ready;
-  } else {
-    return TimelineStage::Ship;
-  }
-}
-
-struct TimelineState {
-  TimelineStageState state = TimelineStageState::ConveyorPending;
-};
+// Include order components after ItemType is defined
+#include "order_components.h"
 
 struct Order : afterhours::BaseComponent {
   std::vector<ItemType> items;
@@ -95,94 +26,76 @@ struct Order : afterhours::BaseComponent {
   std::vector<ItemType> ready_items;
   bool has_been_selected = false;
   int items_completed = 0;
-  TimelineState timeline{};
 
-  static TimelineStageState ready_stamp_state_from_progress(int value) {
-    int clamped = std::max(0, std::min(3, value));
-    switch (clamped) {
-    case 0:
-      return TimelineStageState::ReadyStamp0;
-    case 1:
-      return TimelineStageState::ReadyStamp1;
-    case 2:
-      return TimelineStageState::ReadyStamp2;
-    case 3:
-    default:
-      return TimelineStageState::ReadyStamp3;
-    }
-  }
-
+  // Helper methods using the new state machine
   int get_ready_stamp_progress() const {
-    switch (timeline.state) {
-    case TimelineStageState::ReadyStamp0:
-      return 0;
-    case TimelineStageState::ReadyStamp1:
-      return 1;
-    case TimelineStageState::ReadyStamp2:
-      return 2;
-    case TimelineStageState::ReadyStamp3:
-      return 3;
-    case TimelineStageState::ConveyorPending:
-    case TimelineStageState::BoxingPending:
-    case TimelineStageState::ReadyPending:
-    case TimelineStageState::ShipPending:
-    case TimelineStageState::ConveyorActive:
-    case TimelineStageState::ConveyorActiveFlash:
-    case TimelineStageState::BoxingActive:
-    case TimelineStageState::ReadyActive:
-    case TimelineStageState::ConveyorDone:
-    case TimelineStageState::BoxingDone:
-    case TimelineStageState::ReadyDone:
-    case TimelineStageState::ShipDone:
-    default:
-      return 0;
-    }
+    // This should be replaced with logic that checks OrderWorkflow state
+    // For now, return 0 as a placeholder
+    return 0;
   }
 
-  void set_ready_stamp_progress(int value) {
-    int clamped = std::max(0, std::min(3, value));
-    timeline.state = ready_stamp_state_from_progress(clamped);
+  bool is_shipped() const {
+    // This should be replaced with logic that checks if order is in shipped states
+    // For now, return false as a placeholder
+    return false;
   }
-
-  bool is_ready_stamp_state() const {
-    switch (timeline.state) {
-    case TimelineStageState::ReadyStamp0:
-    case TimelineStageState::ReadyStamp1:
-    case TimelineStageState::ReadyStamp2:
-    case TimelineStageState::ReadyStamp3:
-    case TimelineStageState::ShipDone:
-      return true;
-    case TimelineStageState::ConveyorPending:
-    case TimelineStageState::BoxingPending:
-    case TimelineStageState::ReadyPending:
-    case TimelineStageState::ShipPending:
-    case TimelineStageState::ConveyorActive:
-    case TimelineStageState::ConveyorActiveFlash:
-    case TimelineStageState::BoxingActive:
-    case TimelineStageState::ReadyActive:
-    case TimelineStageState::ConveyorDone:
-    case TimelineStageState::BoxingDone:
-    case TimelineStageState::ReadyDone:
-    default:
-      return false;
-    }
-  }
-
-  bool is_shipped() const { return is_ready_stamp_state(); }
 
   bool is_fully_complete() const {
-    return timeline.state == TimelineStageState::ReadyStamp3 ||
-           timeline.state == TimelineStageState::ShipDone;
+    // This should be replaced with logic that checks if order is in Complete_ClosedOut state
+    // For now, return false as a placeholder
+    return false;
   }
 
   bool is_ready_to_pack() const {
-    return timeline.state == TimelineStageState::BoxingActive;
+    // This should be replaced with logic that checks if order is in ReadyToBox states
+    // For now, return false as a placeholder
+    return false;
   }
 
   bool should_flash_conveyor() const {
-    return timeline.state == TimelineStageState::ConveyorActiveFlash;
+    // This should be replaced with logic that checks workflow state
+    // For now, return false as a placeholder
+    return false;
   }
 };
+
+// Timeline helper functions
+
+// Order-related helper functions
+inline std::map<ItemType, int> count_items(const std::vector<ItemType> &items) {
+  std::map<ItemType, int> counts;
+  for (ItemType item_type : items) {
+    counts[item_type]++;
+  }
+  return counts;
+}
+
+inline bool all_items_selected(const Order &order) {
+  std::map<ItemType, int> item_counts = count_items(order.items);
+  std::map<ItemType, int> selected_counts = count_items(order.selected_items);
+
+  for (const auto &[item_type, needed_count] : item_counts) {
+    int selected_count = selected_counts[item_type];
+    if (selected_count < needed_count) {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline bool all_items_ready(const Order &order) {
+  std::map<ItemType, int> item_counts = count_items(order.items);
+  std::map<ItemType, int> ready_counts = count_items(order.ready_items);
+
+  for (const auto &[item_type, needed_count] : item_counts) {
+    int ready_count = ready_counts[item_type];
+    if (ready_count < needed_count) {
+      return false;
+    }
+  }
+  return true;
+}
+
 
 enum struct BoxingState { None, FoldBox, PutItems, Fold, Tape, Ship };
 
@@ -276,15 +189,6 @@ struct Item : afterhours::BaseComponent {
   std::string name() const { return item_type_to_string(type); }
 };
 
-enum struct GameTag : afterhours::TagId {
-  IsOnShelf = 0,
-  IsGrabbed = 1,
-  IsBoxed = 2,
-  IsBox = 3,
-  IsInProgressOrder = 4,
-  IsOnConveyor = 5,
-  IsSelectedOrder = 6
-};
 
 enum struct TypingStatus { Idle, Typing, Match, Error };
 
@@ -348,36 +252,3 @@ struct ConveyorItem : afterhours::BaseComponent {
   afterhours::EntityID order_id;
 };
 
-inline std::map<ItemType, int> count_items(const std::vector<ItemType> &items) {
-  std::map<ItemType, int> counts;
-  for (ItemType item_type : items) {
-    counts[item_type]++;
-  }
-  return counts;
-}
-
-inline bool all_items_selected(const Order &order) {
-  std::map<ItemType, int> item_counts = count_items(order.items);
-  std::map<ItemType, int> selected_counts = count_items(order.selected_items);
-
-  for (const auto &[item_type, needed_count] : item_counts) {
-    int selected_count = selected_counts[item_type];
-    if (selected_count < needed_count) {
-      return false;
-    }
-  }
-  return true;
-}
-
-inline bool all_items_ready(const Order &order) {
-  std::map<ItemType, int> item_counts = count_items(order.items);
-  std::map<ItemType, int> ready_counts = count_items(order.ready_items);
-
-  for (const auto &[item_type, needed_count] : item_counts) {
-    int ready_count = ready_counts[item_type];
-    if (ready_count < needed_count) {
-      return false;
-    }
-  }
-  return true;
-}

@@ -2,12 +2,13 @@
 
 #include "../components.h"
 #include "../input_wrapper.h"
+#include "../order_components.h"
+#include "../order_state_machine.h"
 #include <afterhours/ah.h>
 
-struct ProcessOrderSelectionSystem : afterhours::System<Order> {
+struct ProcessOrderSelectionSystem : afterhours::System<Order, OrderWorkflow> {
   bool should_run(float) const override {
-    const ActiveView &active_view = get_singleton_as<ActiveView>();
-    return active_view.current_view != ViewState::Cutscene;
+    return true;
   }
 
   void set_selected_and_active_order(
@@ -31,7 +32,7 @@ struct ProcessOrderSelectionSystem : afterhours::System<Order> {
     active_order.order_id.reset_if_matching_order(order_id);
   }
 
-  void for_each_with(afterhours::Entity &order_entity, Order &order,
+  void for_each_with(afterhours::Entity &order_entity, Order &order, OrderWorkflow &workflow,
                      float) override {
     SelectedOrder &selected_order = get_singleton_as<SelectedOrder>();
     ActiveOrder &active_order = get_singleton_as<ActiveOrder>();
@@ -43,13 +44,9 @@ struct ProcessOrderSelectionSystem : afterhours::System<Order> {
       return;
     }
 
-    int order_index = -1;
-    for (const OrderSlot &slot : afterhours::EntityQuery()
-                                     .whereID(order_entity.id)
-                                     .gen_as<OrderSlot>()) {
-      order_index = slot.index;
-      break;
-    }
+    int order_index = afterhours::EntityQuery()
+                                  .whereID(order_entity.id)
+                                  .gen_first_as<OrderSlot>().index;
 
     if (selected_order.order_id.is_matching_order(order_id)) {
       if (game_input::IsKeyPressed(raylib::KEY_ESCAPE)) {
@@ -73,35 +70,29 @@ struct ProcessOrderSelectionSystem : afterhours::System<Order> {
         continue;
       }
 
-      if (order.is_shipped() && !order.is_fully_complete()) {
-        if (order.get_ready_stamp_progress() >= 3) {
-          // Mark order complete by clearing its slot
-          order_entity.removeComponent<OrderSlot>();
-          reset_if_matching_order(selected_order, active_order, order_id);
-          return;
-        }
-
-        // Shipped but not fully stamped: select and arm for stamping, do not
-        // complete
+      // Handle order opening - advance from Incoming_Arrived to Requesting_NeedsInput
+      if (workflow.state == OrderState::Incoming_Arrived && kind_of(workflow.state) == OrderStateKind::Input) {
+        workflow.state = OrderState::Requesting_NeedsInput;
+        workflow.time_in_state = 0.0f;
+        order.has_been_selected = true;
         set_selected_and_active_order(order_id);
         TypingBuffer &buffer = get_singleton_as<TypingBuffer>();
         buffer.buffer.clear();
         buffer.status = TypingStatus::Idle;
         buffer.status_time = 0.0f;
         buffer.last_input_time = 0.0f;
+        log_info("Order {} opened and ready for input (Incoming -> Requesting)", static_cast<unsigned long long>(order_id));
         return;
       }
 
-      if (!order.is_shipped()) {
-        order.has_been_selected = true;
-        if (selected_order.order_id.order_id.has_value() &&
-            selected_order.order_id.order_id.value() != order_id) {
-          TypingBuffer &buffer = get_singleton_as<TypingBuffer>();
-          buffer.buffer.clear();
-          buffer.status = TypingStatus::Idle;
-          buffer.status_time = 0.0f;
-          buffer.last_input_time = 0.0f;
-        }
+      // Handle order selection for already active orders
+      if (kind_of(workflow.state) == OrderStateKind::Input) {
+        set_selected_and_active_order(order_id);
+        return;
+      }
+
+      // For already active orders, just select them
+      if (kind_of(workflow.state) == OrderStateKind::Input) {
         set_selected_and_active_order(order_id);
       }
       return;

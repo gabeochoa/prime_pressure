@@ -49,6 +49,9 @@ struct BoxItemSystem
       if (it != order.items.end()) {
         order.items_completed++;
         order.items.erase(it);
+        // TODO: Update OrderBoxedCounts component when items are boxed
+        // Consider: Add system to increment boxed_counts[item.type] for the order
+        // This is needed for the state machine to properly track completion
         break;
       }
     }

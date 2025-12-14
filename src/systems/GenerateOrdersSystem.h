@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../components.h"
+#include "../order_components.h"
 #include "../testing/test_input.h"
 #include "../ui_constants.h"
 #include <afterhours/ah.h>
@@ -103,6 +104,24 @@ private:
 
     OrderSlot &slot = order_entity.addComponent<OrderSlot>();
     slot.index = slot_index;
+
+    // Add new workflow components
+    OrderWorkflow &workflow = order_entity.addComponent<OrderWorkflow>();
+    workflow.state = OrderState::Incoming_Arrived;
+    workflow.time_in_state = 0.0f;
+
+    // Initialize item count tracking components
+    OrderRequiredCounts &required_counts = order_entity.addComponent<OrderRequiredCounts>();
+    required_counts.counts = count_items(order_items);
+
+    OrderRequestedCounts &requested_counts = order_entity.addComponent<OrderRequestedCounts>();
+    // Start empty - items get requested through input
+
+    OrderReceivedCounts &received_counts = order_entity.addComponent<OrderReceivedCounts>();
+    // Start empty - items get received through conveyor system
+
+    OrderBoxedCounts &boxed_counts = order_entity.addComponent<OrderBoxedCounts>();
+    // Start empty - items get boxed through boxing system
   }
 
   void generate_order() {
