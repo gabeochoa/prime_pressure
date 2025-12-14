@@ -29,6 +29,8 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 Prime Pressure is a C++23 + Raylib game implemented as a **pure ECS** on the vendored `afterhours` library. The architecture prioritizes low-latency keyboard input, small focused systems, and an ECS-backed global state (“Sophie” as a singleton **entity**) to keep gameplay, meta-progression, and UI consistent and AI-agent-friendly.
 
+This document is aligned to the current PRD MVP target: a **Day 1–3 vertical slice** that proves the Day Loop (pledge → shift → review/email) integrates cleanly with the existing fulfillment gameplay without sacrificing typing feel or architectural invariants.
+
 ## Decision Summary
 
 | Category | Decision | Notes |
@@ -54,12 +56,12 @@ Prime Pressure is a C++23 + Raylib game implemented as a **pure ECS** on the ven
 **Functional Requirements:**
 *   **Core Simulation:** High-fidelity typing and "boxing" mechanics (Place, Fold, Tape, Label).
 *   **Oppression Systems:** Timer-based pressure (TOT), Interruptions (Smile Verification), and Daily Rituals (Pledges).
-*   **Progression:** 20-Day linear campaign with branching endings.
+*   **Progression:** MVP is a **Day 1–3 vertical slice** (hard endpoint at End of Day 3). Full campaign (e.g., 20 days + endings) is a later expansion.
 *   **Economy:** Dual currency system (Stars for health, Black Market Points for upgrades).
 
 **Architectural Constraints (User Specified):**
 *   **Pure ECS:** All game state, including "Meta" and "UI" where possible, should be represented via Entity-Component-System patterns (`afterhours` library).
-*   **Phasing:** Focus on **MVP Gameplay first**. Reactive polish (shaders, dynamic audio) is deferred.
+*   **Phasing:** Focus on **MVP Gameplay first** (Day 1–3 vertical slice). Reactive polish (shaders, dynamic audio) is deferred.
 *   **UI Strategy:** Defer complex UI architecture. Focus on functional gameplay first.
 
 **Metric & Scale:**
@@ -123,8 +125,35 @@ Prime Pressure is a C++23 + Raylib game implemented as a **pure ECS** on the ven
 
 **Decision:** **ECS Singleton Entity**
 *   **Pattern:** A single persistent entity (named "Sophie" or similar) acts as the data store for global state.
-*   **Components:** `GoldStarManager`, `FactionAffinity`, `InventoryState`.
+*   **Components (MVP):** `CampaignProgress` (day/phase + slice endpoint), `RunTelemetryState` (session/run identifiers + counters), plus any minimal day-loop state needed for gating input.
+*   **Components (Later):** `GoldStars`, `MarketPoints`, `FactionAffinity`, richer inventory/meta state.
 *   **Rationale:** Maintains "Pure ECS" constraint. Systems query "Sophie" to check global currencies or reputation, rather than accessing a global C++ singleton class.
+
+### Day Loop & Campaign Slice (MVP: Days 1–3)
+
+**Decision:** Model the Day Loop as explicit ECS state (stored on Sophie) and drive it via small, focused systems.
+
+**Core concept:**
+- A “day” is a structured sequence of phases:
+  - **Start-of-day:** pledge ritual
+  - **Shift:** normal fulfillment gameplay (existing loop)
+  - **End-of-day:** review/email + day summary
+- The MVP slice hard-ends at **End of Day 3**.
+
+**Proposed ECS state (stored on the Sophie singleton entity):**
+- `CampaignProgress`
+  - `int day_index` (1..3 for MVP)
+  - `enum DayPhase { Pledge, Shift, Review }`
+  - `bool slice_complete` (true at End of Day 3)
+- `RunTelemetryState`
+  - `uint64_t session_id` (or string)
+  - `uint64_t run_id`
+  - counters/flags: `crash_flag`, `softlock_flag`, `last_exit_reason`, and a small “event counters” struct (see Instrumentation section below)
+
+**Phase gating rule (architectural):**
+- Gameplay systems that mutate fulfillment state should only run when `CampaignProgress.phase == Shift`.
+- Pledge/review systems run only in their phases.
+- Render systems remain read-only (they can display phase UI based on Sophie state).
 
 ### Rendering & Polish
 
@@ -136,10 +165,11 @@ Prime Pressure is a C++23 + Raylib game implemented as a **pure ECS** on the ven
 ### Decision Impact Analysis
 
 **Implementation Sequence:**
-1.  **Sophie Entity:** Create the persistent entity and `GameState` components.
-2.  **Input Buffer:** Implement the system to capture and parse "PPPBFTS" sequences.
-3.  **Boxing Logic:** Connect Input sequences to State transitions (Box -> Folded).
-4.  **UI Overlay:** Add simple text debug UI to show "Sophie's" state (Stars/Affinity).
+1.  **Sophie Entity:** Create the persistent entity and MVP meta components (`CampaignProgress`, `RunTelemetryState`).
+2.  **Day Loop:** Implement the Day 1–3 phase state machine (Pledge → Shift → Review) with a hard endpoint at End of Day 3.
+3.  **Input Buffer:** Preserve typing feel while ensuring view/phase transitions never drop or “eat” characters.
+4.  **Minimal pressure hook:** Add **TOT** (recommended for MVP) gated to Shift phase only. (Smile can be added later without changing the Day Loop structure.)
+5.  **Debug UI:** Add simple text UI to show Day/Phase and basic telemetry counters for playtests.
 
 **Cross-Component Dependencies:**
 *   `InputSystem` needs to know if `Sophie` allows inputs (e.g., if Day is active).
@@ -229,6 +259,10 @@ prime_pressure/
 *   `MetaSystem` manages the `Sophie` singleton entity.
 *   Other systems (e.g., Boxing) query `Sophie` to check "Can I box right now?" (Is Day Active?).
 
+**Telemetry Boundary (MVP-friendly):**
+*   A small `TelemetrySystem` (or equivalent utility) records **coarse session/run events** (day_start/day_end/run_completed/run_ended).
+*   Telemetry must not be required for gameplay correctness; it is observational and safe to disable.
+
 **Render Boundary:**
 *   `RenderSystem` is Read-Only. It visualizes the current component state.
 *   It does *not* modify game state (no "OnClick" callbacks inside the render loop).
@@ -240,8 +274,8 @@ prime_pressure/
 | Epic | Current core code (authoritative) | Current systems/files (update loop) | Current systems/files (render loop) |
 |---|---|---|---|
 | **E01 – Core Fulfillment Loop (P0)** | `src/order_components.h` (OrderWorkflow + state enums + tags + count components)<br>`src/order_state_machine.*` (state table + transitions)<br>`src/components.h` (Order, TypingBuffer, BoxingProgress, ConveyorItem, view + selection singletons) | `src/systems/SpawnItemsSystem.h` (spawn shelf items)<br>`src/systems/GenerateOrdersSystem.h` (spawn orders + workflow/count components)<br>`src/systems/ManageInProgressOrderTagSystem.h` (derives `IsInProgressOrder` tag from `OrderSlot`)<br>`src/systems/ManageSelectedOrderTagSystem.h` (derives `IsSelectedOrder` tag from SelectedOrder singleton)<br>`src/systems/ProcessOrderSelectionSystem.h` (1–9 select/open orders; resets typing buffer)<br>`src/systems/ProcessOrderTabbingSystem.h` (TAB cycle active order)<br>`src/systems/ProcessTypingInputSystem.h` (character buffer + timeout + status)<br>`src/systems/MatchItemToOrderSystem.h` (warehouse “request item” input → requested counts + conveyor move)<br>`src/systems/SpawnConveyorItemsSystem.h` (spawn conveyor items per order)<br>`src/systems/ManageConveyorItemsSystem.h` (move conveyor items; mark items ready + received counts)<br>`src/systems/ProcessBoxingInputSystem.h` (boxing key sequence; syncs OrderWorkflow to BoxingProgress)<br>`src/systems/ProcessReadyStampSystem.h` (READY/TO/SHIP stamping states)<br>`src/systems/ManageOrderStateTagsSystem.h` (keeps macro/micro state tags in sync)<br>`src/systems/UpdateOrderWorkflowSystem.h` (advances processing states via state machine)<br>`src/systems/DebugOrderWorkflowSystem.h` (periodic workflow logging)<br>`src/systems/GrabItemSystem.h` + `src/systems/BoxItemSystem.h` (WIP: grabbed → boxed; needs boxed-count wiring) | `src/systems/RenderComputerView.h` (order cards + timeline rendering)<br>`src/systems/RenderWarehouseView*.h` (warehouse belt + request prompt rendering)<br>`src/systems/RenderBoxingViewSystem.h` (boxing UI + prompts)<br>`src/systems/RenderTypingBufferSystem.h` (status strip + hints)<br>`src/systems/RenderRenderTextureSystem.h` + `src/systems/UpdateRenderTextureSystem.h` (present / resize render textures)<br>`src/render_*.cpp` + `src/render_views.h` (view registration) |
-| **E02 – Oppression Systems (P0)** | `docs/GDD.md` + `docs/epics.md` define TOT / Smile / Pledge requirements | *(Not implemented yet in `src/systems/`)*<br>Planned: new systems/components for TOT timer, Smile verification interruptions, and Morning pledge gate. | *(Not implemented yet in `src/systems/`)* |
-| **E03 – Economy & Meta (P1)** | `src/settings.*` (save/load + settings persistence)<br>`src/preload.*` (startup + resource setup) | *(Not implemented yet as “Sophie” ECS state)*<br>Current global-ish runtime state is handled via afterhours singleton components created in `src/game.cpp` (e.g., `TypingBuffer`, `ActiveView`, `SelectedOrder`, `ActiveOrder`, `BoxingProgress`). Planned: introduce a dedicated Sophie singleton **entity** for currencies/day-cycle/meta. | *(N/A)* |
+| **E02 – Oppression Systems (P0)** | `docs/GDD.md` + `docs/epics.md` define TOT / Smile / Pledge requirements | *(Not implemented yet in `src/systems/`)*<br>**MVP subset required:** Morning pledge gate + **TOT** (recommended) integrated with the Day Loop phases (Shift-only).<br>Planned: systems/components for TOT timer, Smile verification interruptions, and pledge gate. | *(Not implemented yet in `src/systems/`)* |
+| **E03 – Economy & Meta (P1)** | `src/settings.*` (save/load + settings persistence)<br>`src/preload.*` (startup + resource setup) | *(Not implemented yet as “Sophie” ECS state)*<br>**MVP subset required:** Sophie singleton entity + `CampaignProgress` (Day 1–3, phase state) + minimal run/session telemetry state.<br>Current global-ish runtime state is handled via afterhours singleton components created in `src/game.cpp` (e.g., `TypingBuffer`, `ActiveView`, `SelectedOrder`, `ActiveOrder`, `BoxingProgress`). Planned: introduce a dedicated Sophie singleton **entity** for currencies/day-cycle/meta. | *(N/A)* |
 
 **Target mapping (goal)**
 
@@ -265,7 +299,9 @@ The flat `src/systems` structure matches the MVP requirements. Separation of `co
 *   **Gap (Resolved): Input Constraints in Data (`items.json`)**
     *   **Decision:** Game input is primarily **Single Keystroke** (Letters & Unshifted Symbols).
     *   **Progression:** **Shifted Symbols** (e.g., `{`, `}`, `?`) are permitted for **Late Game** difficulty spikes.
-    *   **Syntax:** JSON strings use the literal character produced (e.g., `"recipe": "PPP{T}"`). No special modifier codes needed.
+    *   **Syntax:** Use the **single-keystroke JSON syntax** where `^` encodes Shift in data/config (not in gameplay code).
+        *   Example: `"recipe": "PPP^T"` means the final key is `Shift+T`.
+        *   For shifted symbols, encode the *base key* with `^` (e.g., `^[` for `{`, `^/` for `?`) rather than placing raw `{` / `?` in gameplay recipes.
     *   **Reserved Keys:** Numbers (`0-9`) are reserved for Order Selection.
 
 **Gap Analysis Results:**
@@ -292,7 +328,11 @@ The flat `src/systems` structure matches the MVP requirements. Separation of `co
 **Overall Status:** READY FOR IMPLEMENTATION
 
 **First Implementation Priority:**
-Refactor the current input systems (e.g., `src/systems/ProcessTypingInputSystem.h`, `src/systems/ProcessBoxingInputSystem.h`) to use a clear `InputBuffer` contract and the JSON `^` shift-encoding rules (no direct Shift checks in gameplay code).
+Implement the **Day 1–3 vertical slice foundation** without risking typing feel:
+1. Create the **Sophie** singleton entity with `CampaignProgress` + minimal `RunTelemetryState`.
+2. Implement the Day Loop phases (Pledge → Shift → Review) and hard endpoint at **End of Day 3**.
+3. Keep `InputBuffer` behavior stable across phase/view transitions (no dropped characters), continuing to honor the JSON `^` shift-encoding rules (no direct Shift checks in gameplay code).
+4. Add **TOT** as the minimal “pressure hook,” gated to Shift phase only.
 
 ## Architecture Completion Summary
 
