@@ -5,14 +5,25 @@
 | ID | Title | Priority | Description |
 |----|-------|----------|-------------|
 | **E01** | **Core Fulfillment Loop** | P0 (MVP) | The baseline "Order -> Box -> Ship" gameplay. (Already mostly implemented). |
-| **E02** | **Oppression Systems** | P0 (MVP) | The mechanics that apply pressure: TOT Timer, Smile Checks, Daily Pledges. |
-| **E03** | **Economy & Meta** | P1 | The "Gold Stars" economy, Black Market shop, and Day/Run progression logic. |
-| **E04** | **Content & Narrative** | P1 | The data-driven content: Item Tiers (1-3), Email System, and Glitch Progression. |
+| **E02** | **Oppression Systems** | P0 (MVP) | The mechanics that apply pressure: TOT Timer, Smile Checks, Daily Pledges. **MVP requires at least one pressure hook** (TOT recommended) inside Days 1–3. |
+| **E03** | **Economy & Meta** | P0→P1 | Day/Run progression logic (Day Loop). **MVP target:** a **Day 1–3 vertical slice** endpoint at End of Day 3. Economy comes later. |
+| **E04** | **Content & Narrative** | P1 | Data-driven content: Item Tiers (1-3), Email System, and Glitch Progression. **MVP includes a minimal end-of-day email/review delivery for Days 1–3** (not the full narrative system). |
 | **E05** | **Game Juice & Polish** | P2 | Visual/Audio polish: CRT Shaders, Camerashake, Dynamic Audio Manager. |
 
 ---
 
 ## Epic Breakdowns
+
+### MVP Definition (Option A) — Day 1–3 Vertical Slice
+
+The MVP deliverable is a cohesive **Days 1–3** slice that proves the **Day Loop** works:
+
+- **Start-of-day:** pledge ritual
+- **Shift:** fulfillment gameplay
+- **End-of-day:** review/email delivery + day summary
+- **Hard endpoint:** “Day 3 Complete”
+
+This MVP must preserve the Prime Pressure input rules (Shift encoded in data with `^`; no direct Shift checks in gameplay code) and avoid softlocks across day transitions.
 
 ### Epic 1: Core Fulfillment Loop (P0 - MVP)
 
@@ -55,6 +66,7 @@
     *   [ ] Timer bar fills up when no input is detected for > 2 seconds.
     *   [ ] Filling the bar triggers a "Warning" SFX and visual overlay (Red Border).
     *   [ ] 3 Warnings = 1 Strike (Fine).
+    *   [ ] **MVP constraint:** TOT only applies during **Shift** (not during pledge/review screens).
 
 **Story 2.2: Smile Verification System**
 *   **As a** System,
@@ -63,25 +75,38 @@
 *   **Acceptance Criteria:**
     *   [ ] Randomly triggers during the `Work Phase`.
     *   [ ] Pop-up covers center screen: "Please Smile for Verification".
-    *   [ ] Player must hold a key (e.g., `[Right Shift]`) for 1 second to clear.
+    *   [ ] Player must hold a **non-Shift** key for 1 second to clear (Shift checks are prohibited in gameplay code; Shift is encoded via `^` in data instead).
     *   [ ] Failure to smile pauses all inputs and raises TOT.
+    *   [ ] **MVP note:** Smile Verification is optional for the Day 1–3 slice if TOT is the chosen minimal pressure hook.
 
 **Story 2.3: Morning Pledge Minigame**
 *   **As a** Company,
 *   **I want** the player to type a loyalty pledge before starting the day,
 *   **So that** they are indoctrinated.
 *   **Acceptance Criteria:**
-    *   [ ] New Game State: `DayStart_Pledge`.
+    *   [ ] New Day Phase: `Pledge` (e.g., stored on the Sophie singleton entity as `CampaignProgress.phase`).
     *   [ ] Text crawler shows the daily slogan.
-    *   [ ] Player must type it 100% correctly to unlock the shift key.
+    *   [ ] Player must type it 100% correctly to begin the Shift phase.
+    *   [ ] **MVP scope:** implement pledges for Days 1–3 (content can be simple and escalate lightly).
 
 ---
 
 ### Epic 3: Economy & Meta (P1)
 
-**Goal:** Create the resource loop (Earn Tokens -> Buy Survival).
+**Goal:** Implement the Day Loop state machine and (later) the resource loop (Earn Tokens -> Buy Survival).
 
 #### Stories
+
+**Story 3.0: Day Loop State Machine (Days 1–3 Vertical Slice)**
+*   **As a** Player,
+*   **I want** the game to advance through Day 1–3 as a clear ritualized loop (Pledge → Shift → Review),
+*   **So that** the experience feels like a campaign, not a disconnected sandbox.
+*   **Acceptance Criteria:**
+    *   [ ] The Sophie singleton entity stores `day_index` (1..3) and `phase` (Pledge/Shift/Review).
+    *   [ ] Completing pledge moves to Shift; completing Shift moves to Review; completing Review advances the day.
+    *   [ ] End-of-Day 3 reaches a hard “Day 3 Complete” endpoint.
+    *   [ ] No known softlocks across Day 1–3 transitions.
+    *   [ ] **MVP telemetry hooks:** `day_start`, `day_end`, `run_completed(day=3)` or `run_ended(reason=...)`.
 
 **Story 3.1: Dual Economy System**
 *   **As a** Designer,
@@ -109,7 +134,7 @@
     *   [ ] Shop uses `MarketPoints` currency.
     *   [ ] Items: "Clear Strikes" (Safety), "Slow Down Conveyor" (Ease).
 
-**Story 3.3: Corporate Directory Screen**
+**Story 3.4: Corporate Directory Screen**
 *   **As a** Player,
 *   **I want** to see the staff directory change over time,
 *   **So that** I understand the narrative stakes (people disappearing).
@@ -139,7 +164,8 @@
 *   **I want** to attach special input rules to dangerous items,
 *   **So that** they are harder to type.
 *   **Acceptance Criteria:**
-    *   [ ] Support for Modifiers: `HoldShift`, `DoubleTap`, `Reverse`.
+    *   [ ] Support for input modifiers **without direct Shift checks in gameplay code**.
+    *   [ ] Shifted requirements are expressed via the `^` encoding in data/config and resolved by the input layer.
     *   [ ] Visual indicator on the typing prompt showing the required modifier.
 
 **Story 4.3: Email Narrative System**
@@ -147,9 +173,10 @@
 *   **I want** to push emails to the player's inbox between shifts,
 *   **So that** I can deliver lore and foreshadowing.
 *   **Acceptance Criteria:**
-    *   [ ] `EmailManager` queues messages based on Day #.
-    *   [ ] Unread badge on "Email" icon.
-    *   [ ] "Forwarded" chains that show corporate conversations.
+    *   [ ] **MVP subset:** end-of-day Review phase shows at least one “email/message” per day for Days 1–3.
+    *   [ ] Full system later: `EmailManager` queues messages based on Day #.
+    *   [ ] Full system later: unread badge on "Email" icon.
+    *   [ ] Full system later: "Forwarded" chains that show corporate conversations.
 
 **Story 4.4: Narrative Evaluation & Endings**
 *   **As a** Player,

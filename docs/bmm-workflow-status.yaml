@@ -30,7 +30,7 @@ workflow_status:
   research: skipped
   product-brief: skipped
 
-  prd: required
+  prd: "docs/prd.md"
   create-ux-design: "docs/ux-design-specification.md"
 
   create-architecture: "docs/architecture.md"
