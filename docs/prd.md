@@ -1,5 +1,5 @@
 ---
-stepsCompleted: []
+stepsCompleted: [1]
 inputDocuments:
   - docs/GDD.md
   - docs/architecture.md
@@ -15,7 +15,7 @@ documentCounts:
   brainstorming: 1
   projectDocs: 7
 workflowType: 'prd'
-lastStep: 0
+lastStep: 1
 project_name: 'prime_pressure'
 user_name: 'gabe'
 date: '2025-12-14'
