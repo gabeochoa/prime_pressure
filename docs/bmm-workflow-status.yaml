@@ -39,4 +39,4 @@ workflow_status:
   validate-architecture: optional
   implementation-readiness: "docs/implementation-readiness-report-2025-12-14.md"
 
-  sprint-planning: required
+  sprint-planning: "docs/sprint-artifacts/sprint-status.yaml"
