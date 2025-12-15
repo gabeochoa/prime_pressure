@@ -119,7 +119,8 @@ void game() {
         afterhours::input::register_update_systems(systems);
         afterhours::window_manager::register_update_systems(systems);
 
-        systems.register_update_system(std::make_unique<TestFrameBeginSystem>());
+        systems.register_update_system(
+            std::make_unique<TestFrameBeginSystem>());
         systems.register_update_system(std::make_unique<SpawnItemsSystem>());
         systems.register_update_system(
             std::make_unique<ManageInProgressOrderTagSystem>());
@@ -282,7 +283,8 @@ int run_test(const std::string &test_name, bool slow_mode) {
         afterhours::input::register_update_systems(systems);
         afterhours::window_manager::register_update_systems(systems);
 
-        systems.register_update_system(std::make_unique<TestFrameBeginSystem>());
+        systems.register_update_system(
+            std::make_unique<TestFrameBeginSystem>());
         systems.register_update_system(std::make_unique<SpawnItemsSystem>());
         systems.register_update_system(
             std::make_unique<ManageInProgressOrderTagSystem>());

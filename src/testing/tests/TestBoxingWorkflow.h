@@ -10,6 +10,8 @@
 #include "../test_app.h"
 #include "../test_macros.h"
 
+#pragma clang diagnostic ignored "-Woverload-member-function"
+
 TEST(test_boxing_workflow) {
     // Wait for order to be generated and arrive
     bool order_generated = co_await TestApp::wait_for_condition(

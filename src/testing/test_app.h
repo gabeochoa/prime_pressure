@@ -477,7 +477,7 @@ struct TestApp {
                 case OrderState::Boxing_Fold:
                 case OrderState::Boxing_Tape:
                 case OrderState::Boxing_Ship:
-                    return 0; // Not stamped yet
+                    return 0;  // Not stamped yet
                 // Shipped states (stamping progress)
                 case OrderState::Shipped_Stamp0:
                     return 0;
@@ -490,9 +490,9 @@ struct TestApp {
                 // Complete states
                 case OrderState::Complete_CloseoutDelay:
                 case OrderState::Complete_ClosedOut:
-                    return 4; // Fully complete
+                    return 4;  // Fully complete
             }
-            return 0; // Fallback (should not reach here)
+            return 0;  // Fallback (should not reach here)
         }
         return 0;
     }
