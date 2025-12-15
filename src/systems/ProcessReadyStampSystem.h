@@ -49,6 +49,31 @@ struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
     OrderState next_state = workflow.state;
 
     switch (workflow.state) {
+      // Incoming states - not handled by this system
+      case OrderState::Incoming_Arrived:
+      case OrderState::Incoming_Backlogged:
+      // Opened states - not handled by this system
+      case OrderState::Opened_Active:
+      case OrderState::Opened_Inactive:
+      // Requesting states - not handled by this system
+      case OrderState::Requesting_NeedsInput:
+      case OrderState::Requesting_InputError:
+      case OrderState::Requesting_AllRequested:
+      // Receiving states - not handled by this system
+      case OrderState::Receiving_OnConveyorWaiting:
+      case OrderState::Receiving_OnConveyorMoving:
+      case OrderState::Receiving_ReceivedToReady:
+      // ReadyToBox states - not handled by this system
+      case OrderState::ReadyToBox_Staged:
+      case OrderState::ReadyToBox_Queued:
+      // Boxing states - not handled by this system
+      case OrderState::Boxing_FoldBox:
+      case OrderState::Boxing_PutItems:
+      case OrderState::Boxing_Fold:
+      case OrderState::Boxing_Tape:
+      case OrderState::Boxing_Ship:
+        return;
+      // Shipped states - handled by this system
       case OrderState::Shipped_Stamp0:
         if (pressed_r) {
           expected_key = 'r';

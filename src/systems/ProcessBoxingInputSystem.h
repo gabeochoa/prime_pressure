@@ -51,7 +51,6 @@ struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {
         }
 
         // Handle boxing input based on current state
-        bool advanced = false;
 
         // Handle boxing actions using the internal helper which updates
         // boxing_progress
@@ -62,32 +61,34 @@ struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {
         // Check if boxing_progress state has advanced and update workflow
         // accordingly
         switch (boxing_progress.state) {
+            case BoxingState::FoldBox:
+                if (workflow.state != OrderState::Boxing_FoldBox) {
+                    workflow.state = OrderState::Boxing_FoldBox;
+                    workflow.time_in_state = 0.0f;
+                }
+                break;
             case BoxingState::PutItems:
                 if (workflow.state != OrderState::Boxing_PutItems) {
                     workflow.state = OrderState::Boxing_PutItems;
                     workflow.time_in_state = 0.0f;
-                    advanced = true;
                 }
                 break;
             case BoxingState::Fold:
                 if (workflow.state != OrderState::Boxing_Fold) {
                     workflow.state = OrderState::Boxing_Fold;
                     workflow.time_in_state = 0.0f;
-                    advanced = true;
                 }
                 break;
             case BoxingState::Tape:
                 if (workflow.state != OrderState::Boxing_Tape) {
                     workflow.state = OrderState::Boxing_Tape;
                     workflow.time_in_state = 0.0f;
-                    advanced = true;
                 }
                 break;
             case BoxingState::Ship:
                 if (workflow.state != OrderState::Boxing_Ship) {
                     workflow.state = OrderState::Boxing_Ship;
                     workflow.time_in_state = 0.0f;
-                    advanced = true;
                 }
                 break;
             case BoxingState::None:
@@ -96,10 +97,7 @@ struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {
                 if (workflow.state == OrderState::Boxing_Ship && s_pressed) {
                     workflow.state = OrderState::Shipped_Stamp0;
                     workflow.time_in_state = 0.0f;
-                    advanced = true;
                 }
-                break;
-            default:
                 break;
         }
     }

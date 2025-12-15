@@ -114,13 +114,13 @@ private:
     OrderRequiredCounts &required_counts = order_entity.addComponent<OrderRequiredCounts>();
     required_counts.counts = count_items(order_items);
 
-    OrderRequestedCounts &requested_counts = order_entity.addComponent<OrderRequestedCounts>();
+    order_entity.addComponent<OrderRequestedCounts>();
     // Start empty - items get requested through input
 
-    OrderReceivedCounts &received_counts = order_entity.addComponent<OrderReceivedCounts>();
+    order_entity.addComponent<OrderReceivedCounts>();
     // Start empty - items get received through conveyor system
 
-    OrderBoxedCounts &boxed_counts = order_entity.addComponent<OrderBoxedCounts>();
+    order_entity.addComponent<OrderBoxedCounts>();
     // Start empty - items get boxed through boxing system
   }
 

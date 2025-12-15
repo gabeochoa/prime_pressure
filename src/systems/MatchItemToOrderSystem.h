@@ -66,7 +66,6 @@ struct MatchItemToOrderSystem
     }
 
     // Check if the typed key matches an available item
-    bool item_requested = false;
     for (const auto &[item_type, required_count] : required_counts.counts) {
       auto requested_it = requested_counts.counts.find(item_type);
       int requested_count = (requested_it != requested_counts.counts.end()) ? requested_it->second : 0;

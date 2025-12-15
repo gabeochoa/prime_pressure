@@ -454,6 +454,31 @@ struct TestApp {
             const OrderWorkflow &workflow = order_entity.get<OrderWorkflow>();
             // Derive ready stamp progress from workflow state
             switch (workflow.state) {
+                // Incoming states
+                case OrderState::Incoming_Arrived:
+                case OrderState::Incoming_Backlogged:
+                // Opened states
+                case OrderState::Opened_Active:
+                case OrderState::Opened_Inactive:
+                // Requesting states
+                case OrderState::Requesting_NeedsInput:
+                case OrderState::Requesting_InputError:
+                case OrderState::Requesting_AllRequested:
+                // Receiving states
+                case OrderState::Receiving_OnConveyorWaiting:
+                case OrderState::Receiving_OnConveyorMoving:
+                case OrderState::Receiving_ReceivedToReady:
+                // ReadyToBox states
+                case OrderState::ReadyToBox_Staged:
+                case OrderState::ReadyToBox_Queued:
+                // Boxing states
+                case OrderState::Boxing_FoldBox:
+                case OrderState::Boxing_PutItems:
+                case OrderState::Boxing_Fold:
+                case OrderState::Boxing_Tape:
+                case OrderState::Boxing_Ship:
+                    return 0; // Not stamped yet
+                // Shipped states (stamping progress)
                 case OrderState::Shipped_Stamp0:
                     return 0;
                 case OrderState::Shipped_Stamp1:
@@ -462,9 +487,12 @@ struct TestApp {
                     return 2;
                 case OrderState::Shipped_Stamp3:
                     return 3;
-                default:
-                    return 0;
+                // Complete states
+                case OrderState::Complete_CloseoutDelay:
+                case OrderState::Complete_ClosedOut:
+                    return 4; // Fully complete
             }
+            return 0; // Fallback (should not reach here)
         }
         return 0;
     }
