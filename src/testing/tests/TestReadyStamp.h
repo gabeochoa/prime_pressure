@@ -49,6 +49,32 @@ TEST(test_ready_stamp_sequence) {
     co_await TestApp::wait_for_condition(
         []() { return TestApp::are_all_items_requested(); }, 120);
 
+    // STRICT but non-flaky: require these states were *observed*.
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::was_selected_order_state_seen(
+                OrderState::Requesting_AllRequested);
+        },
+        240);
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::was_selected_order_state_seen(
+                OrderState::Receiving_OnConveyorWaiting);
+        },
+        240);
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::was_selected_order_state_seen(
+                OrderState::Receiving_OnConveyorMoving);
+        },
+        240);
+    co_await TestApp::wait_for_condition(
+        []() {
+            return TestApp::was_selected_order_state_seen(
+                OrderState::Receiving_ReceivedToReady);
+        },
+        240);
+
     co_await TestApp::wait_for_condition(
         []() { return TestApp::are_all_items_received(); }, 300);
 
@@ -61,6 +87,10 @@ TEST(test_ready_stamp_sequence) {
         60);
 
     // Boxing starts with FoldBox -> press B to begin putting items
+    co_await TestApp::wait_for_condition(
+        []() { return TestApp::get_boxing_state() == BoxingState::FoldBox; },
+        600);
+
     TestApp::simulate_key(raylib::KEY_B);
     co_await TestApp::wait_for_frames(2);
 
@@ -70,6 +100,10 @@ TEST(test_ready_stamp_sequence) {
                 OrderState::Boxing_PutItems);
         },
         60);
+
+    co_await TestApp::wait_for_condition(
+        []() { return TestApp::get_boxing_state() == BoxingState::PutItems; },
+        120);
 
     int total_items = 0;
     for (const auto& [_, count] : required_counts) {

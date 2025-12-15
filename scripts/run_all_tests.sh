@@ -23,7 +23,11 @@ for test in "${TESTS[@]}"; do
     if [ ! -f "$BIN" ]; then
         BIN="./output/warehouse_game.exe"
     fi
-    timeout 120s "$BIN" --run-test "$test" > /tmp/test_output.txt 2>&1
+    RUN_CMD=( "$BIN" --run-test "$test" )
+    if command -v xvfb-run >/dev/null 2>&1; then
+        RUN_CMD=( xvfb-run -a "${RUN_CMD[@]}" )
+    fi
+    timeout 120s "${RUN_CMD[@]}" > /tmp/test_output.txt 2>&1
     exit_code=$?
 
     if [ $exit_code -eq 0 ]; then
