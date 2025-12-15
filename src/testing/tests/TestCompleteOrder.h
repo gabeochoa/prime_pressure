@@ -62,9 +62,8 @@ TEST(test_complete_order) {
     }
 
     for (const auto &[it, cnt] : required_counts) {
-        log_info("TCO: requires {} x{} (key='{}')",
-                 magic_enum::enum_name(it), cnt,
-                 std::string(1, item_key_for(it)));
+        log_info("TCO: requires {} x{} (key='{}')", magic_enum::enum_name(it),
+                 cnt, std::string(1, item_key_for(it)));
     }
 
     // STRICT: typing must cause requested-counts to increment, per key press.
@@ -96,8 +95,8 @@ TEST(test_complete_order) {
             if (auto it = after.find(item_type); it != after.end()) {
                 after_count = it->second;
             }
-            log_info("TCO: typed '{}' -> after_count={}",
-                     std::string(1, key), after_count);
+            log_info("TCO: typed '{}' -> after_count={}", std::string(1, key),
+                     after_count);
 
             if (after_count != before_count + 1) {
                 throw std::runtime_error(
@@ -176,7 +175,7 @@ TEST(test_complete_order) {
 
     // STRICT: B must be consumed (otherwise boxing input isn't being processed)
     co_await TestApp::wait_for_condition(
-        []() { return test_input::input_queue.empty(); }, 120);
+        []() { return TestApp::is_input_queue_empty(); }, 120);
 
     co_await TestApp::wait_for_condition(
         []() {
@@ -200,21 +199,27 @@ TEST(test_complete_order) {
     }
 
     co_await TestApp::wait_for_condition(
-        []() { return TestApp::is_selected_order_in_state(OrderState::Boxing_Fold); },
+        []() {
+            return TestApp::is_selected_order_in_state(OrderState::Boxing_Fold);
+        },
         240);
 
     TestApp::simulate_key(raylib::KEY_F);
     co_await TestApp::wait_for_frames(2);
 
     co_await TestApp::wait_for_condition(
-        []() { return TestApp::is_selected_order_in_state(OrderState::Boxing_Tape); },
+        []() {
+            return TestApp::is_selected_order_in_state(OrderState::Boxing_Tape);
+        },
         240);
 
     TestApp::simulate_key(raylib::KEY_T);
     co_await TestApp::wait_for_frames(2);
 
     co_await TestApp::wait_for_condition(
-        []() { return TestApp::is_selected_order_in_state(OrderState::Boxing_Ship); },
+        []() {
+            return TestApp::is_selected_order_in_state(OrderState::Boxing_Ship);
+        },
         240);
 
     TestApp::simulate_key(raylib::KEY_S);
@@ -222,25 +227,37 @@ TEST(test_complete_order) {
 
     // Stamping: R, T, S, then S to start animation -> CloseoutDelay
     co_await TestApp::wait_for_condition(
-        []() { return TestApp::is_selected_order_in_state(OrderState::Shipped_Stamp0); },
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Shipped_Stamp0);
+        },
         240);
 
     TestApp::simulate_key(raylib::KEY_R);
     co_await TestApp::wait_for_frames(1);
     co_await TestApp::wait_for_condition(
-        []() { return TestApp::is_selected_order_in_state(OrderState::Shipped_Stamp1); },
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Shipped_Stamp1);
+        },
         120);
 
     TestApp::simulate_key(raylib::KEY_T);
     co_await TestApp::wait_for_frames(1);
     co_await TestApp::wait_for_condition(
-        []() { return TestApp::is_selected_order_in_state(OrderState::Shipped_Stamp2); },
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Shipped_Stamp2);
+        },
         120);
 
     TestApp::simulate_key(raylib::KEY_S);
     co_await TestApp::wait_for_frames(1);
     co_await TestApp::wait_for_condition(
-        []() { return TestApp::is_selected_order_in_state(OrderState::Shipped_Stamp3); },
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Shipped_Stamp3);
+        },
         120);
 
     // Finalize shipping
@@ -248,11 +265,17 @@ TEST(test_complete_order) {
     co_await TestApp::wait_for_frames(1);
 
     co_await TestApp::wait_for_condition(
-        []() { return TestApp::is_selected_order_in_state(OrderState::Complete_CloseoutDelay); },
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Complete_CloseoutDelay);
+        },
         240);
 
     co_await TestApp::wait_for_condition(
-        []() { return TestApp::is_selected_order_in_state(OrderState::Complete_ClosedOut); },
+        []() {
+            return TestApp::is_selected_order_in_state(
+                OrderState::Complete_ClosedOut);
+        },
         2400);
 
     co_return 0;

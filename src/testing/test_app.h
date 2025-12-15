@@ -46,7 +46,7 @@ extern std::vector<std::pair<int, OrderState>> state_trace;
 void reset_state_trace();
 void record_state_trace(int frame, OrderState state);
 bool was_state_seen(OrderState state);
-}
+}  // namespace test_app
 
 struct TestApp {
     struct promise_type {
@@ -160,10 +160,7 @@ struct TestApp {
         int slow_multiplier;
         std::coroutine_handle<promise_type> handle;
 
-        WaitFrames(int frames)
-            : frames(frames),
-              slow_multiplier(test_input::slow_test_mode ? 100 : 1) {
-        }
+        WaitFrames(int frames) : frames(frames), slow_multiplier(1) {}
 
         bool await_ready() const { return frames <= 0; }
 
@@ -210,9 +207,11 @@ struct TestApp {
             auto &p = handle.promise();
             if (p.wait_timed_out) {
                 p.wait_timed_out = false;
-                throw std::runtime_error(
+                std::string error_msg =
                     "Condition not met within max frames (" +
-                    std::to_string(max_frames) + ")");
+                    std::to_string(max_frames) + ") at frame " +
+                    std::to_string(test_app::frame_counter);
+                throw std::runtime_error(error_msg);
             }
             return condition && condition();
         }
@@ -235,7 +234,12 @@ struct TestApp {
             afterhours::EntityHelper::get_singleton<SelectedOrder>();
         const SelectedOrder &selected_order =
             selected_order_entity.get<SelectedOrder>();
-        return selected_order.order_id.order_id.has_value();
+        bool result = selected_order.order_id.order_id.has_value();
+        return result;
+    }
+
+    static bool is_input_queue_empty() {
+        return test_input::input_queue.empty();
     }
 
     static bool are_all_items_selected() {
