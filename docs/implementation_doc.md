@@ -102,7 +102,7 @@ This plan is designed to minimize risk: first create the state model, then wire 
   - `bool slice_complete` (true at Day 3 completion; optional if you use `phase == Complete`)
 - `WorkdayConfig`
   - fixed-length Work phase duration by difficulty (e.g., easy = 5 minutes, normal = 3 minutes)
-  - quota target definition (recommended: orders shipped)
+  - quota target definition (orders completed)
 - `WorkdayRuntime`
   - elapsed time in the Work phase for the current day
   - quota progress for the current day
@@ -346,7 +346,7 @@ Total items to place can be derived (MVP choice):
 
 - If the active order is in boxing macro state:
   - `B` advances `OrderWorkflow.state` from `Boxing_FoldBox` → `Boxing_PutItems` and resets `items_placed = 0`.
-  - `P` in `Boxing_PutItems` increments `items_placed`. When `items_placed >= total_items`, advance to `Boxing_Fold`.
+  - `P` in `Boxing_PutItems` increments `items_placed`. (MVP note: there is no incorrect placement today.) When `items_placed >= total_items`, advance to `Boxing_Fold`.
   - `F` advances to `Boxing_Tape`.
   - `T` advances to `Boxing_Ship`.
   - `S` finalizes shipping and advances the workflow to stamping (`Shipped_Stamp0`).
