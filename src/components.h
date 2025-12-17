@@ -307,3 +307,8 @@ struct ConveyorItem : afterhours::BaseComponent {
     int vertical_index = 0;
     afterhours::EntityID order_id;
 };
+
+struct DebugOverlay : afterhours::BaseComponent {
+    bool enabled = false;
+    std::vector<std::string> debug_lines;
+};

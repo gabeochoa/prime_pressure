@@ -92,12 +92,7 @@ struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {
                 }
                 break;
             case BoxingState::None:
-                // If we finished shipping (state went to None), verify we are
-                // sending shipped signal
-                if (workflow.state == OrderState::Boxing_Ship && s_pressed) {
-                    workflow.state = OrderState::Shipped_Stamp0;
-                    workflow.time_in_state = 0.0f;
-                }
+                // Boxing is complete, no action needed here
                 break;
         }
     }
@@ -215,6 +210,9 @@ struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {
                                 .whereHasComponent<Order>()
                                 .gen_as<Order>()) {
             switch (boxing_progress.state) {
+                case BoxingState::None:
+                    // No boxing in progress, nothing to do
+                    break;
                 case BoxingState::FoldBox:
                     if (b_pressed) {
                         boxing_progress.state = BoxingState::PutItems;
@@ -242,6 +240,9 @@ struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {
                 case BoxingState::Ship:
                     if (s_pressed) {
                         finish_shipping(boxing_progress, order);
+                        // Immediately advance workflow state to stamping phase
+                        workflow.state = OrderState::Shipped_Stamp0;
+                        workflow.time_in_state = 0.0f;
                     }
                     break;
 

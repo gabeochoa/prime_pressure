@@ -26,6 +26,7 @@
 #include "systems/ProcessOrderTabbingSystem.h"
 #include "systems/ProcessReadyStampSystem.h"
 #include "systems/ProcessTypingInputSystem.h"
+#include "systems/RenderDebugOverlaySystem.h"
 #include "systems/RenderOrders.h"
 #include "systems/RenderRenderTextureSystem.h"
 #include "systems/RenderSystemHelpers.h"
@@ -106,6 +107,12 @@ void game() {
         afterhours::EntityHelper::registerSingleton<ShippingAnimation>(
             shipping_animation_entity);
 
+        afterhours::Entity &debug_overlay_entity =
+            afterhours::EntityHelper::createEntity();
+        debug_overlay_entity.addComponent<DebugOverlay>();
+        afterhours::EntityHelper::registerSingleton<DebugOverlay>(
+            debug_overlay_entity);
+
         afterhours::Entity &box_entity =
             afterhours::EntityHelper::createEntity();
         Box &box = box_entity.addComponent<Box>();
@@ -171,6 +178,8 @@ void game() {
         systems.register_render_system(
             std::make_unique<RenderTypingBufferSystem>());
         systems.register_render_system(
+            std::make_unique<RenderDebugOverlaySystem>());
+        systems.register_render_system(
             std::make_unique<EndWorldRenderSystem>());
         systems.register_render_system(
             std::make_unique<BeginPostProcessingRenderSystem>());
@@ -184,6 +193,10 @@ void game() {
     while (running && !raylib::WindowShouldClose()) {
         if (raylib::IsKeyPressed(raylib::KEY_ESCAPE)) {
             running = false;
+        }
+        if (raylib::IsKeyPressed(raylib::KEY_F1)) {
+            DebugOverlay &debug_overlay = get_singleton_as<DebugOverlay>();
+            debug_overlay.enabled = !debug_overlay.enabled;
         }
         float dt = raylib::GetFrameTime();
         systems.run(dt);
@@ -270,6 +283,12 @@ int run_test(const std::string &test_name, bool slow_mode) {
         afterhours::EntityHelper::registerSingleton<ShippingAnimation>(
             shipping_animation_entity);
 
+        afterhours::Entity &debug_overlay_entity =
+            afterhours::EntityHelper::createEntity();
+        debug_overlay_entity.addComponent<DebugOverlay>();
+        afterhours::EntityHelper::registerSingleton<DebugOverlay>(
+            debug_overlay_entity);
+
         afterhours::Entity &box_entity =
             afterhours::EntityHelper::createEntity();
         Box &box = box_entity.addComponent<Box>();
@@ -333,6 +352,8 @@ int run_test(const std::string &test_name, bool slow_mode) {
         register_render_boxing_systems(systems);
         systems.register_render_system(
             std::make_unique<RenderTypingBufferSystem>());
+        systems.register_render_system(
+            std::make_unique<RenderDebugOverlaySystem>());
         systems.register_render_system(
             std::make_unique<EndWorldRenderSystem>());
         systems.register_render_system(

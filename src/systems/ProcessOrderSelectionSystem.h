@@ -34,16 +34,9 @@ struct ProcessOrderSelectionSystem : afterhours::System<Order, OrderWorkflow> {
 
     void for_each_with(afterhours::Entity &order_entity, Order &order,
                        OrderWorkflow &workflow, float) override {
-        static int call_count = 0;
-        call_count++;
-        if (call_count % 10 == 0) {  // Log every 10th call to avoid spam
-            log_info(
-                "ProcessOrderSelectionSystem: Processing order entity {} (call "
-                "#{})",
-                static_cast<unsigned long long>(order_entity.id), call_count);
-        }
         SelectedOrder &selected_order = get_singleton_as<SelectedOrder>();
         ActiveOrder &active_order = get_singleton_as<ActiveOrder>();
+        DebugOverlay &debug_overlay = get_singleton_as<DebugOverlay>();
 
         afterhours::EntityID order_id = order_entity.id;
 
@@ -57,11 +50,14 @@ struct ProcessOrderSelectionSystem : afterhours::System<Order, OrderWorkflow> {
                               .gen_first_as<OrderSlot>()
                               .index;
 
-        log_info(
-            "ProcessOrderSelectionSystem: Processing order {}, index {}, state "
-            "{}",
-            static_cast<unsigned long long>(order_id), order_index,
-            static_cast<int>(workflow.state));
+        // Store debug information
+        if (debug_overlay.enabled) {
+            debug_overlay.debug_lines.push_back(
+                "Processing order " +
+                std::to_string(static_cast<unsigned long long>(order_id)) +
+                ", index " + std::to_string(order_index) + ", state " +
+                std::to_string(static_cast<int>(workflow.state)));
+        }
 
         if (selected_order.order_id.is_matching_order(order_id)) {
             if (game_input::IsKeyPressed(raylib::KEY_ESCAPE)) {
@@ -81,10 +77,6 @@ struct ProcessOrderSelectionSystem : afterhours::System<Order, OrderWorkflow> {
             }
 
             int pressed_index = key - raylib::KEY_ONE;
-            log_info(
-                "ProcessOrderSelectionSystem: Key {} pressed, "
-                "pressed_index={}, order_index={}",
-                key, pressed_index, order_index);
             if (pressed_index != order_index) {
                 continue;
             }
@@ -102,10 +94,14 @@ struct ProcessOrderSelectionSystem : afterhours::System<Order, OrderWorkflow> {
                 buffer.status = TypingStatus::Idle;
                 buffer.status_time = 0.0f;
                 buffer.last_input_time = 0.0f;
-                log_info(
-                    "Order {} opened and ready for input (Incoming -> "
-                    "Requesting)",
-                    static_cast<unsigned long long>(order_id));
+                // Store debug information
+                if (debug_overlay.enabled) {
+                    debug_overlay.debug_lines.push_back(
+                        "Order " +
+                        std::to_string(
+                            static_cast<unsigned long long>(order_id)) +
+                        " opened and ready for input (Incoming -> Requesting)");
+                }
                 return;
             }
 

@@ -1,5 +1,17 @@
 # Prime Pressure Afterhours Project Rules
 
+## Build and Runtime Permissions
+- All LLMs must run the game with full permissions (use `required_permissions: ["all"]` when using the Shell tool)
+- This ensures proper access to system resources and complete game functionality
+
+## Testing Requirements
+- Audit all existing tests after any code changes that affect game logic, components, or systems
+- Add comprehensive assertions and validation to ensure code correctness
+- Validate test isolation - tests should pass both individually and when run together
+- Run all tests regularly using `make test` or `scripts/run_all_tests.sh`
+- Fix test runner bugs that report false positives (exceptions should fail tests, not pass them)
+- Check both test output content and exit codes for proper validation
+
 ## Git Commit Format
 Use short, descriptive commit messages with prefixes:
 - no prefix for new features
@@ -38,6 +50,17 @@ Examples:
 - Run `make` to build game
 - Use `make clean` to clean build artifacts
 - Use `make run` to build and run game
+- Use `make test` or `scripts/run_all_tests.sh` to run test suite
+- Suppress warnings for vendor libraries (e.g., fmt) using compiler flags like `-Wno-all` for vendor include paths
+- Update include paths and compiler flags in makefile when adding new vendor libraries
+- Run `make` after each significant change to catch compilation errors early
+
+## IDE and Editor Configuration
+- Ensure format on save is working properly in your editor
+- Use `.clang-format` file for consistent C++ code formatting
+- Configure editor to use clang-format for automatic formatting
+- Check Cursor settings if format on save is not functioning
+- Verify editor recognizes `.clang-format` configuration file
 
 ## Debugging
 - Use `log_info()`, `log_warn()`, `log_error()` for logging
@@ -121,4 +144,20 @@ Examples:
 - Fix build errors immediately before continuing development
 - Include all necessary component headers in system files
 - Use early returns for error conditions in systems
+
+## Code Auditing and Review
+- Review all changed systems and components after modifications
+- Validate component integrity and relationships between systems
+- Check git diffs to understand the scope and impact of changes
+- Audit component usage patterns and ensure consistency
+- Verify that refactoring maintains existing functionality
+- Examine system interactions and data flow between components
+- Check for proper error handling and edge cases in modified code
+
+## Workflow and Project Management
+- Use BMAD workflows for structured development processes (@bmad/ workflows)
+- Check workflow status regularly using appropriate BMAD tools
+- Reference BMAD rules explicitly when needed (@bmad/{module}/rules)
+- Document project context and maintain organized documentation
+- Follow established workflow patterns for consistent development
 

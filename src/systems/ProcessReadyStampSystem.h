@@ -116,6 +116,10 @@ struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
                     next_state = OrderState::Complete_CloseoutDelay;
                 }
                 break;
+            // Complete states - order is already shipped, no more input needed
+            case OrderState::Complete_CloseoutDelay:
+            case OrderState::Complete_ClosedOut:
+                return;
             default:
                 return;
         }
