@@ -56,6 +56,14 @@ struct UpdateShippingAnimationSystem : afterhours::System<> {
                 boxing_progress.state = BoxingState::None;
                 boxing_progress.items_placed = 0;
             }
+
+            // Free up the order slot so a new order can spawn
+            for (OrderSlot &slot : afterhours::EntityQuery()
+                                       .whereID(anim_order_id)
+                                       .whereHasComponent<OrderSlot>()
+                                       .gen_as<OrderSlot>()) {
+                slot.index = -1;  // Mark slot as free
+            }
         }
 
         // Reset animation

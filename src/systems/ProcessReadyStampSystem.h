@@ -127,10 +127,6 @@ struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
         if (expected_key != ' ') {
             workflow.state = next_state;
             workflow.time_in_state = 0.0f;
-
-            log_info("Order {} shipped stamp advanced to state {}",
-                     static_cast<unsigned long long>(order_entity.id),
-                     static_cast<int>(workflow.state));
         }
     }
 };

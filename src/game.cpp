@@ -14,6 +14,7 @@
 #include "render_views.h"
 #include "settings.h"
 #include "systems/BoxItemSystem.h"
+#include "systems/CleanupCompletedOrdersSystem.h"
 #include "systems/GenerateOrdersSystem.h"
 #include "systems/GrabItemSystem.h"
 #include "systems/ManageConveyorItemsSystem.h"
@@ -149,6 +150,8 @@ void game() {
             std::make_unique<ProcessBoxingInputSystem>());
         systems.register_update_system(
             std::make_unique<UpdateShippingAnimationSystem>());
+        systems.register_update_system(
+            std::make_unique<CleanupCompletedOrdersSystem>());
         systems.register_update_system(
             std::make_unique<MatchItemToOrderSystem>());
         systems.register_update_system(
@@ -327,6 +330,8 @@ int run_test(const std::string &test_name, bool slow_mode) {
             std::make_unique<UpdateOrderWorkflowSystem>());
         systems.register_update_system(
             std::make_unique<UpdateShippingAnimationSystem>());
+        systems.register_update_system(
+            std::make_unique<CleanupCompletedOrdersSystem>());
         systems.register_update_system(
             std::make_unique<MatchItemToOrderSystem>());
         systems.register_update_system(

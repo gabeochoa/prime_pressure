@@ -54,8 +54,9 @@ struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {
 
         // Handle boxing actions using the internal helper which updates
         // boxing_progress
-        handle_boxing_actions(boxing_progress, f_pressed, p_pressed, t_pressed,
-                              s_pressed, b_pressed);
+        handle_boxing_actions(boxing_progress, workflow, order_entity.id,
+                              f_pressed, p_pressed, t_pressed, s_pressed,
+                              b_pressed);
 
         // Sync workflow state with boxing_progress state
         // Check if boxing_progress state has advanced and update workflow
@@ -193,7 +194,9 @@ struct ProcessBoxingInputSystem : afterhours::System<Order, OrderWorkflow> {
         }
     }
 
-    void handle_boxing_actions(BoxingProgress &boxing_progress, bool f_pressed,
+    void handle_boxing_actions(BoxingProgress &boxing_progress,
+                               OrderWorkflow &workflow,
+                               afterhours::EntityID order_id, bool f_pressed,
                                bool p_pressed, bool t_pressed, bool s_pressed,
                                bool b_pressed) const {
         if (!boxing_progress.order_id.has_value()) {
