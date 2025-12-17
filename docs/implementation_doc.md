@@ -156,7 +156,16 @@ This plan is designed to minimize risk: first create the state model, then wire 
 
 **Goal:** define what makes a Workday succeed.
 
-**Timer:** Workday duration is fixed per difficulty.
+**Workday start/end UX (MVP):**
+
+- After pledge completion, fade to black and then fade into the normal gameplay UI for the Work phase.
+- Treat a “morning bell” moment as the start of Workday timekeeping (start the Workday timer there).
+- Show a clock on the computer UI:
+  - starts at **9:00 AM**
+  - reaches **5:00 PM** when the Workday ends
+- When the Workday ends, fade to black and then fade into the computer email view (Review phase).
+
+**Timer:** Workday duration is fixed per difficulty and maps to the 9am→5pm clock span for presentation.
 
 **Quota:** a Workday is successful only if the player completes enough orders before the timer expires.
 
@@ -170,7 +179,7 @@ This plan is designed to minimize risk: first create the state model, then wire 
   - MVP note: if you don’t have per-day completion stamps yet, track a `counted_completed_orders` set/list for the current day so you only count each order once.
 - `WorkdayCompletionSystem` (update): when timer expires:
   - if quota met: transition to Review
-  - else: fail the Workday (MVP: end the run or show a minimal failure screen; keep it simple)
+  - else: fail the Workday and transition to Review (summary email should be a “you’re fired” message)
 
 ### Milestone 1.5 — Convert selected/active order from singleton IDs to tags
 
@@ -207,7 +216,7 @@ This plan is designed to minimize risk: first create the state model, then wire 
 
 **Behavior:**
 
-- When `CampaignProgress.phase == Pledge`, show pledge prompt.
+- When `CampaignProgress.phase == Pledge`, fade in from black with a simple “DAY X” title card, then show the pledge prompt.
 - Player types the pledge text.
 - There is a timer, but it should be easy to hit (target ~40 WPM).
 - Pass conditions (MVP):
@@ -220,6 +229,9 @@ This plan is designed to minimize risk: first create the state model, then wire 
 - Keep pledge input separate from the existing “work typing buffer” so Work-phase buffers can’t accidentally dismiss the pledge.
 - On entering pledge, ensure work gameplay inputs are ignored.
 - Reuse the same pledge text for Days 1–3 for now. (TODO: add story-specific pledges per day later.)
+  - TODO: later, corporate tone early and more surreal/dystopian tone later as the campaign progresses.
+  - On completion, show a small results view: WPM and a placeholder reward line (e.g., “+1 gold star”).
+  - Then fade to black and transition into Work (Workday begins at the “morning bell” moment).
 
 **Where:**
 
