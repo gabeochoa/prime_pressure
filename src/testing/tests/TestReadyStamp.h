@@ -174,14 +174,7 @@ TEST(test_ready_stamp_sequence) {
     TestApp::simulate_key(raylib::KEY_S);
     co_await TestApp::wait_for_frames(1);
 
-    co_await TestApp::wait_for_condition(
-        []() {
-            return TestApp::is_selected_order_in_state(
-                OrderState::Shipped_Stamp3);
-        },
-        60);
-
-    // Stamp3 requires one more S to actually ship (starts animation)
+    // Stamp2 requires S to actually ship (starts animation)
     TestApp::simulate_key(raylib::KEY_S);
     co_await TestApp::wait_for_frames(1);
 

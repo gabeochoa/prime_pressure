@@ -433,14 +433,18 @@ struct RenderComputerViewSystem : ComputerViewRenderSystem {
             return;
         }
 
-        // Check if shipping animation is active - if so, show animation instead of RTS prompt
+        // Check if shipping animation is active - if so, show animation instead
+        // of RTS prompt
         const afterhours::Entity &animation_entity =
             afterhours::EntityHelper::get_singleton<ShippingAnimation>();
-        const ShippingAnimation &animation = animation_entity.get<ShippingAnimation>();
+        const ShippingAnimation &animation =
+            animation_entity.get<ShippingAnimation>();
         if (animation.is_active) {
-            log_info("Rendering shipping animation at time {:.2f}", animation.animation_time);
+            log_info("Rendering shipping animation at time {:.2f}",
+                     animation.animation_time);
             // Show shipping animation across the entire card
-            float progress = animation.animation_time / animation.animation_duration;
+            float progress =
+                animation.animation_time / animation.animation_duration;
             if (progress > 1.0f) progress = 1.0f;
 
             // Animate from left edge to right edge of the card
@@ -451,20 +455,19 @@ struct RenderComputerViewSystem : ComputerViewRenderSystem {
             float center_y = card_rect.y + scaled_h * 0.5f;
 
             // Draw a large, prominent package/envelope icon
-            float icon_size = scaled_h * 0.4f; // Make it proportional to card height
-            raylib::Color icon_color = raylib::Color{255, 200, 100, 255}; // Bright orange
+            float icon_size =
+                scaled_h * 0.4f;  // Make it proportional to card height
+            raylib::Color icon_color =
+                raylib::Color{255, 200, 100, 255};  // Bright orange
             raylib::Color outline_color = raylib::Color{200, 150, 50, 255};
 
             // Draw a simple package/box shape
             float box_width = icon_size * 1.2f;
             float box_height = icon_size * 0.8f;
 
-            raylib::Rectangle box_rect{
-                current_x - box_width * 0.5f,
-                center_y - box_height * 0.5f,
-                box_width,
-                box_height
-            };
+            raylib::Rectangle box_rect{current_x - box_width * 0.5f,
+                                       center_y - box_height * 0.5f, box_width,
+                                       box_height};
 
             // Draw filled box
             raylib::DrawRectangleRec(box_rect, icon_color);
@@ -474,46 +477,50 @@ struct RenderComputerViewSystem : ComputerViewRenderSystem {
 
             // Draw shipping label lines
             raylib::DrawLine(static_cast<int>(box_rect.x + box_width * 0.2f),
-                           static_cast<int>(box_rect.y + box_height * 0.3f),
-                           static_cast<int>(box_rect.x + box_width * 0.8f),
-                           static_cast<int>(box_rect.y + box_height * 0.3f),
-                           outline_color);
+                             static_cast<int>(box_rect.y + box_height * 0.3f),
+                             static_cast<int>(box_rect.x + box_width * 0.8f),
+                             static_cast<int>(box_rect.y + box_height * 0.3f),
+                             outline_color);
             raylib::DrawLine(static_cast<int>(box_rect.x + box_width * 0.2f),
-                           static_cast<int>(box_rect.y + box_height * 0.5f),
-                           static_cast<int>(box_rect.x + box_width * 0.8f),
-                           static_cast<int>(box_rect.y + box_height * 0.5f),
-                           outline_color);
+                             static_cast<int>(box_rect.y + box_height * 0.5f),
+                             static_cast<int>(box_rect.x + box_width * 0.8f),
+                             static_cast<int>(box_rect.y + box_height * 0.5f),
+                             outline_color);
             raylib::DrawLine(static_cast<int>(box_rect.x + box_width * 0.2f),
-                           static_cast<int>(box_rect.y + box_height * 0.7f),
-                           static_cast<int>(box_rect.x + box_width * 0.8f),
-                           static_cast<int>(box_rect.y + box_height * 0.7f),
-                           outline_color);
+                             static_cast<int>(box_rect.y + box_height * 0.7f),
+                             static_cast<int>(box_rect.x + box_width * 0.8f),
+                             static_cast<int>(box_rect.y + box_height * 0.7f),
+                             outline_color);
 
             // Draw "SHIPPING" text above the box
-            raylib::DrawTextEx(raylib::GetFontDefault(), "SHIPPING",
-                              raylib::Vector2{current_x - 50.0f, center_y - icon_size - 20.0f},
-                              static_cast<float>(data.instruction_font_size * 1.2f), 1.0f,
-                              raylib::Color{255, 255, 255, 255});
+            raylib::DrawTextEx(
+                raylib::GetFontDefault(), "SHIPPING",
+                raylib::Vector2{current_x - 50.0f,
+                                center_y - icon_size - 20.0f},
+                static_cast<float>(data.instruction_font_size * 1.2f), 1.0f,
+                raylib::Color{255, 255, 255, 255});
 
             // Draw progress bar at the bottom
             float progress_bar_width = scaled_w * 0.8f;
             float progress_bar_height = 8.0f;
-            float progress_bar_x = card_rect.x + (scaled_w - progress_bar_width) * 0.5f;
+            float progress_bar_x =
+                card_rect.x + (scaled_w - progress_bar_width) * 0.5f;
             float progress_bar_y = card_rect.y + scaled_h - 30.0f;
 
             // Background
             raylib::DrawRectangle(static_cast<int>(progress_bar_x),
-                                 static_cast<int>(progress_bar_y),
-                                 static_cast<int>(progress_bar_width),
-                                 static_cast<int>(progress_bar_height),
-                                 raylib::Color{50, 50, 50, 150});
+                                  static_cast<int>(progress_bar_y),
+                                  static_cast<int>(progress_bar_width),
+                                  static_cast<int>(progress_bar_height),
+                                  raylib::Color{50, 50, 50, 150});
 
             // Progress fill
-            raylib::DrawRectangle(static_cast<int>(progress_bar_x),
-                                 static_cast<int>(progress_bar_y),
-                                 static_cast<int>(progress_bar_width * progress),
-                                 static_cast<int>(progress_bar_height),
-                                 raylib::Color{100, 200, 100, 200});
+            raylib::DrawRectangle(
+                static_cast<int>(progress_bar_x),
+                static_cast<int>(progress_bar_y),
+                static_cast<int>(progress_bar_width * progress),
+                static_cast<int>(progress_bar_height),
+                raylib::Color{100, 200, 100, 200});
             return;
         }
         int stamp_font = data.instruction_font_size + 12;
@@ -622,8 +629,6 @@ struct RenderComputerViewSystem : ComputerViewRenderSystem {
                 ready_stamp = 1;
             else if (workflow_ptr->state == OrderState::Shipped_Stamp2)
                 ready_stamp = 2;
-            else if (workflow_ptr->state == OrderState::Shipped_Stamp3)
-                ready_stamp = 3;
             bool ready_to_pack = macro_state_of(workflow_ptr->state) ==
                                  OrderMacroState::ReadyToBox;
             bool should_flash_conveyor =

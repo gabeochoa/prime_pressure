@@ -66,8 +66,6 @@ struct Order : afterhours::BaseComponent {
                 return 1;
             case OrderState::Shipped_Stamp2:
                 return 2;
-            case OrderState::Shipped_Stamp3:
-                return 3;
             // Complete states
             case OrderState::Complete_CloseoutDelay:
             case OrderState::Complete_ClosedOut:

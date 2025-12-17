@@ -485,8 +485,6 @@ struct TestApp {
                     return 1;
                 case OrderState::Shipped_Stamp2:
                     return 2;
-                case OrderState::Shipped_Stamp3:
-                    return 3;
                 // Complete states
                 case OrderState::Complete_CloseoutDelay:
                 case OrderState::Complete_ClosedOut:
@@ -538,8 +536,7 @@ struct TestApp {
             return macro_state == OrderMacroState::Shipped &&
                    (workflow.state == OrderState::Shipped_Stamp0 ||
                     workflow.state == OrderState::Shipped_Stamp1 ||
-                    workflow.state == OrderState::Shipped_Stamp2 ||
-                    workflow.state == OrderState::Shipped_Stamp3);
+                    workflow.state == OrderState::Shipped_Stamp2);
         }
         return false;
     }
@@ -744,7 +741,7 @@ struct TestApp {
                  .whereHasComponent<OrderWorkflow>()
                  .gen()) {
             OrderWorkflow &workflow = order_entity.get<OrderWorkflow>();
-            workflow.state = OrderState::Shipped_Stamp3;
+            workflow.state = OrderState::Shipped_Stamp2;
             workflow.time_in_state = 0.0f;
             break;
         }

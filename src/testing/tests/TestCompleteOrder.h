@@ -251,15 +251,6 @@ TEST(test_complete_order) {
         },
         120);
 
-    TestApp::simulate_key(raylib::KEY_S);
-    co_await TestApp::wait_for_frames(1);
-    co_await TestApp::wait_for_condition(
-        []() {
-            return TestApp::is_selected_order_in_state(
-                OrderState::Shipped_Stamp3);
-        },
-        120);
-
     // Finalize shipping
     TestApp::simulate_key(raylib::KEY_S);
     co_await TestApp::wait_for_frames(1);

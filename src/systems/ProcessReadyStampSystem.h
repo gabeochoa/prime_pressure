@@ -10,8 +10,7 @@
 struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
     bool should_run(float) const override { return true; }
 
-    void for_each_with(afterhours::Entity &order_entity, Order &order,
-                       OrderWorkflow &workflow, float) override {
+    bool should_process_order(const afterhours::Entity &order_entity) {
         // Get active order, fallback to selected order
         const ActiveOrder &active_order = get_singleton_as<ActiveOrder>();
         const SelectedOrder &selected_order = get_singleton_as<SelectedOrder>();
@@ -22,8 +21,15 @@ struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
             selected_order.order_id.is_matching_order(order_entity.id);
 
         // Only process input for orders that are either actively being worked
+        // on or are currently selected in the UI
+        return is_active_order || is_selected_order;
+    }
+
+    void for_each_with(afterhours::Entity &order_entity, Order &order,
+                       OrderWorkflow &workflow, float) override {
+        // Only process input for orders that are either actively being worked
         // on or are currently selected in the UI - skip all others
-        if (!is_active_order && !is_selected_order) {
+        if (!should_process_order(order_entity)) {
             return;
         }
 
@@ -36,13 +42,6 @@ struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
         bool pressed_r = game_input::IsKeyPressed(raylib::KEY_R);
         bool pressed_t = game_input::IsKeyPressed(raylib::KEY_T);
         bool pressed_s = game_input::IsKeyPressed(raylib::KEY_S);
-
-        if (pressed_r || pressed_t || pressed_s) {
-            log_info(
-                "ProcessReadyStampSystem: Key pressed - R:{}, T:{}, S:{} for "
-                "order {}",
-                pressed_r, pressed_t, pressed_s, order_entity.id);
-        }
 
         if (!pressed_r && !pressed_t && !pressed_s) {
             return;
@@ -91,12 +90,6 @@ struct ProcessReadyStampSystem : afterhours::System<Order, OrderWorkflow> {
                 }
                 break;
             case OrderState::Shipped_Stamp2:
-                if (pressed_s) {
-                    expected_key = 's';
-                    next_state = OrderState::Shipped_Stamp3;
-                }
-                break;
-            case OrderState::Shipped_Stamp3:
                 // READY TO SHIP confirmed - start shipping animation and
                 // advance to closeout delay
                 if (pressed_s) {

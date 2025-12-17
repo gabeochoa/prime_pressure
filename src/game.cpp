@@ -14,17 +14,9 @@
 #include "render_views.h"
 #include "settings.h"
 #include "systems/BoxItemSystem.h"
-#include "systems/CleanupCompletedOrdersSystem.h"
-#include "systems/GenerateOrdersSystem.h"
 #include "systems/GrabItemSystem.h"
 #include "systems/ManageConveyorItemsSystem.h"
-#include "systems/ManageInProgressOrderTagSystem.h"
-#include "systems/ManageOrderStateTagsSystem.h"
-#include "systems/ManageSelectedOrderTagSystem.h"
-#include "systems/MatchItemToOrderSystem.h"
 #include "systems/ProcessBoxingInputSystem.h"
-#include "systems/ProcessOrderSelectionSystem.h"
-#include "systems/ProcessOrderTabbingSystem.h"
 #include "systems/ProcessReadyStampSystem.h"
 #include "systems/ProcessTypingInputSystem.h"
 #include "systems/RenderDebugOverlaySystem.h"
@@ -36,9 +28,9 @@
 #include "systems/SpawnItemsSystem.h"
 #include "systems/TestFrameBeginSystem.h"
 #include "systems/TestSystem.h"
-#include "systems/UpdateOrderWorkflowSystem.h"
 #include "systems/UpdateRenderTextureSystem.h"
 #include "systems/UpdateShippingAnimationSystem.h"
+#include "systems/order_systems.h"
 #include "testing/test_input.h"
 #include "testing/test_macros.h"
 #include "testing/tests/all_tests.h"
@@ -160,7 +152,11 @@ void game() {
         systems.register_update_system(std::make_unique<BoxItemSystem>());
         // New order workflow systems
         systems.register_update_system(
-            std::make_unique<ManageOrderStateTagsSystem>());
+            std::make_unique<ManageOrderMicrostateTagsSystem>());
+        systems.register_update_system(
+            std::make_unique<ManageOrderMacrostateTagsSystem>());
+        systems.register_update_system(
+            std::make_unique<ValidateOrderStateTagsSystem>());
         systems.register_update_system(
             std::make_unique<UpdateOrderWorkflowSystem>());
         systems.register_update_system(
