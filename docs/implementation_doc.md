@@ -99,10 +99,10 @@ This plan is designed to minimize risk: first create the state model, then wire 
   - `int day_index` (1..3)
   - `enum struct DayPhase { Pledge, Work, Review, Complete }`
   - `bool slice_complete` (true at Day 3 completion; optional if you use `phase == Complete`)
-- `WorkdayConfig` (name TBD)
+- `WorkdayConfig`
   - fixed-length Work phase duration by difficulty (e.g., easy = 5 minutes, normal = 3 minutes)
   - quota target definition (recommended: orders shipped)
-- `WorkdayRuntime` (name TBD)
+- `WorkdayRuntime`
   - elapsed time in the Work phase for the current day
   - quota progress for the current day
 
