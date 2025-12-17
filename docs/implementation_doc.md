@@ -41,6 +41,7 @@ From the PRD, these are intentionally **not** part of the Day 1–3 MVP:
 - **Sophie:** global/meta persistence is an **ECS singleton entity**, not a C++ singleton class.
   - **Prohibited:** `Sophie::get()` or any “global object” singleton pattern for Sophie.
 - **Render systems are read‑only:** do not mutate gameplay state in rendering.
+- **Selection invariants are hard-fail:** if code ever creates an invalid “multiple selected/active orders” state, log an error and crash. Do not silently auto-heal.
 
 ### Input invariants
 
@@ -151,6 +152,33 @@ This plan is designed to minimize risk: first create the state model, then wire 
 - You can advance through Day 1 → Day 2 → Day 3 and reach a stable “Day 3 Complete” endpoint.
 - Transitions do not accidentally consume buffered typing.
 
+### Milestone 1.5 — Convert selected/active order from singleton IDs to tags
+
+**Goal:** make “what order is selected/active” queryable and entity-native.
+
+**Decision:** selection is tracked on order entities via tags, not via singleton components that store `EntityID`.
+
+**Tags:**
+
+- `GameTag::IsSelectedOrder`
+- `GameTag::IsActiveOrder` (if you still need a distinct concept; otherwise collapse to selected only)
+
+**Invariant:** there must be **at most one** selected order and **at most one** active order at a time.
+
+- If more than one is detected, `log_error(...)` and crash (intentional).
+
+**Where:**
+
+- Update `src/systems/ProcessOrderSelectionSystem` and `src/systems/ProcessOrderTabbingSystem` to set/clear tags on the order entities.
+- Remove the singleton components `SelectedOrder` and `ActiveOrder` (and their creation/registration in `src/game.cpp`).
+- Update any systems/renderers that reference `SelectedOrder` / `ActiveOrder` to query by tags instead.
+
+**Definition of done:**
+
+- Selecting/tabbing orders works as before.
+- No `SelectedOrder` / `ActiveOrder` singletons remain.
+- Render highlights are driven by tags.
+
 ### Milestone 2 — Morning pledge (Pledge phase)
 
 **Goal:** implement the pledge typing mini-screen.
@@ -188,6 +216,7 @@ This plan is designed to minimize risk: first create the state model, then wire 
 **Behavior:**
 
 - Emails are ECS entities with an `Email` component: `{from, header, body, unread}`.
+- Inbox selection/view state is stored in ECS components (recommended: on the Sophie entity).
 - The summary email exists for each day and is marked unread on entry to Review.
 - The player must open the summary email at least once to be allowed to end the day.
 - Controls (MVP):
@@ -284,6 +313,7 @@ If completing Work requires a lot of gameplay steps, add a **temporary MVP-only 
 
 - **Softlock on phase transitions:** always clear or isolate input buffers when moving between phases.
 - **Work systems running in pledge/review:** enforce gating explicitly (don’t rely on “it won’t happen”).
+- **Multiple selected/active orders:** treat as a fatal invariant violation (log_error + crash) so it is fixed immediately.
 - **Tests can’t drive input:** ensure gameplay systems use `game_input::...` wrappers.
 - **Day 3 completion doesn’t count:** “completion” requires reaching End-of-Day 3 and advancing past it to the “Day 3 Complete” endpoint.
 
@@ -296,5 +326,32 @@ The Day 1–3 slice is “done” when:
 - [ ] Day 3 Review advances to a stable “Day 3 Complete” endpoint
 - [ ] Work-only systems do not mutate state during Pledge/Review
 - [ ] TOT exists and is Work-only
-- [ ] Minimum telemetry events fire with correct semantics
 - [ ] At least one E2E test proves Days 1–3 advancement without softlock
+
+## Boxing plan (refactor guideline)
+
+Boxing step state should live **only** in `OrderWorkflow.state`. Do not maintain a second boxing state machine.
+
+### What the boxing system needs to track
+
+The only boxing “extra state” we need on the order (beyond `OrderWorkflow.state`) is progress inside the `Boxing_PutItems` step:
+
+- `OrderBoxingRuntime { int items_placed = 0; }`
+
+Total items to place can be derived (MVP choice):
+
+- `total_items = order.ready_items.size()`
+
+### How it should work
+
+- If the active order is in boxing macro state:
+  - `B` advances `OrderWorkflow.state` from `Boxing_FoldBox` → `Boxing_PutItems` and resets `items_placed = 0`.
+  - `P` in `Boxing_PutItems` increments `items_placed`. When `items_placed >= total_items`, advance to `Boxing_Fold`.
+  - `F` advances to `Boxing_Tape`.
+  - `T` advances to `Boxing_Ship`.
+  - `S` finalizes shipping and advances the workflow to stamping (`Shipped_Stamp0`).
+
+### What to remove
+
+- Remove the singleton `BoxingProgress` and the duplicated `BoxingState` state machine tracking.
+- Do not spawn per-item boxing entities unless/until you need per-item UI; keep MVP as a simple counter.
