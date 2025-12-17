@@ -252,12 +252,14 @@ This plan is designed to minimize risk: first create the state model, then wire 
 - Emails are ECS entities with an `Email` component: `{from, header, body, unread}`.
 - Inbox selection/view state is stored in ECS components (recommended: on the Sophie entity).
 - The summary email exists for each day and is marked unread on entry to Review.
+- In addition to the summary, add **1–3 additional emails** (random count) on entry to Review (MVP content can be placeholder `header_text` / `body_text`).
 - The player must open the summary email at least once to be allowed to end the day.
 - Controls (MVP):
-  - `Enter`: open email (and also close it if already open)
-  - `Esc` or `X`: close email
-  - arrow keys: navigate email selection
+  - arrow keys: navigate email selection (does not open)
+  - `Enter`: open the selected email in a viewer
+  - `Esc` or `X`: close email viewer
   - `Tab`: end day (only after summary opened)
+    - TBD: if the viewer is open, either close it first or end day; decide later.
 
 **Implementation notes:**
 
@@ -265,6 +267,10 @@ This plan is designed to minimize risk: first create the state model, then wire 
 - Separate logic from rendering:
   - update systems mutate `Email`/selection/viewer components
   - render systems only draw the inbox + selected email view
+ - Summary email content:
+   - Workday success: corporate summary (placeholder header/body for now)
+   - Workday failure: “you’re fired” summary (placeholder header/body for now)
+   - TODO: corporate tone early; more surreal/dystopian tone later as the campaign progresses
 
 **Recommended query shape (inbox):**
 
