@@ -57,7 +57,7 @@ These keybindings are the “intern-safe” contract for MVP implementation.
 - `Enter`: open selected email in the viewer
 - `Esc` or `X`: close email viewer
 - `Tab`: end day (only after summary email has been opened at least once)
-  - TBD: if the viewer is open, either close it first or end day; decide later.
+  - MVP decision: if the viewer is open, `Tab` ends the day anyway.
 
 ## Non‑negotiables (don’t break these)
 
@@ -251,8 +251,7 @@ struct ReviewInboxState : afterhours::BaseComponent {
   - if quota met: transition to Review
   - else: fail the Workday and transition to Review (summary email should be a “you’re fired” message)
     - MVP behavior: when the player closes the “you’re fired” email, quit the game.
-    - TODO: define the real failure flow (retry day, restart run, penalties, etc.).
-    - Temporary guard: `log_error("handle failure state")` on close until the flow is fully implemented.
+    - This is the real MVP failure flow for now.
 
 **Quota counting example (CompletedOnDay):**
 
@@ -305,7 +304,8 @@ struct ReviewInboxState : afterhours::BaseComponent {
   - If the pledge is finished, it passes.
   - If the timer expires, it still passes if the player is at least ~80% complete.
 - If the timer expires and the player is < 80% complete:
-  - TODO: define the failure/punishment behavior (what happens next).
+  - MVP behavior: show a simple “Pledge failed” screen and then continue into the Work phase anyway.
+  - TODO: define the real punishment/flow later.
 - Bonus (TODO): faster typing + better accuracy yields a “bonus gold star” (economy is out of scope; log/placeholder only).
 
 **Implementation notes:**
@@ -343,7 +343,7 @@ struct ReviewInboxState : afterhours::BaseComponent {
   - `Enter`: open the selected email in a viewer
   - `Esc` or `X`: close email viewer
   - `Tab`: end day (only after summary opened)
-    - TBD: if the viewer is open, either close it first or end day; decide later.
+    - MVP decision: if the viewer is open, `Tab` ends the day anyway.
   - MVP decision: view switching/navigation should not rely on keyboard Shift.
 
 **Implementation notes:**
