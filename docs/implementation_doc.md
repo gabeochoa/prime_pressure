@@ -49,6 +49,7 @@ From the PRD, these are intentionally **not** part of the Day 1–3 MVP:
 - **Gameplay key handling uses wrappers:** gameplay systems should read keys/chars via `game_input::...` (`src/input_wrapper.h`) so tests can inject input.
 - **Shift encoding:** do not implement gameplay “shift checks” (like `IsKeyDown(KEY_LEFT_SHIFT)`) to interpret recipes/commands.
   - Shifted keys are represented in data/config via the `^` syntax (see `docs/architecture.md`, `docs/project_context.md`).
+  - MVP decision: remove `Shift+TAB` view switching (no keyboard-Shift-based gameplay navigation).
 
 ## Where things live in this repo (orientation)
 
@@ -101,7 +102,7 @@ This plan is designed to minimize risk: first create the state model, then wire 
   - `enum struct DayPhase { Pledge, Work, Review, Complete }`
   - `bool slice_complete` (true at Day 3 completion; optional if you use `phase == Complete`)
 - `WorkdayConfig`
-  - fixed-length Work phase duration by difficulty (e.g., easy = 5 minutes, normal = 3 minutes)
+  - fixed-length Work phase duration (MVP: Normal only)
   - quota target definition: **orders completed** (an order is counted when it reaches `OrderState::Complete_ClosedOut`)
 - `WorkdayRuntime`
   - elapsed time in the Work phase for the current day
@@ -166,6 +167,7 @@ This plan is designed to minimize risk: first create the state model, then wire 
 - When the Workday ends, fade to black and then fade into the computer email view (Review phase).
 
 **Timer:** Workday duration is fixed per difficulty and maps to the 9am→5pm clock span for presentation.
+  - MVP decision: ship **Normal only** for now.
 
 **Quota:** a Workday is successful only if the player completes enough orders before the timer expires.
 
@@ -180,6 +182,9 @@ This plan is designed to minimize risk: first create the state model, then wire 
 - `WorkdayCompletionSystem` (update): when timer expires:
   - if quota met: transition to Review
   - else: fail the Workday and transition to Review (summary email should be a “you’re fired” message)
+    - MVP behavior: when the player closes the “you’re fired” email, quit the game.
+    - TODO: define the real failure flow (retry day, restart run, penalties, etc.).
+    - Temporary guard: `log_error("handle failure state")` on close until the flow is fully implemented.
 
 ### Milestone 1.5 — Convert selected/active order from singleton IDs to tags
 
@@ -222,6 +227,8 @@ This plan is designed to minimize risk: first create the state model, then wire 
 - Pass conditions (MVP):
   - If the pledge is finished, it passes.
   - If the timer expires, it still passes if the player is at least ~80% complete.
+- If the timer expires and the player is < 80% complete:
+  - TODO: define the failure/punishment behavior (what happens next).
 - Bonus (TODO): faster typing + better accuracy yields a “bonus gold star” (economy is out of scope; log/placeholder only).
 
 **Implementation notes:**
@@ -260,6 +267,7 @@ This plan is designed to minimize risk: first create the state model, then wire 
   - `Esc` or `X`: close email viewer
   - `Tab`: end day (only after summary opened)
     - TBD: if the viewer is open, either close it first or end day; decide later.
+  - MVP decision: view switching/navigation should not rely on keyboard Shift.
 
 **Implementation notes:**
 
@@ -286,38 +294,9 @@ This plan is designed to minimize risk: first create the state model, then wire 
 - Review always appears after the Work completion trigger.
 - The Day 3 Review can be acknowledged and results in a stable endpoint.
 
-### Milestone 4 — Add one oppression system: TOT (Work-only)
+### Milestone 4 — Oppression systems (deferred)
 
-**Goal:** add a single pressure hook for the Day 1–3 slice.
-
-**TOT requirements (MVP):**
-
-- Only runs in `Work`.
-- If no gameplay-relevant input for > 2 seconds → TOT meter starts filling.
-- Provide a visible warning overlay at a threshold.
-- After 3 warnings, record a strike/fine (placeholder penalty acceptable).
-
-**Important detail:**
-
-“Gameplay-relevant input” should include (narrow definition for now):
-
-- typing input used by `ProcessTypingInputSystem`
-- boxing input used by `ProcessBoxingInputSystem`
-- order selection/tabbing inputs (if those are driven by typed keys)
-
-Avoid relying on OS key repeat; treat per-frame detection as authoritative.
-
-**Where:**
-
-- New components: e.g., `TotState` (timer, warnings count, overlay state).
-- New systems:
-  - `UpdateTotSystem` (update)
-  - `RenderTotOverlaySystem` (render)
-
-**Definition of done:**
-
-- TOT never advances in `Pledge` or `Review`.
-- TOT warning is visible and consistent.
+TOT (Time Off Task) and Smile Verification are deferred for now. (TODO: revisit once the Day Loop + Workday quota pacing feels right.)
 
 ### Milestone 5 — Telemetry/events (minimum viable)
 
@@ -357,6 +336,7 @@ If completing Work requires a lot of gameplay steps, add a **temporary MVP-only 
 - **Multiple selected orders:** treat as a fatal invariant violation (log_error + crash) so it is fixed immediately.
 - **Tests can’t drive input:** ensure gameplay systems use `game_input::...` wrappers.
 - **Day 3 completion doesn’t count:** “completion” requires reaching End-of-Day 3 and advancing past it to the “Day 3 Complete” endpoint.
+- **Shift-based navigation:** MVP removes `Shift+TAB`; do not add new Shift-based gameplay navigation.
 
 ## Definition of Done (intern checklist)
 
@@ -366,7 +346,6 @@ The Day 1–3 slice is “done” when:
 - [ ] Pledge → Work → Review transitions work for Day 1, Day 2, Day 3
 - [ ] Day 3 Review advances to a stable “Day 3 Complete” endpoint
 - [ ] Work-only systems do not mutate state during Pledge/Review
-- [ ] TOT exists and is Work-only
 - [ ] At least one E2E test proves Days 1–3 advancement without softlock
 
 ## Boxing plan (refactor guideline)
