@@ -102,10 +102,10 @@ This plan is designed to minimize risk: first create the state model, then wire 
   - `bool slice_complete` (true at Day 3 completion; optional if you use `phase == Complete`)
 - `WorkdayConfig`
   - fixed-length Work phase duration by difficulty (e.g., easy = 5 minutes, normal = 3 minutes)
-  - quota target definition (orders completed)
+  - quota target definition: **orders completed** (an order is counted when it reaches `OrderState::Complete_ClosedOut`)
 - `WorkdayRuntime`
   - elapsed time in the Work phase for the current day
-  - quota progress for the current day
+  - quota progress for the current day (count of orders completed this day)
 
 **Where:**
 
@@ -151,6 +151,26 @@ This plan is designed to minimize risk: first create the state model, then wire 
 
 - You can advance through Day 1 → Day 2 → Day 3 and reach a stable “Day 3 Complete” endpoint.
 - Transitions do not accidentally consume buffered typing.
+
+### Milestone 1.25 — Workday timer + quota success/failure
+
+**Goal:** define what makes a Workday succeed.
+
+**Timer:** Workday duration is fixed per difficulty.
+
+**Quota:** a Workday is successful only if the player completes enough orders before the timer expires.
+
+- A completed order is one that reaches `OrderState::Complete_ClosedOut`.
+- Workday quota progress is reset at the start of each Workday.
+
+**Implementation sketch:**
+
+- `WorkdayTimerSystem` (update): increments `WorkdayRuntime.elapsed_seconds` only during `phase == Work`.
+- `WorkdayQuotaSystem` (update): counts orders in `Complete_ClosedOut` that were completed “this day” and updates `WorkdayRuntime.quota_progress`.
+  - MVP note: if you don’t have per-day completion stamps yet, track a `counted_completed_orders` set/list for the current day so you only count each order once.
+- `WorkdayCompletionSystem` (update): when timer expires:
+  - if quota met: transition to Review
+  - else: fail the Workday (MVP: end the run or show a minimal failure screen; keep it simple)
 
 ### Milestone 1.5 — Convert selected/active order from singleton IDs to tags
 
