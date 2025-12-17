@@ -174,24 +174,26 @@ This plan is designed to minimize risk: first create the state model, then wire 
 
 ### Milestone 1.5 — Convert selected/active order from singleton IDs to tags
 
-**Goal:** make “what order is selected/active” queryable and entity-native.
+**Goal:** make “what order is selected” queryable and entity-native.
 
-**Decision:** selection is tracked on order entities via tags, not via singleton components that store `EntityID`.
+**Decision (MVP):** selected and active are the same concept. Selection is tracked on order entities via a tag, not via singleton components that store `EntityID`.
 
 **Tags:**
 
 - `GameTag::IsSelectedOrder`
-- `GameTag::IsActiveOrder` (if you still need a distinct concept; otherwise collapse to selected only)
 
 **Invariant:** there must be **at most one** selected order and **at most one** active order at a time.
+
+**Invariant (MVP):** there must be **at most one** selected order at a time.
 
 - If more than one is detected, `log_error(...)` and crash (intentional).
 
 **Where:**
 
-- Update `src/systems/ProcessOrderSelectionSystem` and `src/systems/ProcessOrderTabbingSystem` to set/clear tags on the order entities.
-- Remove the singleton components `SelectedOrder` and `ActiveOrder` (and their creation/registration in `src/game.cpp`).
-- Update any systems/renderers that reference `SelectedOrder` / `ActiveOrder` to query by tags instead.
+- Update `src/systems/ProcessOrderSelectionSystem` and `src/systems/ProcessOrderTabbingSystem` to set/clear `GameTag::IsSelectedOrder` on the order entities.
+- Remove the singleton component `SelectedOrder` (and its creation/registration in `src/game.cpp`).
+- Remove the singleton component `ActiveOrder` (MVP: not needed since selected == active).
+- Update any systems/renderers that reference `SelectedOrder` / `ActiveOrder` to use the selected-order tag instead.
 
 **Definition of done:**
 
@@ -334,6 +336,7 @@ If completing Work requires a lot of gameplay steps, add a **temporary MVP-only 
 - **Softlock on phase transitions:** always clear or isolate input buffers when moving between phases.
 - **Work systems running in pledge/review:** enforce gating explicitly (don’t rely on “it won’t happen”).
 - **Multiple selected/active orders:** treat as a fatal invariant violation (log_error + crash) so it is fixed immediately.
+- **Multiple selected orders:** treat as a fatal invariant violation (log_error + crash) so it is fixed immediately.
 - **Tests can’t drive input:** ensure gameplay systems use `game_input::...` wrappers.
 - **Day 3 completion doesn’t count:** “completion” requires reaching End-of-Day 3 and advancing past it to the “Day 3 Complete” endpoint.
 
