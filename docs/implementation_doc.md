@@ -33,6 +33,32 @@ From the PRD, these are intentionally **not** part of the Day 1–3 MVP:
 - Full menu UX
 - Cutscenes / polish systems (CRT shaders, etc.)
 
+## MVP keybindings (authoritative)
+
+These keybindings are the “intern-safe” contract for MVP implementation.
+
+### Global / always
+
+- `Esc`: quit game (existing behavior)
+
+### Work phase (existing gameplay)
+
+- `Tab`: cycle views forward (Computer → Warehouse → Boxing → Computer)
+- MVP decision: **no backward view cycling** (no `Shift+Tab` replacement)
+- `1`–`9`: select/open order in the computer UI (existing behavior)
+
+### Pledge phase
+
+- Character typing: pledge input only
+
+### Review phase (email)
+
+- Arrow keys: change selected email (does not open)
+- `Enter`: open selected email in the viewer
+- `Esc` or `X`: close email viewer
+- `Tab`: end day (only after summary email has been opened at least once)
+  - TBD: if the viewer is open, either close it first or end day; decide later.
+
 ## Non‑negotiables (don’t break these)
 
 ### Architecture invariants
@@ -108,6 +134,48 @@ This plan is designed to minimize risk: first create the state model, then wire 
   - elapsed time in the Work phase for the current day
   - quota progress for the current day (count of orders completed this day)
 
+**Component field sketch (copy/paste reference):**
+
+```cpp
+struct CampaignProgress : afterhours::BaseComponent {
+    int day_index = 1;
+    enum struct DayPhase { Pledge, Work, Review, Complete };
+    DayPhase phase = DayPhase::Pledge;
+};
+
+struct WorkdayConfig : afterhours::BaseComponent {
+    float duration_seconds = 3.0f * 60.0f;  // MVP: Normal only
+    int quota_target = 1;                  // Day 1=1, Day 2=2, Day 3=3
+};
+
+struct WorkdayRuntime : afterhours::BaseComponent {
+    float elapsed_seconds = 0.0f;
+    int quota_progress = 0;
+    bool quota_met = false;
+};
+
+struct CompletedOnDay : afterhours::BaseComponent {
+    int day_index = 0;  // 0 means not completed
+};
+
+struct OrderBoxingRuntime : afterhours::BaseComponent {
+    int items_placed = 0;
+};
+
+struct Email : afterhours::BaseComponent {
+    std::string from;
+    std::string header_text;
+    std::string body_text;
+    bool unread = true;
+};
+
+struct ReviewInboxState : afterhours::BaseComponent {
+    int selected_index = 0;
+    bool summary_opened = false;
+    bool viewer_open = false;
+};
+```
+
 **Where:**
 
 - Add the new component structs in `src/components.h` (keep it minimal + POD).
@@ -178,13 +246,22 @@ This plan is designed to minimize risk: first create the state model, then wire 
 
 - `WorkdayTimerSystem` (update): increments `WorkdayRuntime.elapsed_seconds` only during `phase == Work`.
 - `WorkdayQuotaSystem` (update): counts orders in `Complete_ClosedOut` that were completed “this day” and updates `WorkdayRuntime.quota_progress`.
-  - MVP note: if you don’t have per-day completion stamps yet, track a `counted_completed_orders` set/list for the current day so you only count each order once.
+  - MVP decision: use a per-order stamp `CompletedOnDay.day_index` to count each completed order exactly once per day.
 - `WorkdayCompletionSystem` (update): when timer expires:
   - if quota met: transition to Review
   - else: fail the Workday and transition to Review (summary email should be a “you’re fired” message)
     - MVP behavior: when the player closes the “you’re fired” email, quit the game.
     - TODO: define the real failure flow (retry day, restart run, penalties, etc.).
     - Temporary guard: `log_error("handle failure state")` on close until the flow is fully implemented.
+
+**Quota counting example (CompletedOnDay):**
+
+- Add a small system that runs after `UpdateOrderWorkflowSystem` and stamps the day index when an order becomes complete:
+  - if `workflow.state == OrderState::Complete_ClosedOut` and `!entity.hasComponent<CompletedOnDay>()`: add it
+  - if `CompletedOnDay.day_index == 0`: set it to `CampaignProgress.day_index`
+- `WorkdayQuotaSystem` then computes:
+  - `quota_progress = EntityQuery().whereHasComponent<CompletedOnDay>().whereLambda(day_index == current_day).gen_count()`
+  - `quota_met = quota_progress >= WorkdayConfig.quota_target`
 
 ### Milestone 1.5 — Convert selected/active order from singleton IDs to tags
 
@@ -337,6 +414,34 @@ If completing Work requires a lot of gameplay steps, add a **temporary MVP-only 
 - **Tests can’t drive input:** ensure gameplay systems use `game_input::...` wrappers.
 - **Day 3 completion doesn’t count:** “completion” requires reaching End-of-Day 3 and advancing past it to the “Day 3 Complete” endpoint.
 - **Shift-based navigation:** MVP removes `Shift+TAB`; do not add new Shift-based gameplay navigation.
+
+## Example: update/render system registration (shape)
+
+This is an example of how the intern should think about system ordering. (Exact file names can differ; the important part is phase-gated update ordering and read-only render.)
+
+```cpp
+// Update systems (pseudo-order)
+systems.register_update_system(std::make_unique<MetaDayLoopSystem>());
+systems.register_update_system(std::make_unique<WorkdayTimerSystem>());
+systems.register_update_system(std::make_unique<WorkdayQuotaSystem>());
+systems.register_update_system(std::make_unique<WorkdayCompletionSystem>());
+
+systems.register_update_system(std::make_unique<ProcessPledgeInputSystem>());
+systems.register_update_system(std::make_unique<ProcessReviewInputSystem>());
+
+// Existing fulfillment systems (must early-return unless phase == Work)
+systems.register_update_system(std::make_unique<ProcessOrderSelectionSystem>());
+systems.register_update_system(std::make_unique<ProcessOrderTabbingSystem>()); // Tab forward only
+systems.register_update_system(std::make_unique<ProcessTypingInputSystem>());
+systems.register_update_system(std::make_unique<ProcessBoxingInputSystem>());
+systems.register_update_system(std::make_unique<ProcessReadyStampSystem>());
+systems.register_update_system(std::make_unique<UpdateOrderWorkflowSystem>());
+
+// Render systems (read-only)
+systems.register_render_system(std::make_unique<RenderPledgeSystem>());
+systems.register_render_system(std::make_unique<RenderInboxSystem>());
+systems.register_render_system(std::make_unique<RenderEmailViewerSystem>());
+```
 
 ## Definition of Done (intern checklist)
 
