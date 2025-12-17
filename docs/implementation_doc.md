@@ -1,0 +1,306 @@
+# Prime Pressure — Implementation Doc (Intern Guide)
+
+This is the **implementation guide** for building the next planned increment of Prime Pressure.
+
+It is written for an intern who will be asked to “build the Day 1–3 slice.” It focuses on *what to implement*, *where to implement it*, and *how to prove it works*.
+
+## Canonical references (read these first)
+
+- **Architecture (authoritative):** `docs/architecture.md`
+- **Requirements (authoritative):** `docs/prd.md`
+- **Stories / acceptance criteria:** `docs/epics.md`
+- **Project conventions:** `docs/project_context.md`, `PROJECT_RULES.md`
+- **Current test direction (future work):** `docs/test-infrastructure-overhaul-plan.md`
+
+If anything in this doc conflicts with `docs/architecture.md`, **follow `docs/architecture.md`**.
+
+## What we are building (MVP)
+
+### MVP target
+
+Deliver a **Day 1–3 vertical slice** that proves the **Day Loop** is real and stable:
+
+- **Pledge → Work → Review** phases each day
+- Works for **Day 1, Day 2, Day 3**
+- **Hard endpoint:** after the player acknowledges the End-of-Day 3 Review screen, the run reaches **“Day 3 Complete”** and stops advancing.
+
+### Explicitly out of scope (do not implement)
+
+From the PRD, these are intentionally **not** part of the Day 1–3 MVP:
+
+- Gold Stars / Market Points economy
+- Hazard materials / input modifiers
+- Full menu UX
+- Cutscenes / polish systems (CRT shaders, etc.)
+
+## Non‑negotiables (don’t break these)
+
+### Architecture invariants
+
+- **Pure ECS:** state lives in components; logic lives in systems.
+- **Sophie:** global/meta persistence is an **ECS singleton entity**, not a C++ singleton class.
+  - **Prohibited:** `Sophie::get()` or any “global object” singleton pattern for Sophie.
+- **Render systems are read‑only:** do not mutate gameplay state in rendering.
+
+### Input invariants
+
+- **Typing feel:** keep input responsive (perceived < 1 frame).
+- **Gameplay key handling uses wrappers:** gameplay systems should read keys/chars via `game_input::...` (`src/input_wrapper.h`) so tests can inject input.
+- **Shift encoding:** do not implement gameplay “shift checks” (like `IsKeyDown(KEY_LEFT_SHIFT)`) to interpret recipes/commands.
+  - Shifted keys are represented in data/config via the `^` syntax (see `docs/architecture.md`, `docs/project_context.md`).
+
+## Where things live in this repo (orientation)
+
+### Entry points
+
+- Main entry point: `src/main.cpp`
+- Game loop + system registration: `src/game.cpp`
+
+### Components
+
+- Most current components are aggregated in:
+  - `src/components.h`
+  - `src/order_components.h`
+
+### Systems (update loop)
+
+- Systems are currently header-based and registered in `src/game.cpp`.
+- Look at these as examples of style and patterns:
+  - `src/systems/ProcessTypingInputSystem.h`
+  - `src/systems/ProcessBoxingInputSystem.h`
+  - `src/systems/order_systems.h` (order selection/tabbing + workflow tag systems)
+
+### Rendering
+
+- Render systems are registered in `src/game.cpp` using helpers like:
+  - `register_render_computer_systems(systems)` (`src/render_computer.cpp`)
+  - `register_render_warehouse_systems(systems)` (`src/render_warehouse.cpp`)
+  - `register_render_boxing_systems(systems)` (`src/render_boxing.cpp`)
+
+### Tests
+
+- Test runner is built into the game binary:
+  - list tests: `./output/warehouse_game --list-tests`
+  - run one: `./output/warehouse_game --run-test <name>`
+- Current tests live under:
+  - `src/testing/tests/`
+
+## Implementation plan (do this in order)
+
+This plan is designed to minimize risk: first create the state model, then wire the phase machine, then add pledge/review UI, then add pressure + telemetry.
+
+### Milestone 0 — Add Sophie + MVP meta components
+
+**Goal:** create a single ECS entity that stores campaign/day state.
+
+**Add components (MVP):**
+
+- `CampaignProgress`
+  - `int day_index` (1..3)
+  - `enum struct DayPhase { Pledge, Work, Review, Complete }`
+  - `bool slice_complete` (true at Day 3 completion; optional if you use `phase == Complete`)
+- `RunTelemetryState`
+  - enough fields to emit:
+    - `session_start`, `session_end`
+    - `day_start(day=1..3)`, `day_end(day=1..3)`
+    - `run_completed(day=3)` or `run_ended(reason=quit|fail|crash|softlock, day_index=...)`
+
+**Where:**
+
+- Add the new component structs in `src/components.h` (keep it minimal + POD).
+- Create the Sophie entity in `src/game.cpp` near the other singleton entity creation.
+  - Recommended: tag it by component presence (e.g., it’s “Sophie” if it has `CampaignProgress`).
+  - Use `EntityQuery().whereHasComponent<CampaignProgress>().gen_first()` whenever you need it.
+
+**Definition of done:**
+
+- The game boots with Day 1 initialized and phase set to `Pledge`.
+- There is exactly one Sophie entity.
+
+### Milestone 1 — Implement the Day Loop state machine
+
+**Goal:** implement the phase transitions and gating rules.
+
+**State machine:**
+
+- Start run → Day 1 → `Pledge`
+- Pledge complete → `Work` and record `day_start(day_index)`
+- Work complete → `Review` and record `day_end(day_index)`
+- Review acknowledge:
+  - if day_index < 3: increment day_index, go to `Pledge`
+  - if day_index == 3: go to `Complete` and record `run_completed(day=3)`
+
+**Where:**
+
+- Add a new update system like `MetaDayLoopSystem` under `src/systems/` and register it early in the update list in `src/game.cpp`.
+
+**Phase gating:**
+
+- Gameplay systems that mutate fulfillment state must only run in `Work`.
+- Pledge systems run only in `Pledge`.
+- Review systems run only in `Review`.
+
+**Practical implementation options (pick one and stick to it):**
+
+- **Option A (preferred for clarity):** each “work gameplay” system checks Sophie phase at the start and early-returns unless phase is `Work`.
+- **Option B:** create one “gate” system that writes a singleton `GameplayPhaseGate` component (`allow_work_systems` bool), then have work systems check that instead.
+
+**Definition of done:**
+
+- You can advance through Day 1 → Day 2 → Day 3 and reach a stable “Day 3 Complete” endpoint.
+- Transitions do not accidentally consume buffered typing.
+
+### Milestone 2 — Morning pledge (Pledge phase)
+
+**Goal:** implement the pledge typing mini-screen.
+
+**Behavior:**
+
+- When `CampaignProgress.phase == Pledge`, show pledge prompt.
+- Player types the pledge text exactly.
+- On success: transition to `Work`.
+- On incorrect character: do not advance; show minimal feedback.
+
+**Implementation notes:**
+
+- Keep pledge input separate from the existing “work typing buffer” so Work-phase buffers can’t accidentally dismiss the pledge.
+- On entering pledge, ensure work gameplay inputs are ignored.
+
+**Where:**
+
+- Add components for pledge UI/input state (e.g., `PledgeState` on Sophie or on a pledge UI entity).
+- Add `ProcessPledgeInputSystem` (update) and `RenderPledgeSystem` (render).
+
+**Definition of done:**
+
+- Pledge phase reliably blocks Work systems.
+- The pledge can be completed on Days 1–3.
+
+### Milestone 3 — End-of-day review/email (Review phase)
+
+**Goal:** implement a minimal review screen with at least one “email/message” per day.
+
+**Behavior:**
+
+- When `CampaignProgress.phase == Review`, show:
+  - a day summary header (Day N Complete)
+  - one short email/message body (hardcoded text is fine for MVP)
+  - a clear “continue” instruction
+- On “continue”:
+  - advance to next day pledge (Days 1–2)
+  - or show “Day 3 Complete” endpoint (Day 3)
+
+**Implementation notes:**
+
+- On entering Review, flush/ignore leftover Work-phase input so stray keystrokes don’t auto-advance.
+
+**Where:**
+
+- Add `ProcessReviewInputSystem` (update) and `RenderReviewSystem` (render).
+
+**Definition of done:**
+
+- Review always appears after the Work completion trigger.
+- The Day 3 Review can be acknowledged and results in a stable endpoint.
+
+### Milestone 4 — Add one oppression system: TOT (Work-only)
+
+**Goal:** add a single pressure hook for the Day 1–3 slice.
+
+**TOT requirements (MVP):**
+
+- Only runs in `Work`.
+- If no gameplay-relevant input for > 2 seconds → TOT meter starts filling.
+- Provide a visible warning overlay at a threshold.
+- After 3 warnings, record a strike/fine (placeholder penalty acceptable).
+
+**Important detail:**
+
+“Gameplay-relevant input” should include:
+
+- typing input used by `ProcessTypingInputSystem`
+- boxing input used by `ProcessBoxingInputSystem`
+- order selection/tabbing inputs
+
+Avoid relying on OS key repeat; treat per-frame detection as authoritative.
+
+**Where:**
+
+- New components: e.g., `TotState` (timer, warnings count, overlay state).
+- New systems:
+  - `UpdateTotSystem` (update)
+  - `RenderTotOverlaySystem` (render)
+
+**Definition of done:**
+
+- TOT never advances in `Pledge` or `Review`.
+- TOT warning is visible and consistent.
+
+### Milestone 5 — Telemetry/events (minimum viable)
+
+**Goal:** log/record run/day events so playtest metrics aren’t ambiguous.
+
+**Events required (PRD):**
+
+- session_start / session_end
+- day_start(day=1..3) / day_end(day=1..3)
+- run_completed(day=3) OR run_ended(reason=quit|fail|crash|softlock)
+
+**Semantics (important):**
+
+- “Started” should mean **first actionable input of Day 1** (not just booting the app).
+- Always attach day_index to run end events.
+
+**Where:**
+
+- Store counters/flags on `RunTelemetryState` (Sophie).
+- For MVP, printing to stdout is acceptable, but prefer a structured format so it’s easy to parse later.
+
+**Definition of done:**
+
+- Events are emitted exactly once per run and per day.
+
+### Milestone 6 — Tests (minimum coverage)
+
+**Goal:** add at least one test that proves you can progress through the Day Loop without softlocking.
+
+**How tests work today:**
+
+- Tests run inside the real game loop via `TestSystem`.
+- Input is injected through `test_input::input_queue` and consumed by `game_input::IsKeyPressed` / `game_input::GetCharPressed`.
+
+**Add tests:**
+
+- `TestDayLoopAdvancesDays1to3`:
+  - complete pledge
+  - do whatever is required to finish Work for a day
+  - acknowledge Review
+  - repeat until Day 3 Complete
+
+If completing Work requires a lot of gameplay steps, add a **temporary MVP-only “debug end shift”** input (Work-only) that ends the day; remove it once real shift completion is defined.
+
+## Build / run / test commands
+
+- Build: `make`
+- Run: `make run`
+- Run tests: `make test` (or `scripts/run_all_tests.sh`)
+- List in-game tests: `./output/warehouse_game --list-tests`
+
+## Common failure modes (and how to avoid them)
+
+- **Softlock on phase transitions:** always clear or isolate input buffers when moving between phases.
+- **Work systems running in pledge/review:** enforce gating explicitly (don’t rely on “it won’t happen”).
+- **Tests can’t drive input:** ensure gameplay systems use `game_input::...` wrappers.
+- **Day 3 completion doesn’t count:** “completion” requires reaching End-of-Day 3 and advancing past it to the “Day 3 Complete” endpoint.
+
+## Definition of Done (intern checklist)
+
+The Day 1–3 slice is “done” when:
+
+- [ ] Day 1 starts in `Pledge`
+- [ ] Pledge → Work → Review transitions work for Day 1, Day 2, Day 3
+- [ ] Day 3 Review advances to a stable “Day 3 Complete” endpoint
+- [ ] Work-only systems do not mutate state during Pledge/Review
+- [ ] TOT exists and is Work-only
+- [ ] Minimum telemetry events fire with correct semantics
+- [ ] At least one E2E test proves Days 1–3 advancement without softlock
