@@ -87,7 +87,7 @@ From the PRD, these are intentionally **not** part of the Day 1–3 MVP:
 
 ## Implementation plan (do this in order)
 
-This plan is designed to minimize risk: first create the state model, then wire the phase machine, then add pledge/review UI, then add pressure + telemetry.
+This plan is designed to minimize risk: first create the state model, then wire the phase machine, then add pledge/review UI, then add pressure. Telemetry is explicitly deferred for now.
 
 ### Milestone 0 — Add Sophie + MVP meta components
 
@@ -99,11 +99,12 @@ This plan is designed to minimize risk: first create the state model, then wire 
   - `int day_index` (1..3)
   - `enum struct DayPhase { Pledge, Work, Review, Complete }`
   - `bool slice_complete` (true at Day 3 completion; optional if you use `phase == Complete`)
-- `RunTelemetryState`
-  - enough fields to emit:
-    - `session_start`, `session_end`
-    - `day_start(day=1..3)`, `day_end(day=1..3)`
-    - `run_completed(day=3)` or `run_ended(reason=quit|fail|crash|softlock, day_index=...)`
+- `WorkdayConfig` (name TBD)
+  - fixed-length Work phase duration by difficulty (e.g., easy = 5 minutes, normal = 3 minutes)
+  - quota target definition (recommended: orders shipped)
+- `WorkdayRuntime` (name TBD)
+  - elapsed time in the Work phase for the current day
+  - quota progress for the current day
 
 **Where:**
 
@@ -157,14 +158,18 @@ This plan is designed to minimize risk: first create the state model, then wire 
 **Behavior:**
 
 - When `CampaignProgress.phase == Pledge`, show pledge prompt.
-- Player types the pledge text exactly.
-- On success: transition to `Work`.
-- On incorrect character: do not advance; show minimal feedback.
+- Player types the pledge text.
+- There is a timer, but it should be easy to hit (target ~40 WPM).
+- Pass conditions (MVP):
+  - If the pledge is finished, it passes.
+  - If the timer expires, it still passes if the player is at least ~80% complete.
+- Bonus (TODO): faster typing + better accuracy yields a “bonus gold star” (economy is out of scope; log/placeholder only).
 
 **Implementation notes:**
 
 - Keep pledge input separate from the existing “work typing buffer” so Work-phase buffers can’t accidentally dismiss the pledge.
 - On entering pledge, ensure work gameplay inputs are ignored.
+- Reuse the same pledge text for Days 1–3 for now. (TODO: add story-specific pledges per day later.)
 
 **Where:**
 
@@ -178,25 +183,34 @@ This plan is designed to minimize risk: first create the state model, then wire 
 
 ### Milestone 3 — End-of-day review/email (Review phase)
 
-**Goal:** implement a minimal review screen with at least one “email/message” per day.
+**Goal:** implement an end-of-day “inbox” where the player must open the summary email to proceed.
 
 **Behavior:**
 
-- When `CampaignProgress.phase == Review`, show:
-  - a day summary header (Day N Complete)
-  - one short email/message body (hardcoded text is fine for MVP)
-  - a clear “continue” instruction
-- On “continue”:
-  - advance to next day pledge (Days 1–2)
-  - or show “Day 3 Complete” endpoint (Day 3)
+- Emails are ECS entities with an `Email` component: `{from, header, body, unread}`.
+- The summary email exists for each day and is marked unread on entry to Review.
+- The player must open the summary email at least once to be allowed to end the day.
+- Controls (MVP):
+  - `Enter`: open email (and also close it if already open)
+  - `Esc` or `X`: close email
+  - arrow keys: navigate email selection
+  - `Tab`: end day (only after summary opened)
 
 **Implementation notes:**
 
 - On entering Review, flush/ignore leftover Work-phase input so stray keystrokes don’t auto-advance.
+- Separate logic from rendering:
+  - update systems mutate `Email`/selection/viewer components
+  - render systems only draw the inbox + selected email view
+
+**Recommended query shape (inbox):**
+
+- Unread list: `EntityQuery().whereHasComponent<Email>().whereLambda(...unread...).gen()`
 
 **Where:**
 
-- Add `ProcessReviewInputSystem` (update) and `RenderReviewSystem` (render).
+- Add a helper to create an email entity (function or small builder) such as `make_email(...)`.
+- Add `ProcessReviewInputSystem` (update) and `RenderReviewSystem` (render). If you want, split render into `RenderInboxSystem` + `RenderEmailViewerSystem`.
 
 **Definition of done:**
 
@@ -216,11 +230,11 @@ This plan is designed to minimize risk: first create the state model, then wire 
 
 **Important detail:**
 
-“Gameplay-relevant input” should include:
+“Gameplay-relevant input” should include (narrow definition for now):
 
 - typing input used by `ProcessTypingInputSystem`
 - boxing input used by `ProcessBoxingInputSystem`
-- order selection/tabbing inputs
+- order selection/tabbing inputs (if those are driven by typed keys)
 
 Avoid relying on OS key repeat; treat per-frame detection as authoritative.
 
@@ -238,27 +252,7 @@ Avoid relying on OS key repeat; treat per-frame detection as authoritative.
 
 ### Milestone 5 — Telemetry/events (minimum viable)
 
-**Goal:** log/record run/day events so playtest metrics aren’t ambiguous.
-
-**Events required (PRD):**
-
-- session_start / session_end
-- day_start(day=1..3) / day_end(day=1..3)
-- run_completed(day=3) OR run_ended(reason=quit|fail|crash|softlock)
-
-**Semantics (important):**
-
-- “Started” should mean **first actionable input of Day 1** (not just booting the app).
-- Always attach day_index to run end events.
-
-**Where:**
-
-- Store counters/flags on `RunTelemetryState` (Sophie).
-- For MVP, printing to stdout is acceptable, but prefer a structured format so it’s easy to parse later.
-
-**Definition of done:**
-
-- Events are emitted exactly once per run and per day.
+Telemetry is deferred for now.
 
 ### Milestone 6 — Tests (minimum coverage)
 
